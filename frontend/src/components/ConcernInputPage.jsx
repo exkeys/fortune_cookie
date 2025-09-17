@@ -17,7 +17,7 @@ function ConcernInputPage({ role }) {
     }
     setLoading(true);
     try {
-      const res = await axios.post('http://localhost:4000/api/concerns', {
+      const res = await axios.post('http://localhost:4000/api/concerns/ai', {
         persona: role,
         concern
       });
