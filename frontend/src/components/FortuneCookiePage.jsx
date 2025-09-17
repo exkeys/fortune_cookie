@@ -12,24 +12,25 @@ function FortuneCookiePage() {
   const [saved, setSaved] = useState(false);
 
   const handleSave = async () => {
-    if (saved) return;
-    setSaveStatus('saving');
-    try {
-      const res = await fetch('http://localhost:4000/api/concerns/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ persona: role, concern, aiAnswer: answer })
-      });
-      if (res.ok) {
-        setSaveStatus('success');
-        setSaved(true);
-      } else {
-        setSaveStatus('error');
-      }
-    } catch (e) {
+  if (saved) return;
+  setSaveStatus('saving');
+  try {
+    const userId = localStorage.getItem('userId'); // 반드시 userId를 가져와서
+    const res = await fetch('http://localhost:4000/api/concerns/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ persona: role, concern, aiAnswer: answer, userId }) // userId 포함!
+    });
+    if (res.ok) {
+      setSaveStatus('success');
+      setSaved(true);
+    } else {
       setSaveStatus('error');
     }
-  };
+  } catch (e) {
+    setSaveStatus('error');
+  }
+};
 
   const handleFinish = () => {
     navigate('/');

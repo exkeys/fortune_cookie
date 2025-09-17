@@ -107,7 +107,11 @@ const DeleteBtn = styled.button`
   }
 `;
 
+
 function PastConcernsPage({ userId }) {
+  // userId가 없으면 아무것도 렌더링하지 않음 (빈 화면)
+  if (!userId) return null;
+
   const [concerns, setConcerns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -119,7 +123,6 @@ function PastConcernsPage({ userId }) {
       try {
         const res = await fetch(`http://localhost:4000/api/concerns?userId=${userId}`);
         const data = await res.json();
-  // console.log('API 응답:', data); 
         if (res.ok) {
           setConcerns(Array.isArray(data.concerns) ? data.concerns : []);
         } else {
@@ -127,14 +130,11 @@ function PastConcernsPage({ userId }) {
         }
       } catch (e) {
         setError('서버 오류');
-  // console.error('fetchConcerns 오류:', e); 
       }
       setLoading(false);
     }
     fetchConcerns();
   }, [userId]);
-
-
 
   const handleDelete = async (id) => {
     try {
@@ -149,7 +149,6 @@ function PastConcernsPage({ userId }) {
     }
   };
 
-  // 스와이프 삭제 액션 정의 (confirm 없이 바로 삭제)
   const trailingActions = (id) => (
     <TrailingActions>
       <SwipeAction destructive onClick={() => handleDelete(id)}>

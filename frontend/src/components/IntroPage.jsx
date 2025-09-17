@@ -1,16 +1,36 @@
 import HamburgerMenu from './HamburgerMenu';
 import MainButton from './MainButton';
 import { useNavigate } from 'react-router-dom';
+import { supabase } from '../supabaseClient';
 
 function IntroPage({ onMenuClick }) {
   const navigate = useNavigate();
+
+  const handleNext = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      alert('로그인 후 이용해 주세요.');
+      return;
+    }
+    // users 테이블에 id 기준 upsert (id는 고정, email은 최신 값으로 update)
+    const { error } = await supabase.from('users').upsert([
+      { id: user.id, email: user.email }
+    ], { onConflict: ['id'] });
+    if (error) {
+      console.error('DB 저장 에러:', error);
+      alert('사용자 정보 저장에 실패했습니다.');
+      return;
+    }
+    navigate('/main');
+  };
+
   return (
     <div style={{
       minHeight: '100vh',
       minWidth: '100vw',
       height: '100vh',
       width: '100vw',
-  background: '#fffbe6',
+      background: '#fffbe6',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
@@ -50,7 +70,7 @@ function IntroPage({ onMenuClick }) {
           </h1>
         </div>
         <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
-          <MainButton onClick={() => navigate('/main')}>
+          <MainButton onClick={handleNext}>
             다음
           </MainButton>
         </div>

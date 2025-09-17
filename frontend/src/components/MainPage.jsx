@@ -1,8 +1,13 @@
 import MainButton from './MainButton';
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 function MainPage() {
   const navigate = useNavigate();
+
+  // IntroPage에서 user 저장을 처리하므로 MainPage에서는 불필요
+
   return (
     <div
       style={{
@@ -10,7 +15,7 @@ function MainPage() {
         minWidth: '100vw',
         height: '100vh',
         width: '100vw',
-  background: '#fffbe6',
+        background: '#fffbe6',
         display: 'flex',
         flexDirection: 'column',
         justifyContent: 'center',
