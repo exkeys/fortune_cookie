@@ -78,7 +78,7 @@ function FortuneCookiePage() {
           style={{
             padding: '14px 36px',
             fontSize: 20,
-            background: '#bdbdbd',
+            background: '#ff9800',
             color: '#fff',
             border: 'none',
             borderRadius: 8,
