@@ -1,10 +1,10 @@
+
+import PastConcernsPage from './PastConcernsPage';
+
 function HistoryPage() {
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#f5f5f5' }}>
-      <h2>지난 고민 보기</h2>
-      <p>여기에 지난 고민 목록이 표시됩니다.</p>
-    </div>
-  );
+  // 임시: userId를 localStorage에서 가져옴 (실제 로그인 연동 시 교체)
+  const userId = localStorage.getItem('userId');
+  return <PastConcernsPage userId={userId} />;
 }
 
 export default HistoryPage;

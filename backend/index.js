@@ -24,7 +24,6 @@ function isUUID(str) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(str);
 }
 
-
 // AI 답변만 생성 (DB 저장 X)
 app.post('/api/concerns/ai', async (req, res) => {
   const { persona, concern } = req.body;
@@ -81,6 +80,52 @@ app.post('/api/concerns/save', async (req, res) => {
   } catch (err) {
     console.error('DB 저장 오류:', err?.response?.data || err.message || err);
     return res.status(500).json({ error: 'DB 저장 실패' });
+  }
+});
+
+// 고민 목록 조회 (userId 없으면 user_id=null만, userId 있으면 해당 userId만)
+app.get('/api/concerns', async (req, res) => {
+  let { userId } = req.query;
+  let query = supabase.from('ai_answers').select('id, persona, concern, ai_response, created_at');
+  if (!userId || userId === 'null' || userId === '') {
+    query = query.is('user_id', null);
+  } else if (isUUID(userId)) {
+    query = query.eq('user_id', userId);
+  } else {
+    return res.status(400).json({ error: '유효한 userId가 필요합니다.' });
+  }
+  try {
+    const { data, error } = await query.order('created_at', { ascending: false });
+    if (error) {
+      console.error('고민 목록 조회 오류:', error);
+      return res.status(500).json({ error: '고민 목록 조회 실패' });
+    }
+    return res.json({ concerns: data });
+  } catch (err) {
+    console.error('고민 목록 조회 오류:', err?.response?.data || err.message || err);
+    return res.status(500).json({ error: '고민 목록 조회 실패' });
+  }
+});
+
+// 고민 삭제 (id 기준)
+app.delete('/api/concerns/:id', async (req, res) => {
+  const { id } = req.params;
+  if (!id) {
+    return res.status(400).json({ error: 'id가 필요합니다.' });
+  }
+  try {
+    const { error } = await supabase
+      .from('ai_answers')
+      .delete()
+      .eq('id', id);
+    if (error) {
+      console.error('고민 삭제 오류:', error);
+      return res.status(500).json({ error: '고민 삭제 실패' });
+    }
+    return res.json({ success: true });
+  } catch (err) {
+    console.error('고민 삭제 오류:', err?.response?.data || err.message || err);
+    return res.status(500).json({ error: '고민 삭제 실패' });
   }
 });
 

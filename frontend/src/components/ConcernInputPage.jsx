@@ -1,13 +1,19 @@
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 
 function ConcernInputPage({ role }) {
+
   const [concern, setConcern] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    inputRef.current && inputRef.current.focus();
+  }, []);
 
   const handleSubmit = async () => {
     setError('');
@@ -80,6 +86,7 @@ function ConcernInputPage({ role }) {
           {role ? <b>{role}</b> : '역할 미지정'}로서 고민을 한 줄로 정리해 보세요
         </h1>
         <input
+          ref={inputRef}
           type="text"
           value={concern}
           onChange={e => setConcern(e.target.value)}

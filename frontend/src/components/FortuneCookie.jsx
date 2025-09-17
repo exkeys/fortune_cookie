@@ -71,9 +71,9 @@ function FortuneCookie({ answer }) {
           </div>
         )}
         {isOpen && (
-          <div className="box-slip absolute flex items-center justify-center" style={{ width: 800, height: 220, left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
-            <img src={imageSlip} alt="slip" style={{ width: 800, height: 220, position: 'absolute', left: 0, top: 0 }} />
-            <span
+          <div className="box-slip absolute flex items-center justify-center" style={{ width: 1100, height: 260, left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
+            <img src={imageSlip} alt="slip" style={{ width: 1100, height: 260, position: 'absolute', left: 0, top: 0 }} />
+            <div
               style={{
                 position: 'absolute',
                 left: 0,
@@ -83,13 +83,13 @@ function FortuneCookie({ answer }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 22,
+                fontSize: 28,
                 color: '#333',
                 fontWeight: 600,
-                padding: '0 60px',
+                padding: '0 100px',
                 textAlign: 'center',
                 wordBreak: 'break-word',
-                lineHeight: 1.3,
+                lineHeight: 1.4,
                 whiteSpace: 'pre-line',
                 overflowWrap: 'break-word',
                 opacity: isFinish ? 1 : 0,
@@ -100,7 +100,7 @@ function FortuneCookie({ answer }) {
               }}
             >
               {message}
-            </span>
+            </div>
           </div>
         )}
       </div>

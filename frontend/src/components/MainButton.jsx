@@ -12,7 +12,7 @@ function MainButton({ children, onClick }) {
     boxShadow: '0 4px 16px rgba(0,0,0,0.10)',
     letterSpacing: 2,
     transition: 'background 0.2s, color 0.2s',
-    marginLeft: '-60px', // 오른쪽에서 약간 왼쪽으로 이동
+    marginLeft: '-60px', 
   };
   return (
     <button
