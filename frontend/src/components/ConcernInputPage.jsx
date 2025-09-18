@@ -1,6 +1,7 @@
 
 
 import { useState, useRef, useEffect } from 'react';
+
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../supabaseClient'; // supabaseClient.js 경로에 맞게 수정
@@ -19,56 +20,72 @@ function ConcernInputPage({ role }) {
   }, []);
 
     const handleSubmit = async () => {
-    console.log('handleSubmit called'); // 1. 함수 진입 확인
-    setError('');
-    if (!concern.trim()) {
-      setError('고민을 입력해 주세요.');
-      console.log('concern is empty');
-      return;
-    }
-    setLoading(true);
-    try {
-      console.log('before getUser');
-      const { data: { user } } = await supabase.auth.getUser();
-      console.log('user:', user); // 2. user 객체 전체 출력
-      if (!user) {
-        setError('로그인이 필요합니다.');
-        setLoading(false);
-        console.log('user is null');
+      console.log('[DEBUG] handleSubmit called');
+      setError('');
+      if (!concern.trim()) {
+        setError('고민을 입력해 주세요.');
+        console.log('[DEBUG] concern is empty');
         return;
       }
-      console.log('userId to save:', user.id); // 3. user.id 값 출력
-      // 1. AI 답변 요청
-      const aiRes = await axios.post('http://localhost:4000/api/concerns/ai', {
-        persona: role,
-        concern
-      });
-      const aiAnswer = aiRes.data.answer;
-
-      // 2. DB 저장 요청 (userId 포함)
-      // [자동 저장 비활성화] 아래 코드를 주석 처리하면 FortuneCookiePage에서만 저장됩니다.
-      // console.log('DB 저장 요청 userId:', user.id);
-      // await axios.post('http://localhost:4000/api/concerns/save', {
-      //   persona: role,
-      //   concern,
-      //   aiAnswer,
-      //   userId: user.id
-      // });
-
-      // 3. FortuneCookiePage로 이동
-      navigate('/fortune', {
-        state: {
-          role,
-          concern,
-          answer: aiAnswer
+      setLoading(true);
+      try {
+        console.log('[DEBUG] before getUser');
+        const { data: { user } } = await supabase.auth.getUser();
+        console.log('[DEBUG] user:', user);
+        if (!user) {
+          setError('로그인이 필요합니다.');
+          setLoading(false);
+          console.log('[DEBUG] user is null');
+          return;
         }
-      });
-    } catch (err) {
-      setError('AI 답변 요청 또는 저장에 실패했습니다.');
-      console.log('error:', err);
-    }
-    setLoading(false);
-  };
+        console.log('[DEBUG] userId to save:', user.id);
+        console.log('[DEBUG] role:', role, 'concern:', concern);
+        // 1. AI 답변 요청 (fetch 사용, Content-Type 명확히 지정)
+        const aiRes = await fetch('http://localhost:4000/api/concerns/ai', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            persona: role,
+            concern
+          })
+        });
+        console.log('[DEBUG] aiRes status:', aiRes.status);
+        if (!aiRes.ok) {
+          const errData = await aiRes.json().catch(() => ({}));
+          console.log('[DEBUG] aiRes error:', errData);
+          throw new Error(errData.error || 'AI 답변 요청 실패');
+        }
+        const aiData = await aiRes.json();
+        console.log('[DEBUG] aiData:', aiData);
+        const aiAnswer = aiData.answer;
+
+        // 2. DB 저장 요청 (userId 포함)
+        // [자동 저장 비활성화] 아래 코드를 주석 처리하면 FortuneCookiePage에서만 저장됩니다.
+        // console.log('[DEBUG] DB 저장 요청 userId:', user.id);
+        // await axios.post('http://localhost:4000/api/concerns/save', {
+        //   persona: role,
+        //   concern,
+        //   aiAnswer,
+        //   userId: user.id
+        // });
+
+        // 3. FortuneCookiePage로 이동
+        console.log('[DEBUG] navigate to /fortune', { role, concern, answer: aiAnswer });
+        navigate('/fortune', {
+          state: {
+            role,
+            concern,
+            answer: aiAnswer
+          }
+        });
+      } catch (err) {
+        setError('AI 답변 요청 또는 저장에 실패했습니다.');
+        console.log('[DEBUG] error:', err);
+      }
+      setLoading(false);
+    };
 
   return (
     <div

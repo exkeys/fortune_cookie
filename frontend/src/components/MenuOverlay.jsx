@@ -1,8 +1,29 @@
 
 
-import { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../supabaseClient';
 
 function MenuOverlay({ onClose, onLogin, onHistory }) {
+  const [user, setUser] = useState(null);
+
+  // 로그인 상태 실시간 반영
+  useEffect(() => {
+    async function fetchUser() {
+      const { data } = await supabase.auth.getUser();
+      setUser(data?.user || null);
+    }
+    fetchUser();
+    const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      fetchUser();
+    });
+    return () => listener?.subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    onClose();
+  };
   const [showLoginGuide, setShowLoginGuide] = useState(false);
 
   const handleHistoryClick = () => {
@@ -17,7 +38,7 @@ function MenuOverlay({ onClose, onLogin, onHistory }) {
 
   return (
     <>
-      <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 100 }} onClick={onClose}>
+  <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 300 }} onClick={onClose}>
         <div
           style={{
             position: 'absolute',
@@ -35,35 +56,56 @@ function MenuOverlay({ onClose, onLogin, onHistory }) {
           }}
           onClick={e => e.stopPropagation()}
         >
-          <div
-            style={{
-              padding: '16px 32px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              color: '#ffb300',
-              fontSize: 18,
-              borderBottom: '1px solid #ffe082',
-              textAlign: 'center',
-              width: '100%',
-            }}
-            onClick={onLogin}
-          >
-            로그인
-          </div>
-          <div
-            style={{
-              padding: '16px 32px',
-              cursor: 'pointer',
-              fontWeight: 600,
-              color: '#ffb300',
-              fontSize: 18,
-              textAlign: 'right',
-              width: '100%',
-            }}
-            onClick={handleHistoryClick}
-          >
-            지난 고민 보기
-          </div>
+          {!user && (
+            <div
+              style={{
+                padding: '16px 32px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                color: '#ffb300',
+                fontSize: 18,
+                borderBottom: '1px solid #ffe082',
+                textAlign: 'center',
+                width: '100%',
+              }}
+              onClick={onLogin}
+            >
+              로그인
+            </div>
+          )}
+          {user && (
+            <>
+              <div
+                style={{
+                  padding: '16px 32px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#e57373',
+                  fontSize: 18,
+                  borderBottom: '1px solid #ffe082',
+                  textAlign: 'center',
+                  width: '100%',
+                }}
+                onClick={handleLogout}
+              >
+                로그아웃
+              </div>
+              <div
+                style={{
+                  padding: '16px 32px',
+                  cursor: 'pointer',
+                  fontWeight: 600,
+                  color: '#ffb300',
+                  fontSize: 18,
+                  textAlign: 'right',
+                  width: '100%',
+                }}
+                onClick={handleHistoryClick}
+              >
+                지난 고민 보기
+              </div>
+            </>
+          )}
         </div>
       </div>
       {showLoginGuide && (

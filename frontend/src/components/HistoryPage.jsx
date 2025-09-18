@@ -10,15 +10,20 @@ function HistoryPage() {
   useEffect(() => {
     async function fetchUser() {
       const { data } = await supabase.auth.getUser();
+      console.log('[DEBUG][HistoryPage] getUser data:', data);
       if (data && data.user) {
         setUserId(data.user.id);
+        console.log('[DEBUG][HistoryPage] setUserId:', data.user.id);
       } else {
         setUserId('');
+        console.log('[DEBUG][HistoryPage] setUserId: (empty)');
       }
       setChecked(true);
+      console.log('[DEBUG][HistoryPage] setChecked: true');
     }
     fetchUser();
     const { data: listener } = supabase.auth.onAuthStateChange(() => {
+      console.log('[DEBUG][HistoryPage] onAuthStateChange triggered');
       fetchUser();
     });
     return () => {
@@ -26,11 +31,13 @@ function HistoryPage() {
     };
   }, []);
 
+  console.log('[DEBUG][HistoryPage] checked:', checked, 'userId:', userId);
   if (!checked) return null; // 아직 체크 중이면 아무것도 렌더링하지 않음
 
   return (
     <>
       <PastConcernsPage userId={userId} />
+      {console.log('[DEBUG][HistoryPage] PastConcernsPage rendered with userId:', userId)}
       {!userId && (
         <div
           style={{
