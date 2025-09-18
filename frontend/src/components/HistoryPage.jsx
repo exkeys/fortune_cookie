@@ -1,4 +1,3 @@
-
 import PastConcernsPage from './PastConcernsPage';
 import { useEffect, useState } from 'react';
 import { supabase } from '../supabaseClient';
@@ -14,9 +13,13 @@ function HistoryPage() {
       if (data && data.user) {
         setUserId(data.user.id);
         console.log('[DEBUG][HistoryPage] setUserId:', data.user.id);
+        // localStorage에도 저장 (다른 컴포넌트와의 호환성을 위해)
+        localStorage.setItem('userId', data.user.id);
       } else {
         setUserId('');
         console.log('[DEBUG][HistoryPage] setUserId: (empty)');
+        // localStorage에서도 제거
+        localStorage.removeItem('userId');
       }
       setChecked(true);
       console.log('[DEBUG][HistoryPage] setChecked: true');
@@ -76,5 +79,4 @@ function HistoryPage() {
     </>
   );
 }
-
 export default HistoryPage;

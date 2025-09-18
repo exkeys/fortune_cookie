@@ -53,16 +53,35 @@ function IntroPage({ onMenuClick }) {
       alert('로그인 후 이용해 주세요.');
       return;
     }
-    // users 테이블에 id 기준 upsert (id는 고정, email은 최신 값으로 update)
-    const { error } = await supabase.from('users').upsert([
-      { id: user.id, email: user.email }
-    ], { onConflict: ['id'] });
-    if (error) {
-      console.error('DB 저장 에러:', error);
+    
+    try {
+      // upsert 시 onConflict를 email로 설정하고, id와 email 모두 업데이트
+      const { error } = await supabase.from('users').upsert([
+        { 
+          id: user.id, 
+          email: user.email,
+          nickname: user.user_metadata?.name || user.email?.split('@')[0] || '사용자'
+        }
+      ], { 
+        onConflict: 'email' // email이 중복될 때의 처리
+      });
+      
+      if (error) {
+        console.error('DB 저장 에러:', error);
+        // 이미 존재하는 사용자라면 에러를 무시하고 진행
+        if (error.code !== '23505') {
+          alert('사용자 정보 저장에 실패했습니다.');
+          return;
+        }
+      }
+      
+      // localStorage에 userId 저장
+      localStorage.setItem('userId', user.id);
+      navigate('/main');
+    } catch (err) {
+      console.error('DB 저장 예외:', err);
       alert('사용자 정보 저장에 실패했습니다.');
-      return;
     }
-    navigate('/main');
   };
 
   return (

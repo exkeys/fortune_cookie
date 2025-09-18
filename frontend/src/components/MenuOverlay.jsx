@@ -1,5 +1,3 @@
-
-
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
 
@@ -22,13 +20,16 @@ function MenuOverlay({ onClose, onLogin, onHistory }) {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    // localStorage도 정리
+    localStorage.removeItem('userId');
     onClose();
   };
+  
   const [showLoginGuide, setShowLoginGuide] = useState(false);
 
   const handleHistoryClick = () => {
-    const userId = localStorage.getItem('userId');
-    if (userId) {
+    // Supabase Auth 기준으로 체크
+    if (user) {
       onHistory();
       onClose();
     } else {
@@ -38,7 +39,7 @@ function MenuOverlay({ onClose, onLogin, onHistory }) {
 
   return (
     <>
-  <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 300 }} onClick={onClose}>
+      <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', zIndex: 300 }} onClick={onClose}>
         <div
           style={{
             position: 'absolute',

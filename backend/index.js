@@ -11,25 +11,25 @@ dotenv.config();
 const app = express();
 
 // 모든 요청/응답 및 에러를 콘솔에 찍는 미들웨어 추가
-app.use((req, res, next) => {
-  console.log(`[GLOBAL-REQ] ${req.method} ${req.url}`);
-  console.log('[GLOBAL-REQ] headers:', req.headers);
-  if (req.method !== 'GET') {
-    let bodyData = '';
-    req.on('data', chunk => { bodyData += chunk; });
-    req.on('end', () => {
-      try {
-        const parsed = JSON.parse(bodyData || '{}');
-        console.log('[GLOBAL-REQ] body:', parsed);
-      } catch {
-        console.log('[GLOBAL-REQ] body(raw):', bodyData);
-      }
-      next();
-    });
-  } else {
-    next();
-  }
-});
+//app.use((req, res, next) => {
+//  console.log(`[GLOBAL-REQ] ${req.method} ${req.url}`);
+//  console.log('[GLOBAL-REQ] headers:', req.headers);
+//  if (req.method !== 'GET') {
+//    let bodyData = '';
+//    req.on('data', chunk => { bodyData += chunk; });
+//    req.on('end', () => {
+//      try {
+//        const parsed = JSON.parse(bodyData || '{}');
+//        console.log('[GLOBAL-REQ] body:', parsed);
+//      } catch {
+//        console.log('[GLOBAL-REQ] body(raw):', bodyData);
+//      }
+//      next();
+//    });
+//  } else {
+//    next();
+ // }
+//});
 
 app.use(cors({
   origin: 'http://localhost:5173',
