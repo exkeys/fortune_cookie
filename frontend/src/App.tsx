@@ -14,9 +14,9 @@ import { useNavigation } from './hooks/useNavigation';
 import errorHandler from './utils/errorHandler';
 import performanceMonitor from './utils/performance';
 
-const App = () => {
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [role, setRole] = useState('');
+const App: React.FC = () => {
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
+  const [role, setRole] = useState<string>('');
   const { goTo } = useNavigation();
 
   return (
@@ -31,7 +31,7 @@ const App = () => {
       <Routes>
         <Route path="/" element={<IntroPage onMenuClick={() => setMenuOpen(true)} />} />
         <Route path="/main" element={<MainPage />} />
-        <Route path="/role" element={<RoleSelectPage onSelect={r => { setRole(r); goTo.concern(); }} />} />
+        <Route path="/role" element={<RoleSelectPage onSelect={(r: string) => { setRole(r); goTo.concern(); }} />} />
         <Route path="/concern" element={<ConcernInputPage role={role} />} />
         <Route path="/fortune" element={<FortuneCookiePage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -43,3 +43,5 @@ const App = () => {
 }
 
 export default App;
+
+

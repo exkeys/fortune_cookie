@@ -1,17 +1,27 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { User } from '../types';
 
-export const useAuth = () => {
-  const [user, setUser] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+interface AuthReturn {
+  user: User | null;
+  isLoggedIn: boolean;
+  isLoading: boolean;
+  login: (provider?: string) => Promise<void>;
+  logout: () => Promise<void>;
+  saveUserToDB: () => Promise<{ error: any }>;
+}
+
+export const useAuth = (): AuthReturn => {
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
 
   useEffect(() => {
     async function checkUser() {
       try {
         const { data } = await supabase.auth.getUser();
         if (data?.user) {
-          setUser(data.user);
+          setUser(data.user as User);
           setIsLoggedIn(true);
           localStorage.setItem('userId', data.user.id);
         } else {
@@ -32,7 +42,7 @@ export const useAuth = () => {
 
     const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        setUser(session.user);
+        setUser(session.user as User);
         setIsLoggedIn(true);
         localStorage.setItem('userId', session.user.id);
       } else {
@@ -48,7 +58,7 @@ export const useAuth = () => {
     };
   }, []);
 
-  const login = async (provider = 'kakao') => {
+  const login = async (provider: string = 'kakao'): Promise<void> => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({ provider });
       if (error) throw error;
@@ -58,7 +68,7 @@ export const useAuth = () => {
     }
   };
 
-  const logout = async () => {
+  const logout = async (): Promise<void> => {
     try {
       const { error } = await supabase.auth.signOut();
       if (error) throw error;
@@ -68,7 +78,7 @@ export const useAuth = () => {
     }
   };
 
-  const saveUserToDB = async () => {
+  const saveUserToDB = async (): Promise<{ error: any }> => {
     if (!user) return { error: 'No user found' };
 
     try {
@@ -102,3 +112,5 @@ export const useAuth = () => {
     saveUserToDB,
   };
 };
+
+

@@ -1,3 +1,5 @@
+import { Theme, Animation, Routes, ApiEndpoints, Messages } from '../types';
+
 // 앱 전체에서 사용되는 상수들
 export const COLORS = {
   primary: '#ff9800',
@@ -13,7 +15,7 @@ export const COLORS = {
   shadow: 'rgba(0,0,0,0.08)',
   shadowLight: 'rgba(0,0,0,0.10)',
   shadowHover: 'rgba(0,0,0,0.15)',
-};
+} as const;
 
 export const SIZES = {
   fontSize: {
@@ -41,7 +43,7 @@ export const SIZES = {
     paddingSmall: '14px 36px',
     paddingInput: '12px 20px',
   },
-};
+} as const;
 
 export const LAYOUT = {
   fullScreen: {
@@ -49,16 +51,16 @@ export const LAYOUT = {
     minWidth: '100vw',
     height: '100vh',
     width: '100vw',
-    position: 'fixed',
+    position: 'fixed' as const,
     top: 0,
     left: 0,
-    overflow: 'hidden',
+    overflow: 'hidden' as const,
   },
   container: {
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
+    display: 'flex' as const,
+    flexDirection: 'column' as const,
+    alignItems: 'center' as const,
+    justifyContent: 'center' as const,
     height: '100vh',
     width: '100vw',
   },
@@ -66,16 +68,16 @@ export const LAYOUT = {
     width: 420,
     maxWidth: '90%',
   },
-};
+} as const;
 
-export const API_ENDPOINTS = {
+export const API_ENDPOINTS: ApiEndpoints = {
   baseUrl: 'http://localhost:4000',
   ai: '/api/concerns/ai',
   save: '/api/concerns/save',
   concerns: '/api/concerns',
 };
 
-export const ROUTES = {
+export const ROUTES: Routes = {
   home: '/',
   main: '/main',
   role: '/role',
@@ -86,7 +88,7 @@ export const ROUTES = {
   history: '/history',
 };
 
-export const MESSAGES = {
+export const MESSAGES: Messages = {
   validation: {
     roleRequired: '역할을 입력해 주세요.',
     concernRequired: '고민을 입력해 주세요.',
@@ -107,7 +109,7 @@ export const MESSAGES = {
   },
 };
 
-export const ANIMATION = {
+export const ANIMATION: Animation = {
   duration: {
     fast: '0.2s',
     medium: '0.5s',
@@ -115,3 +117,5 @@ export const ANIMATION = {
   },
   easing: 'ease-in-out',
 };
+
+

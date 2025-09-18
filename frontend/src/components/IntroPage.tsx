@@ -5,7 +5,11 @@ import { useAuth } from '../hooks/useAuth';
 import { useNavigation } from '../hooks/useNavigation';
 import { MESSAGES } from '../constants';
 
-const UserHeader = () => {
+interface IntroPageProps {
+  onMenuClick: () => void;
+}
+
+const UserHeader: React.FC = () => {
   const { user } = useAuth();
 
   return (
@@ -37,11 +41,11 @@ const UserHeader = () => {
   );
 };
 
-const IntroPage = ({ onMenuClick }) => {
+const IntroPage: React.FC<IntroPageProps> = ({ onMenuClick }) => {
   const { user, isLoggedIn, saveUserToDB } = useAuth();
   const { goTo } = useNavigation();
 
-  const handleNext = async () => {
+  const handleNext = async (): Promise<void> => {
     if (!isLoggedIn) {
       alert(MESSAGES.validation.loginRequired);
       return;
@@ -96,3 +100,5 @@ const IntroPage = ({ onMenuClick }) => {
 }
 
 export default IntroPage;
+
+

@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '../constants';
+import { NavigationState } from '../types';
 
 export const useNavigation = () => {
   const navigate = useNavigate();
@@ -9,7 +10,7 @@ export const useNavigation = () => {
     main: () => navigate(ROUTES.main),
     role: () => navigate(ROUTES.role),
     concern: () => navigate(ROUTES.concern),
-    fortune: (state) => navigate(ROUTES.fortune, { state }),
+    fortune: (state?: NavigationState) => navigate(ROUTES.fortune, { state }),
     login: () => navigate(ROUTES.login),
     signup: () => navigate(ROUTES.signup),
     history: () => navigate(ROUTES.history),
@@ -23,3 +24,5 @@ export const useNavigation = () => {
     navigate,
   };
 };
+
+
