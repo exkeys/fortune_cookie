@@ -13,6 +13,14 @@ export const commonStyles = {
   
   container: {
     ...LAYOUT.container,
+    padding: '20px',
+    maxWidth: '800px',
+    width: '100%',
+    
+    '@media (max-width: 768px)': {
+      padding: '16px',
+      maxWidth: '100%',
+    },
   },
   
   title: {
@@ -24,8 +32,26 @@ export const commonStyles = {
     letterSpacing: 2,
     textShadow: `0 2px 8px ${COLORS.shadow}`,
     textAlign: 'center',
-    width: 'auto',
+    width: '100%',
     wordBreak: 'keep-all',
+    lineHeight: 1.4,
+    whiteSpace: 'normal',
+    overflow: 'visible',
+    textOverflow: 'unset',
+    padding: '0 10px',
+    
+    '@media (max-width: 768px)': {
+      fontSize: '1.6rem',
+      marginBottom: '1.5rem',
+      letterSpacing: 1,
+      lineHeight: 1.3,
+      padding: '0 5px',
+    },
+    
+    '@media (max-width: 480px)': {
+      fontSize: '1.4rem',
+      lineHeight: 1.2,
+    },
   },
   
   input: {
@@ -34,13 +60,18 @@ export const commonStyles = {
     borderRadius: SIZES.borderRadius.medium,
     border: `1px solid ${COLORS.border}`,
     marginBottom: SIZES.spacing.md,
-    width: LAYOUT.input.width,
-    maxWidth: LAYOUT.input.maxWidth,
+    width: '100%',
+    maxWidth: '500px',
     outline: 'none',
     transition: 'border-color 0.2s, box-shadow 0.2s',
     '&:focus': {
       borderColor: COLORS.primary,
       boxShadow: `0 0 0 2px ${COLORS.primary}20`,
+    },
+    
+    '@media (max-width: 768px)': {
+      fontSize: '16px', // iOS 줌 방지
+      padding: '12px 16px',
     },
   },
   
@@ -64,6 +95,7 @@ export const commonStyles = {
     boxShadow: `0 4px 16px ${COLORS.shadowLight}`,
     letterSpacing: 2,
     transition: 'background 0.2s, color 0.2s, transform 0.2s',
+    minWidth: '120px',
     '&:hover': {
       background: COLORS.primaryHover,
       color: COLORS.primary,
@@ -71,6 +103,12 @@ export const commonStyles = {
     },
     '&:active': {
       transform: 'translateY(0)',
+    },
+    
+    '@media (max-width: 768px)': {
+      fontSize: '1rem',
+      padding: '12px 20px',
+      minWidth: '100px',
     },
   },
   

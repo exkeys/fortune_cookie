@@ -1,5 +1,4 @@
 import React from 'react';
-import HamburgerMenu from './HamburgerMenu';
 import MainButton from './MainButton';
 import PageLayout from './common/PageLayout';
 import { useAuth } from '../hooks/useAuth';
@@ -71,7 +70,20 @@ const IntroPage = ({ onMenuClick }) => {
         style={{ paddingTop: 80 }}
       >
         <div style={{ position: 'absolute', top: 16, right: 32, zIndex: 200 }}>
-          <HamburgerMenu onClick={onMenuClick} />
+          <button
+            aria-label="메뉴"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: 36, 
+              cursor: 'pointer', 
+              color: '#ff9800', 
+              padding: 8 
+            }}
+            onClick={onMenuClick}
+          >
+            &#9776;
+          </button>
         </div>
         <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
           <MainButton onClick={handleNext}>

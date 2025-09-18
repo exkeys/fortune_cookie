@@ -8,7 +8,12 @@ export const config = {
   
   // CORS 설정
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+    origin: [
+      'http://localhost:3000',  // Vite 기본 포트
+      'http://localhost:5173',  // Vite 개발 서버
+      'http://localhost:8080',  // 추가 포트
+      process.env.FRONTEND_URL
+    ].filter(Boolean), // undefined 값 제거
     credentials: true
   },
   

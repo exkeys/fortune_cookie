@@ -58,7 +58,7 @@ const ConcernInputPage = ({ role }) => {
   };
 
   return (
-    <PageLayout title={`${role || '역할 미지정'}로서 고민을 한 줄로 정리해 보세요`}>
+    <PageLayout title={`${role || '역할 미지정'}으로서 고민을 한 줄로 정리해 보세요`}>
       <Input
         ref={inputRef}
         type="text"
@@ -73,7 +73,7 @@ const ConcernInputPage = ({ role }) => {
           }
         }}
       />
-      <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
         <Button
           onClick={handleSubmit}
           variant="secondary"

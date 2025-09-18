@@ -14,7 +14,7 @@ backend/
 │   ├── controllers/         # 컨트롤러 (요청/응답 처리)
 │   │   ├── authController.js
 │   │   └── concernController.js
-│   ├── services/            # 비즈니스 로직
+│   ├── services/            # 비즈니스 로직`
 │   │   ├── authService.js
 │   │   ├── concernService.js
 │   │   └── aiService.js

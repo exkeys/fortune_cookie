@@ -1,10 +1,12 @@
-// 모든 훅과 유틸리티를 한 곳에서 export
-export { useAuth } from './hooks/useAuth';
-export { useApi } from './hooks/useApi';
-export { useNavigation } from './hooks/useNavigation';
+import { StrictMode } from 'react';
+import { createRoot } from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import App from './App.jsx';
 
-export * from './constants';
-export * from './utils/validation';
-export * from './utils/storage';
-export * from './utils/helpers';
-export * from './styles/theme';
+createRoot(document.getElementById('root')).render(
+  React.createElement(StrictMode, null,
+    React.createElement(BrowserRouter, null,
+      React.createElement(App, null)
+    )
+  )
+);

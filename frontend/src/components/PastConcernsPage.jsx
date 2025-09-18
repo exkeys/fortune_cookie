@@ -7,6 +7,7 @@ import {
   TrailingActions
 } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
+import { useNavigation } from '../hooks/useNavigation';
 
 
 const Container = styled.div`
@@ -20,9 +21,14 @@ const Container = styled.div`
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: 0;
+  justify-content: flex-start;
+  padding: 20px;
   z-index: 0;
+  overflow-y: auto;
+  
+  @media (max-width: 768px) {
+    padding: 10px;
+  }
 `;
 
 const CardBox = styled.div`
@@ -30,18 +36,30 @@ const CardBox = styled.div`
   border-radius: 24px;
   box-shadow: 0 4px 24px #0002;
   padding: 40px 24px 32px 24px;
-  max-width: 500px;
-  width: 95vw;
-  margin: 40px 0;
+  max-width: 600px;
+  width: 100%;
+  margin: 20px 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+  
+  @media (max-width: 768px) {
+    padding: 20px 16px;
+    margin: 10px 0;
+    max-width: 100%;
+  }
 `;
 
 const Title = styled.h2`
   color: #ff9800;
   font-size: 2rem;
   margin-bottom: 24px;
+  text-align: center;
+  
+  @media (max-width: 768px) {
+    font-size: 1.5rem;
+    margin-bottom: 16px;
+  }
 `;
 
 const List = styled.div`
@@ -55,13 +73,19 @@ const Item = styled.div`
   background: #fffefb;
   border-radius: 16px;
   box-shadow: 0 2px 8px #0001;
-  padding: 20px 20px 16px 20px;
+  padding: 20px;
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
   position: relative;
   transition: box-shadow 0.2s;
   min-height: 90px;
+  width: 100%;
+  
+  @media (max-width: 768px) {
+    padding: 16px;
+    min-height: 80px;
+  }
 `;
 
 const Info = styled.div`
@@ -81,12 +105,24 @@ const Concern = styled.div`
   font-size: 1.1rem;
   margin-bottom: 4px;
   white-space: pre-line;
+  word-break: break-word;
+  line-height: 1.4;
+  
+  @media (max-width: 768px) {
+    font-size: 1rem;
+  }
 `;
 
 const Answer = styled.div`
   color: #009688;
   font-size: 1rem;
   margin-bottom: 2px;
+  word-break: break-word;
+  line-height: 1.4;
+  
+  @media (max-width: 768px) {
+    font-size: 0.9rem;
+  }
 `;
 
 const DateText = styled.div`
@@ -107,6 +143,43 @@ const DeleteBtn = styled.button`
   }
 `;
 
+const BackButton = styled.button`
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  background: #ff9800;
+  color: white;
+  border: none;
+  border-radius: 50px;
+  padding: 12px 20px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3);
+  transition: all 0.3s ease;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  
+  &:hover {
+    background: #f57c00;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(255, 152, 0, 0.4);
+  }
+  
+  &:active {
+    transform: translateY(0);
+  }
+  
+  @media (max-width: 768px) {
+    top: 15px;
+    left: 15px;
+    padding: 10px 16px;
+    font-size: 0.9rem;
+  }
+`;
+
 
 function PastConcernsPage({ userId }) {
   // userId가 없으면 아무것도 렌더링하지 않음 (빈 화면)
@@ -114,6 +187,7 @@ function PastConcernsPage({ userId }) {
     return null;
   }
 
+  const { goTo } = useNavigation();
   const [concerns, setConcerns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -174,6 +248,9 @@ function PastConcernsPage({ userId }) {
 
   return (
     <Container>
+      <BackButton onClick={goTo.home}>
+        ← 뒤로가기
+      </BackButton>
       <CardBox>
         <Title>지난 고민 목록</Title>
         {loading ? (

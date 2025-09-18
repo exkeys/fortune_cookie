@@ -29,7 +29,7 @@ const RoleSelectPage = ({ onSelect }) => {
         error={error}
         onKeyDown={e => { if (e.key === 'Enter') handleNext(); }}
       />
-      <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
+      <div style={{ width: '100%', display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
         <MainButton onClick={handleNext}>다음</MainButton>
       </div>
     </PageLayout>

@@ -45,7 +45,13 @@ const FortuneCookiePage = () => {
   return (
     <PageLayout style={{ justifyContent: 'center' }}>
       <FortuneCookie answer={answer} />
-      <div style={{ marginTop: 40, display: 'flex', gap: 24 }}>
+      <div style={{ 
+        marginTop: 40, 
+        display: 'flex', 
+        gap: 24, 
+        justifyContent: 'center',
+        width: '100%'
+      }}>
         <Button
           onClick={handleSave}
           disabled={saved || saveStatus === 'saving'}

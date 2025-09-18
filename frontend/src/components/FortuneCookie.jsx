@@ -14,6 +14,7 @@ function FortuneCookie({ answer }) {
   const [isOpen, setIsOpen] = useState(false);
   const [isFinish, setIsFinish] = useState(false);
   const [message, setMessage] = useState('');
+  const [containerSize, setContainerSize] = useState({ width: 1200, height: 280 });
   const bgAudioRef = useRef(null);
   const crackAudioRef = useRef(null);
 
@@ -34,21 +35,70 @@ function FortuneCookie({ answer }) {
     }, 750);
   };
 
-  const getMessage = () => {
-    if (answer) {
-      setMessage(answer);
+  // 메시지 길이에 따른 컨테이너 크기 계산 (한 줄로 강제, 충분한 여백)
+  const calculateContainerSize = (text) => {
+    if (!text) return { width: 1200, height: 280 };
+    
+    const textLength = text.length;
+    
+    // 텍스트 길이에 따라 종이를 충분히 크게 만들어 한 줄로 강제
+    // 각 문자당 약 20-25px 정도의 공간을 확보
+    const estimatedWidth = Math.max(800, textLength * 25 + 200);
+    const estimatedHeight = Math.max(200, 280);
+    
+    if (textLength <= 15) {
+      return { width: 1000, height: 240 };
+    } else if (textLength <= 25) {
+      return { width: 1200, height: 280 };
+    } else if (textLength <= 35) {
+      return { width: 1500, height: 320 };
+    } else if (textLength <= 45) {
+      return { width: 1800, height: 360 };
+    } else if (textLength <= 55) {
+      return { width: 2100, height: 400 };
+    } else if (textLength <= 65) {
+      return { width: 2400, height: 440 };
+    } else if (textLength <= 75) {
+      return { width: 2700, height: 480 };
     } else {
-      const keys = Object.keys(messages);
-      const index = Math.floor(Math.random() * keys.length);
-      setMessage(messages[index]);
+      return { width: 3000, height: 520 };
     }
   };
 
+  const getMessage = () => {
+    let newMessage = '';
+    if (answer) {
+      newMessage = answer;
+    } else {
+      const keys = Object.keys(messages);
+      const index = Math.floor(Math.random() * keys.length);
+      newMessage = messages[index];
+    }
+    
+    setMessage(newMessage);
+    // 메시지 길이에 따라 컨테이너 크기 조정
+    setContainerSize(calculateContainerSize(newMessage));
+  };
+
   return (
-    <div className="min-h-screen" style={{ width: '100vw', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div className="min-h-screen" style={{ 
+      width: '100vw', 
+      height: '100vh', 
+      display: 'flex', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      position: 'relative'
+    }}>
       <audio ref={bgAudioRef} src={soundBgs} preload="auto" />
       <audio ref={crackAudioRef} src={soundCrack} preload="auto" />
-  <div className="box-container flex justify-center relative transition duration-500" style={{ width: 700, height: 520, position: 'relative' }}>
+      <div className="box-container flex justify-center relative transition duration-500" style={{ 
+        width: 700, 
+        height: 520, 
+        position: 'relative',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
         {/* 포춘쿠키 애니메이션 */}
         {!isCracked && (
           <div className="box-cookie absolute transition-opacity duration-500" style={{ opacity: 1, left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
@@ -71,32 +121,47 @@ function FortuneCookie({ answer }) {
           </div>
         )}
         {isOpen && (
-          <div className="box-slip absolute flex items-center justify-center" style={{ width: 1100, height: 260, left: '50%', top: '50%', transform: 'translate(-50%, -50%)' }}>
-            <img src={imageSlip} alt="slip" style={{ width: 1100, height: 260, position: 'absolute', left: 0, top: 0 }} />
+          <div className="box-slip absolute flex items-center justify-center" style={{ 
+            width: containerSize.width, 
+            height: containerSize.height, 
+            left: '50%', 
+            top: '50%', 
+            transform: 'translate(-50%, -50%)',
+            transition: 'all 0.5s ease-in-out'
+          }}>
+            <img src={imageSlip} alt="slip" style={{ 
+              width: containerSize.width, 
+              height: containerSize.height, 
+              position: 'absolute', 
+              left: 0, 
+              top: 0 
+            }} />
             <div
+              className="fortune-message"
               style={{
                 position: 'absolute',
-                left: 0,
-                top: 0,
+                left: '0',
+                top: '50%',
+                transform: 'translate(0, -50%)',
                 width: '100%',
-                height: '100%',
+                height: `calc(100% - 100px)`,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                fontSize: 28,
+                fontSize: Math.max(16, Math.min(28, containerSize.width / 60)),
                 color: '#333',
                 fontWeight: 600,
-                padding: '0 100px',
                 textAlign: 'center',
-                wordBreak: 'break-word',
-                lineHeight: 1.4,
-                whiteSpace: 'pre-line',
-                overflowWrap: 'break-word',
+                wordBreak: 'keep-all',
+                lineHeight: 1.2,
+                whiteSpace: 'nowrap',
+                overflow: 'visible',
                 opacity: isFinish ? 1 : 0,
-                transition: 'opacity 0.5s',
+                transition: 'all 0.5s ease-in-out',
                 zIndex: 2,
-                maxHeight: '100%',
-                overflowY: 'auto'
+                padding: '0 100px',
+                margin: '0',
+                boxSizing: 'border-box'
               }}
             >
               {message}
@@ -104,6 +169,26 @@ function FortuneCookie({ answer }) {
           </div>
         )}
       </div>
+      
+      {/* CSS 스타일 - 웹 전용 */}
+      <style jsx>{`
+        .fortune-message {
+          /* 웹에서만 사용하므로 모바일 고려 없음 */
+          text-align: center !important;
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          white-space: nowrap !important;
+          word-break: keep-all !important;
+          overflow: visible !important;
+          box-sizing: border-box !important;
+        }
+        
+        .box-slip {
+          /* 웹에서만 사용하므로 반응형 제거 */
+          transition: all 0.5s ease-in-out !important;
+        }
+      `}</style>
     </div>
   );
 }
