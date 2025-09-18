@@ -1,69 +1,19 @@
 import MainButton from './MainButton';
-import { useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
-import { supabase } from '../supabaseClient';
+import PageLayout from './common/PageLayout';
+import { useNavigation } from '../hooks/useNavigation';
 
-function MainPage() {
-  const navigate = useNavigate();
-
-  // IntroPage에서 user 저장을 처리하므로 MainPage에서는 불필요
+const MainPage = () => {
+  const { goTo } = useNavigation();
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        minWidth: '100vw',
-        height: '100vh',
-        width: '100vw',
-        background: '#fffbe6',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          width: '100vw',
-        }}
-      >
-        <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
-          <h1
-            style={{
-              fontSize: 56,
-              fontWeight: 800,
-              color: '#ff9800',
-              margin: 0,
-              marginBottom: 40,
-              letterSpacing: 2,
-              textShadow: '0 2px 8px rgba(0,0,0,0.08)',
-              textAlign: 'center',
-              width: 'auto',
-              wordBreak: 'keep-all',
-            }}
-          >
-            어떤 고민을 하고 있나요?
-          </h1>
-        </div>
-        <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
-          <MainButton
-            onClick={() => navigate('/role')}
-          >
-            다음
-          </MainButton>
-        </div>
+    <PageLayout title="어떤 고민을 하고 있나요?">
+      <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
+        <MainButton onClick={() => goTo.role()}>
+          다음
+        </MainButton>
       </div>
-    </div>
+    </PageLayout>
   );
-}
+};
 
 export default MainPage;

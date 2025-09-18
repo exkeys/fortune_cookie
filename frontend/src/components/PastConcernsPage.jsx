@@ -110,9 +110,7 @@ const DeleteBtn = styled.button`
 
 function PastConcernsPage({ userId }) {
   // userId가 없으면 아무것도 렌더링하지 않음 (빈 화면)
-  console.log('[DEBUG][PastConcernsPage] userId prop:', userId);
   if (!userId) {
-    console.log('[DEBUG][PastConcernsPage] userId is falsy, return null');
     return null;
   }
 
@@ -124,12 +122,9 @@ function PastConcernsPage({ userId }) {
     async function fetchConcerns() {
       setLoading(true);
       setError('');
-      console.log('[DEBUG][PastConcernsPage] fetchConcerns for userId:', userId);
       try {
         const res = await fetch(`http://localhost:4000/api/concerns?userId=${userId}`);
-        console.log('[DEBUG][PastConcernsPage] fetch status:', res.status);
         const data = await res.json();
-        console.log('[DEBUG][PastConcernsPage] fetch data:', data);
         if (res.ok) {
           setConcerns(Array.isArray(data.concerns) ? data.concerns : []);
         } else {
@@ -137,7 +132,6 @@ function PastConcernsPage({ userId }) {
         }
       } catch (e) {
         setError('서버 오류');
-        console.log('[DEBUG][PastConcernsPage] fetch error:', e);
       }
       setLoading(false);
     }

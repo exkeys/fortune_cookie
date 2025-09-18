@@ -1,71 +1,55 @@
 
 
-import { useEffect, useState } from 'react';
-import { supabase } from '../supabaseClient';
+import PageLayout from './common/PageLayout';
+import Button from './common/Button';
+import { useAuth } from '../hooks/useAuth';
+import { MESSAGES } from '../constants';
 
-function LoginPage() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    async function checkUser() {
-      const { data } = await supabase.auth.getUser();
-      if (data && data.user) {
-        setIsLoggedIn(true);
-        setUser(data.user);
-        // 로그인된 경우 userId를 localStorage에 저장
-        localStorage.setItem('userId', data.user.id);
-      } else {
-        setIsLoggedIn(false);
-        setUser(null);
-        // 로그아웃 시 userId 제거
-        localStorage.removeItem('userId');
-      }
-    }
-    checkUser();
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      checkUser();
-    });
-    return () => {
-      listener?.subscription.unsubscribe();
-    };
-  }, []);
+const LoginPage = () => {
+  const { user, isLoggedIn, login } = useAuth();
 
   const handleKakaoLogin = async () => {
-    await supabase.auth.signInWithOAuth({ provider: 'kakao' });
+    try {
+      await login('kakao');
+    } catch (error) {
+      console.error('로그인 에러:', error);
+    }
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', background: '#f5f5f5' }}>
-      <h2>로그인</h2>
+    <PageLayout 
+      title="로그인"
+      style={{ background: '#f5f5f5' }}
+    >
       {isLoggedIn ? (
-        <div style={{ marginTop: 32, fontSize: 20, color: '#009688', fontWeight: 700, textAlign: 'center' }}>
+        <div style={{ 
+          marginTop: 32, 
+          fontSize: 20, 
+          color: '#009688', 
+          fontWeight: 700, 
+          textAlign: 'center' 
+        }}>
           {user?.email || '로그인 완료!'}<br />
-          <span style={{ fontSize: 24 }}>🎉</span> 환영합니다!
+          <span style={{ fontSize: 24 }}>🎉</span> {MESSAGES.success.welcome}
         </div>
       ) : (
-        <button
+        <Button
           onClick={handleKakaoLogin}
+          variant="secondary"
+          size="small"
           style={{
             marginTop: 32,
-            padding: '14px 40px',
-            fontSize: 20,
             background: '#fee500',
             color: '#181600',
-            border: 'none',
-            borderRadius: 8,
-            fontWeight: 700,
-            cursor: 'pointer',
-            boxShadow: '0 2px 8px #0001',
             display: 'flex',
             alignItems: 'center',
             gap: 10
           }}
         >
           <span style={{ fontSize: 24 }}>🐤</span> 카카오로 로그인
-        </button>
+        </Button>
       )}
-    </div>
+    </PageLayout>
   );
 }
 

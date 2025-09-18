@@ -9,24 +9,19 @@ function HistoryPage() {
   useEffect(() => {
     async function fetchUser() {
       const { data } = await supabase.auth.getUser();
-      console.log('[DEBUG][HistoryPage] getUser data:', data);
       if (data && data.user) {
         setUserId(data.user.id);
-        console.log('[DEBUG][HistoryPage] setUserId:', data.user.id);
         // localStorage에도 저장 (다른 컴포넌트와의 호환성을 위해)
         localStorage.setItem('userId', data.user.id);
       } else {
         setUserId('');
-        console.log('[DEBUG][HistoryPage] setUserId: (empty)');
         // localStorage에서도 제거
         localStorage.removeItem('userId');
       }
       setChecked(true);
-      console.log('[DEBUG][HistoryPage] setChecked: true');
     }
     fetchUser();
     const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      console.log('[DEBUG][HistoryPage] onAuthStateChange triggered');
       fetchUser();
     });
     return () => {
@@ -34,13 +29,11 @@ function HistoryPage() {
     };
   }, []);
 
-  console.log('[DEBUG][HistoryPage] checked:', checked, 'userId:', userId);
   if (!checked) return null; // 아직 체크 중이면 아무것도 렌더링하지 않음
 
   return (
     <>
       <PastConcernsPage userId={userId} />
-      {console.log('[DEBUG][HistoryPage] PastConcernsPage rendered with userId:', userId)}
       {!userId && (
         <div
           style={{

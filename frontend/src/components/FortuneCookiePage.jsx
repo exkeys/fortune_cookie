@@ -1,38 +1,37 @@
 
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 import FortuneCookie from './FortuneCookie';
+import PageLayout from './common/PageLayout';
+import Button from './common/Button';
+import { useAuth } from '../hooks/useAuth';
+import { useApi } from '../hooks/useApi';
+import { useNavigation } from '../hooks/useNavigation';
+import { MESSAGES } from '../constants';
 
 
-function FortuneCookiePage() {
+const FortuneCookiePage = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const { role, concern, answer } = location.state || {};
   const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'success', 'error'
   const [saved, setSaved] = useState(false);
+  
+  const { user } = useAuth();
+  const { saveConcern } = useApi();
+  const { goTo } = useNavigation();
 
   const handleSave = async () => {
-    if (saved) return;
+    if (saved || !user) return;
+    
     setSaveStatus('saving');
     try {
-      // supabase에서 userId 가져오기
-      const { data: { user } } = await import('../supabaseClient').then(m => m.supabase.auth.getUser());
-      if (!user) {
+      const { error } = await saveConcern(role, concern, answer, user.id);
+      
+      if (error) {
         setSaveStatus('error');
-        alert('로그인이 필요합니다.');
-        return;
-      }
-      const userId = user.id;
-      const res = await fetch('http://localhost:4000/api/concerns/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ persona: role, concern, aiAnswer: answer, userId })
-      });
-      if (res.ok) {
+      } else {
         setSaveStatus('success');
         setSaved(true);
-      } else {
-        setSaveStatus('error');
       }
     } catch (e) {
       setSaveStatus('error');
@@ -40,69 +39,46 @@ function FortuneCookiePage() {
   };
 
   const handleFinish = () => {
-    navigate('/');
+    goTo.home();
   };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        minWidth: '100vw',
-        height: '100vh',
-        width: '100vw',
-        background: '#fffbe6',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        overflow: 'hidden',
-      }}
-    >
+    <PageLayout style={{ justifyContent: 'center' }}>
       <FortuneCookie answer={answer} />
       <div style={{ marginTop: 40, display: 'flex', gap: 24 }}>
-        <button
+        <Button
           onClick={handleSave}
           disabled={saved || saveStatus === 'saving'}
+          variant="secondary"
+          size="small"
           style={{
-            padding: '14px 36px',
-            fontSize: 20,
-            background: saved ? '#bdbdbd' : '#ff9800',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            cursor: saved ? 'not-allowed' : 'pointer',
-            fontWeight: 700,
-            boxShadow: '0 2px 8px #0001',
-            transition: 'background 0.2s',
+            background: saved ? '#4caf50' : undefined,
+            color: saved ? '#fff' : undefined,
+            cursor: saved ? 'default' : 'pointer',
           }}
         >
-          {saveStatus === 'saving' ? '저장 중...' : saved ? '저장 완료' : '저장하기'}
-        </button>
-        <button
+          {saveStatus === 'saving' ? MESSAGES.loading.saving : 
+           saved ? '✅ ' + MESSAGES.success.saved : '저장하기'}
+        </Button>
+        <Button
           onClick={handleFinish}
-          style={{
-            padding: '14px 36px',
-            fontSize: 20,
-            background: '#ff9800',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 8,
-            cursor: 'pointer',
-            fontWeight: 700,
-            boxShadow: '0 2px 8px #0001',
-            transition: 'background 0.2s',
-          }}
+          variant="secondary"
+          size="small"
         >
           마침
-        </button>
+        </Button>
       </div>
       {saveStatus === 'error' && (
-        <div style={{ color: 'red', marginTop: 16, fontWeight: 600 }}>저장에 실패했습니다. 다시 시도해 주세요.</div>
+        <div style={{ 
+          color: 'red', 
+          marginTop: 16, 
+          fontWeight: 600,
+          textAlign: 'center'
+        }}>
+          {MESSAGES.error.saveFailed}
+        </div>
       )}
-    </div>
+    </PageLayout>
   );
 }
 

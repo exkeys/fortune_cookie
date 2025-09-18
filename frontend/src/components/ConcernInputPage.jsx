@@ -1,164 +1,88 @@
 
-
 import { useState, useRef, useEffect } from 'react';
+import Input from './common/Input';
+import PageLayout from './common/PageLayout';
+import Button from './common/Button';
+import LoadingSpinner from './common/LoadingSpinner';
+import { useAuth } from '../hooks/useAuth';
+import { useApi } from '../hooks/useApi';
+import { useNavigation } from '../hooks/useNavigation';
+import { validateConcern } from '../utils/validation';
+import { MESSAGES } from '../constants';
 
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
-import { supabase } from '../supabaseClient'; // supabaseClient.js 경로에 맞게 수정
 
-
-function ConcernInputPage({ role }) {
-
+const ConcernInputPage = ({ role }) => {
   const [concern, setConcern] = useState('');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
   const inputRef = useRef(null);
+  
+  const { user, isLoggedIn } = useAuth();
+  const { getAiAnswer } = useApi();
+  const { goTo } = useNavigation();
 
   useEffect(() => {
     inputRef.current && inputRef.current.focus();
   }, []);
 
-    const handleSubmit = async () => {
-      console.log('[DEBUG] handleSubmit called');
-      setError('');
-      if (!concern.trim()) {
-        setError('고민을 입력해 주세요.');
-        console.log('[DEBUG] concern is empty');
+  const handleSubmit = async () => {
+    setError('');
+    
+    const validation = validateConcern(concern);
+    if (!validation.isValid) {
+      setError(validation.message);
+      return;
+    }
+
+    if (!isLoggedIn) {
+      setError(MESSAGES.validation.loginRequired);
+      return;
+    }
+
+    try {
+      const { data, error: apiError } = await getAiAnswer(role, concern);
+      
+      if (apiError) {
+        setError(MESSAGES.error.aiFailed);
         return;
       }
-      setLoading(true);
-      try {
-        console.log('[DEBUG] before getUser');
-        const { data: { user } } = await supabase.auth.getUser();
-        console.log('[DEBUG] user:', user);
-        if (!user) {
-          setError('로그인이 필요합니다.');
-          setLoading(false);
-          console.log('[DEBUG] user is null');
-          return;
-        }
-        console.log('[DEBUG] userId to save:', user.id);
-        console.log('[DEBUG] role:', role, 'concern:', concern);
-        // 1. AI 답변 요청 (fetch 사용, Content-Type 명확히 지정)
-        const aiRes = await fetch('http://localhost:4000/api/concerns/ai', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            persona: role,
-            concern
-          })
-        });
-        console.log('[DEBUG] aiRes status:', aiRes.status);
-        if (!aiRes.ok) {
-          const errData = await aiRes.json().catch(() => ({}));
-          console.log('[DEBUG] aiRes error:', errData);
-          throw new Error(errData.error || 'AI 답변 요청 실패');
-        }
-        const aiData = await aiRes.json();
-        console.log('[DEBUG] aiData:', aiData);
-        const aiAnswer = aiData.answer;
 
-        // 2. DB 저장 요청 (userId 포함)
-        // [자동 저장 비활성화] 아래 코드를 주석 처리하면 FortuneCookiePage에서만 저장됩니다.
-        // console.log('[DEBUG] DB 저장 요청 userId:', user.id);
-        // await axios.post('http://localhost:4000/api/concerns/save', {
-        //   persona: role,
-        //   concern,
-        //   aiAnswer,
-        //   userId: user.id
-        // });
-
-        // 3. FortuneCookiePage로 이동
-        console.log('[DEBUG] navigate to /fortune', { role, concern, answer: aiAnswer });
-        navigate('/fortune', {
-          state: {
-            role,
-            concern,
-            answer: aiAnswer
-          }
-        });
-      } catch (err) {
-        setError('AI 답변 요청 또는 저장에 실패했습니다.');
-        console.log('[DEBUG] error:', err);
-      }
-      setLoading(false);
-    };
+      goTo.fortune({
+        role,
+        concern,
+        answer: data.answer
+      });
+    } catch (err) {
+      setError(MESSAGES.error.aiFailed);
+      console.error('AI 요청 에러:', err);
+    }
+  };
 
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        minWidth: '100vw',
-        height: '100vh',
-        width: '100vw',
-        background: '#fffbe6',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'center',
-        alignItems: 'center',
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        overflow: 'hidden',
-      }}
-    >
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100vh',
-          width: '100vw',
+    <PageLayout title={`${role || '역할 미지정'}로서 고민을 한 줄로 정리해 보세요`}>
+      <Input
+        ref={inputRef}
+        type="text"
+        value={concern}
+        onChange={e => setConcern(e.target.value)}
+        placeholder="고민을 입력하세요"
+        error={error}
+        onKeyDown={e => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            handleSubmit();
+          }
         }}
-      >
-        <h1
-          style={{
-            fontSize: 56,
-            fontWeight: 800,
-            color: '#ff9800',
-            margin: 0,
-            marginBottom: 40,
-            letterSpacing: 2,
-            textShadow: '0 2px 8px rgba(0,0,0,0.08)',
-            textAlign: 'center',
-            width: 'auto',
-            wordBreak: 'keep-all',
-          }}
+      />
+      <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
+        <Button
+          onClick={handleSubmit}
+          variant="secondary"
+          size="small"
         >
-          {role ? <b>{role}</b> : '역할 미지정'}로서 고민을 한 줄로 정리해 보세요
-        </h1>
-        <input
-          ref={inputRef}
-          type="text"
-          value={concern}
-          onChange={e => setConcern(e.target.value)}
-          placeholder="고민을 입력하세요"
-          style={{ fontSize: 20, padding: '12px 20px', borderRadius: 12, border: '1px solid #ffb300', marginBottom: 16, width: 420, maxWidth: '90%' }}
-          onKeyDown={e => {
-            if (e.key === 'Enter') {
-              e.preventDefault(); // 중복 방지
-              handleSubmit();
-            }
-          }}
-          disabled={loading}
-        />
-        {error && <div style={{ color: 'red', marginBottom: 12 }}>{error}</div>}
-        <div style={{ width: '100vw', display: 'flex', justifyContent: 'center' }}>
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={loading}
-            style={{ fontSize: 20, padding: '10px 40px', borderRadius: 12, background: '#ffb300', color: '#fff', border: 'none', fontWeight: 700, cursor: 'pointer' }}
-          >
-            {loading ? 'AI가 답변 중...' : '다음'}
-          </button>
-        </div>
+          다음
+        </Button>
       </div>
-    </div>
+    </PageLayout>
   );
 }
 
