@@ -55,35 +55,46 @@ const FortuneCookiePage = () => {
   return (
     <PageLayout style={{ justifyContent: 'center' }}>
       <FortuneCookie answer={answer} />
-      <div style={{ 
-        marginTop: 40, 
-        display: 'flex', 
-        flexDirection: 'column',
-        gap: 16, 
-        alignItems: 'center',
-        width: '100%',
-        maxWidth: 400
-      }}>
-        {/* 첫 번째 줄: 다시 질문하기, 저장하기 */}
-        <div style={{ 
-          display: 'flex', 
-          gap: 16, 
+      <div
+        style={{
+          marginTop: 350,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          alignItems: 'center',
           width: '100%',
-          justifyContent: 'center'
-        }}>
+          maxWidth: 900,
+        }}
+      >
+        {/* 첫 번째 줄: 다시 질문하기, 저장하기 */}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: 16,
+            width: '100%',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <Button
             onClick={handleRetry}
             variant="primary"
             size="medium"
             style={{
-              flex: 1,
+              minWidth: '180px',
+              height: '60px',
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               border: 'none',
               borderRadius: 12,
-              padding: '12px 24px',
+              padding: '8px 24px',
               fontWeight: 600,
               boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
               transition: 'all 0.3s ease',
+              flexShrink: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
             }}
           >
             🔄 다시 질문하기
@@ -94,36 +105,49 @@ const FortuneCookiePage = () => {
             variant="secondary"
             size="medium"
             style={{
-              flex: 1,
-              background: saved ? '#4caf50' : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+              minWidth: '150px',
+              height: '60px',
+              background: saved
+                ? '#4caf50'
+                : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
               color: '#fff',
               border: 'none',
               borderRadius: 12,
-              padding: '12px 24px',
-              fontWeight: 600,
-              boxShadow: saved ? '0 4px 15px rgba(76, 175, 80, 0.3)' : '0 4px 15px rgba(240, 147, 251, 0.3)',
+              padding: '8px 24px',
+              fontWeight: 700,
+              boxShadow: saved
+                ? '0 4px 15px rgba(76, 175, 80, 0.3)'
+                : '0 4px 15px rgba(240, 147, 251, 0.3)',
               transition: 'all 0.3s ease',
               cursor: saved ? 'default' : 'pointer',
+              flexShrink: 0,
             }}
           >
-            {saveStatus === 'saving' ? '⏳ 저장 중...' : 
-             saved ? '✅ 저장됨' : '💾 저장하기'}
+            {saveStatus === 'saving'
+              ? '⏳ 저장 중...'
+              : saved
+              ? '✅ 저장됨'
+              : '💾 저장하기'}
           </Button>
         </div>
-
         {/* 두 번째 줄: 공유하기, 마침 */}
-        <div style={{ 
-          display: 'flex', 
-          gap: 16, 
-          width: '100%',
-          justifyContent: 'center'
-        }}>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            gap: 16,
+            width: '100%',
+            justifyContent: 'center',
+            flexWrap: 'wrap',
+          }}
+        >
           <Button
             onClick={handleShare}
             variant="secondary"
             size="medium"
             style={{
-              flex: 1,
+              minWidth: '150px',
+              height: '60px',
               background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
               color: '#fff',
               border: 'none',
@@ -132,6 +156,7 @@ const FortuneCookiePage = () => {
               fontWeight: 600,
               boxShadow: '0 4px 15px rgba(79, 172, 254, 0.3)',
               transition: 'all 0.3s ease',
+              flexShrink: 0,
             }}
           >
             📤 공유하기
@@ -141,7 +166,8 @@ const FortuneCookiePage = () => {
             variant="secondary"
             size="medium"
             style={{
-              flex: 1,
+              minWidth: '150px',
+              height: '60px',
               background: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
               color: '#333',
               border: 'none',
@@ -150,6 +176,7 @@ const FortuneCookiePage = () => {
               fontWeight: 600,
               boxShadow: '0 4px 15px rgba(168, 237, 234, 0.3)',
               transition: 'all 0.3s ease',
+              flexShrink: 0,
             }}
           >
             🏠 마침
