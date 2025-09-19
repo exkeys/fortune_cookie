@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import FortuneCookie from './FortuneCookie';
 import PageLayout from './common/PageLayout';
@@ -8,19 +8,31 @@ import ShareModal from './ShareModal';
 import { useAuth } from '../hooks/useAuth';
 import { useApi } from '../hooks/useApi';
 import { useNavigation } from '../hooks/useNavigation';
+import { useAnalytics } from '../hooks/useAnalytics';
 import { MESSAGES } from '../constants';
 
 
-const FortuneCookiePage = () => {
+const FortuneCookiePage = ({ onMenuClick }) => {
   const location = useLocation();
   const { role, concern, answer } = location.state || {};
   const [saveStatus, setSaveStatus] = useState(''); // '', 'saving', 'success', 'error'
   const [saved, setSaved] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+
   
   const { user } = useAuth();
   const { saveConcern } = useApi();
   const { goTo } = useNavigation();
+  const { trackPageEnter, trackPageExit } = useAnalytics();
+
+  // 페이지 진입/이탈 추적
+  useEffect(() => {
+    trackPageEnter('fortune_cookie');
+    
+    return () => {
+      trackPageExit('fortune_cookie');
+    };
+  }, []);
 
   const handleSave = async () => {
     if (saved || !user) return;
@@ -54,6 +66,24 @@ const FortuneCookiePage = () => {
 
   return (
     <PageLayout style={{ justifyContent: 'center' }}>
+      {onMenuClick && (
+        <div style={{ position: 'absolute', top: 16, right: 32, zIndex: 200 }}>
+          <button
+            aria-label="메뉴"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: 36, 
+              cursor: 'pointer', 
+              color: '#ff9800', 
+              padding: 8 
+            }}
+            onClick={onMenuClick}
+          >
+            &#9776;
+          </button>
+        </div>
+      )}
       <FortuneCookie answer={answer} />
       <div
         style={{

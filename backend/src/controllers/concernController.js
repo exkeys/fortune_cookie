@@ -62,6 +62,28 @@ export class ConcernController {
     }
   }
   
+  // 고민 저장 상태 업데이트
+  static async updateConcernSaveStatus(req, res, next) {
+    try {
+      const { id } = req.params;
+      const { isSaved } = req.body;
+      
+      if (!id) {
+        return res.status(400).json({ error: 'id가 필요합니다' });
+      }
+      
+      if (typeof isSaved !== 'boolean') {
+        return res.status(400).json({ error: 'isSaved는 boolean 값이어야 합니다' });
+      }
+      
+      const result = await ConcernService.updateConcernSaveStatus(id, isSaved);
+      res.json(result);
+    } catch (error) {
+      logger.error('고민 저장 상태 업데이트 컨트롤러 에러', error);
+      next(error);
+    }
+  }
+
   // 고민 삭제
   static async deleteConcern(req, res, next) {
     try {

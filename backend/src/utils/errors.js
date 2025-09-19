@@ -1,3 +1,5 @@
+import { logger } from './logger.js';
+
 // 커스텀 에러 클래스들
 export class AppError extends Error {
   constructor(message, statusCode = 500, isOperational = true) {

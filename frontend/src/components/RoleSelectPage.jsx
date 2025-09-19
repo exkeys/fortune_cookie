@@ -5,9 +5,12 @@ import PageLayout from './common/PageLayout';
 import { validateRole } from '../utils/validation';
 import { MESSAGES } from '../constants';
 
-const RoleSelectPage = ({ onSelect }) => {
+const RoleSelectPage = ({ onSelect, onMenuClick }) => {
   const [role, setRole] = useState('');
   const [error, setError] = useState('');
+
+  // 디버깅: onMenuClick prop 확인
+  console.log('RoleSelectPage - onMenuClick:', onMenuClick);
 
   const handleNext = () => {
     const validation = validateRole(role);
@@ -21,6 +24,24 @@ const RoleSelectPage = ({ onSelect }) => {
 
   return (
     <PageLayout title="오늘은 어떤 역할로 고민을 나누고 싶으신가요?">
+      {onMenuClick && (
+        <div style={{ position: 'absolute', top: 16, right: 32, zIndex: 200 }}>
+          <button
+            aria-label="메뉴"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: 36, 
+              cursor: 'pointer', 
+              color: '#ff9800', 
+              padding: 8 
+            }}
+            onClick={onMenuClick}
+          >
+            &#9776;
+          </button>
+        </div>
+      )}
       <Input
         type="text"
         value={role}

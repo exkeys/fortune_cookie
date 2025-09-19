@@ -296,7 +296,7 @@ const CinematicFortuneCookie = ({ answer = "오늘은 당신에게 특별한 기
       </div>
 
       {/* CSS 애니메이션 정의 */}
-      <style jsx>{`
+      <style jsx="true">{`
         @keyframes crackShake {
           0%, 100% { transform: scale(1.1) rotate(0deg); }
           25% { transform: scale(1.15) rotate(-2deg); }

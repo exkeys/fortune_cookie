@@ -8,6 +8,8 @@ import {
 } from 'react-swipeable-list';
 import 'react-swipeable-list/dist/styles.css';
 import { useNavigation } from '../hooks/useNavigation';
+import { useAnalytics } from '../hooks/useAnalytics';
+import { supabase } from '../supabaseClient';
 
 
 const Container = styled.div`
@@ -222,55 +224,131 @@ const PageInfo = styled.div`
 `;
 
 
-function PastConcernsPage({ userId }) {
-  // userId가 없으면 아무것도 렌더링하지 않음 (빈 화면)
-  if (!userId) {
-    return null;
-  }
-
+function PastConcernsPage({ onMenuClick = null }) {
+  const [user, setUser] = useState(null);
+  const [concernsLoading, setConcernsLoading] = useState(true);
   const { goTo } = useNavigation();
+  const { trackPageEnter, trackPageExit } = useAnalytics();
   const [concerns, setConcerns] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 4; // 페이지당 4개씩 표시
 
+  // Supabase Auth로 사용자 정보 가져오기
+  useEffect(() => {
+    async function fetchUser() {
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          setUser(null);
+        } else {
+          setUser(data?.user || null);
+        }
+      } catch (err) {
+        console.error('PastConcernsPage - 사용자 정보 가져오기 에러:', err);
+        setUser(null);
+      } finally {
+        setConcernsLoading(false);
+      }
+    }
+    
+    fetchUser();
+  }, []);
+
+  // 페이지 진입/이탈 추적
+  useEffect(() => {
+    trackPageEnter('past_concerns');
+    
+    return () => {
+      trackPageExit('past_concerns');
+    };
+  }, []);
+
+  // 고민 목록 가져오기 (Supabase 직접)
   useEffect(() => {
     async function fetchConcerns() {
-      setLoading(true);
+      setConcernsLoading(true);
       setError('');
       try {
-        const res = await fetch(`http://localhost:4000/api/concerns?userId=${userId}`);
-        const data = await res.json();
-        if (res.ok) {
-          setConcerns(Array.isArray(data.concerns) ? data.concerns : []);
+        const { data, error } = await supabase
+          .from('ai_answers')
+          .select('id, persona, concern, ai_response, is_saved, created_at')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+
+        if (error) {
+          setError(error.message || '목록 불러오기 실패');
         } else {
-          setError(data.error || '목록 불러오기 실패');
+          setConcerns(Array.isArray(data) ? data : []);
         }
       } catch (e) {
+        console.error('PastConcernsPage - 네트워크 오류:', e);
         setError('서버 오류');
       }
-      setLoading(false);
+      setConcernsLoading(false);
     }
-    fetchConcerns();
-  }, [userId]);
+    if (user) {
+      fetchConcerns();
+    }
+  }, [user]);
+
+  // 사용자가 로그인되지 않았으면 로그인 안내 표시
+  if (concernsLoading) {
+    return <div>로딩 중...</div>;
+  }
+
+  if (!user) {
+    return (
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: 'column', 
+        alignItems: 'center', 
+        justifyContent: 'center', 
+        height: '100vh',
+        textAlign: 'center',
+        padding: '20px'
+      }}>
+        <h2>로그인이 필요합니다</h2>
+        <p>지난 고민을 보려면 먼저 로그인해주세요.</p>
+        <button 
+          onClick={() => window.location.href = '/login'}
+          style={{
+            padding: '12px 24px',
+            backgroundColor: '#ff9800',
+            color: 'white',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+            fontSize: '16px',
+            marginTop: '20px'
+          }}
+        >
+          로그인하기
+        </button>
+      </div>
+    );
+  }
+
 
   const handleDelete = async (id) => {
     try {
-      const res = await fetch(`http://localhost:4000/api/concerns/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setConcerns(concerns.filter(c => c.id !== id));
-        // 현재 페이지에 아이템이 없으면 이전 페이지로 이동
-        const remainingItems = concerns.filter(c => c.id !== id);
-        const totalPages = Math.ceil(remainingItems.length / itemsPerPage);
-        if (currentPage > totalPages && totalPages > 0) {
-          setCurrentPage(totalPages);
-        }
-      } else {
-        alert('삭제 실패');
+      const { error } = await supabase
+        .from('ai_answers')
+        .delete()
+        .eq('id', id);
+      if (error) {
+        alert('삭제 실패: ' + (error.message || '오류'));
+        return;
       }
-    } catch {
-      alert('서버 오류');
+      setConcerns(concerns.filter(c => c.id !== id));
+      const remainingItems = concerns.filter(c => c.id !== id);
+      const totalPages = Math.ceil(remainingItems.length / itemsPerPage);
+      if (currentPage > totalPages && totalPages > 0) {
+        setCurrentPage(totalPages);
+      }
+    } catch (e) {
+      alert('삭제 실패');
     }
   };
 
@@ -310,9 +388,27 @@ function PastConcernsPage({ userId }) {
       <BackButton onClick={goTo.home}>
         ← 뒤로가기
       </BackButton>
+      {onMenuClick && (
+        <div style={{ position: 'absolute', top: 16, right: 32, zIndex: 200 }}>
+          <button
+            aria-label="메뉴"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: 36, 
+              cursor: 'pointer', 
+              color: '#ff9800', 
+              padding: 8 
+            }}
+            onClick={onMenuClick}
+          >
+            &#9776;
+          </button>
+        </div>
+      )}
       <CardBox>
         <Title>지난 고민 목록</Title>
-        {loading ? (
+        {concernsLoading ? (
           <div>불러오는 중...</div>
         ) : error ? (
           <div style={{ color: 'red' }}>{error}</div>
@@ -332,7 +428,7 @@ function PastConcernsPage({ userId }) {
                         <Persona>{item.persona}</Persona>
                         <Concern>{item.concern}</Concern>
                         <Answer>{item.ai_response}</Answer>
-                        <DateText>{new Date(item.created_at).toLocaleString()}</DateText>
+                              <DateText>{new Date(item.created_at).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}</DateText>
                       </Info>
                     </Item>
                   </SwipeableListItem>

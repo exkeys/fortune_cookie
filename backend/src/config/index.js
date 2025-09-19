@@ -10,6 +10,7 @@ export const config = {
   cors: {
     origin: [
       'http://localhost:3000',  // Vite 기본 포트
+      'http://localhost:3001',  // Vite 개발 서버 (포트 충돌 시)
       'http://localhost:5173',  // Vite 개발 서버
       'http://localhost:8080',  // 추가 포트
       process.env.FRONTEND_URL

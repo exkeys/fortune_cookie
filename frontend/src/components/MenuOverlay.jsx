@@ -1,34 +1,58 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../supabaseClient';
+import { useAuth } from '../hooks/useAuth';
 
 function MenuOverlay({ onClose, onLogin, onHistory }) {
   const [user, setUser] = useState(null);
+  const { logout } = useAuth();
 
-  // 로그인 상태 실시간 반영
+
+  // Supabase Auth 기반 로그인 상태 확인
   useEffect(() => {
     async function fetchUser() {
-      const { data } = await supabase.auth.getUser();
-      setUser(data?.user || null);
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) {
+          setUser(null);
+        } else {
+          setUser(data?.user || null);
+        }
+      } catch (err) {
+        console.error('MenuOverlay - 사용자 정보 가져오기 에러:', err);
+        setUser(null);
+      }
     }
+    
     fetchUser();
-    const { data: listener } = supabase.auth.onAuthStateChange(() => {
-      fetchUser();
+    
+    // 인증 상태 변경 리스너
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
     });
-    return () => listener?.subscription.unsubscribe();
+    
+    return () => {
+      listener?.subscription.unsubscribe();
+    };
   }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    try {
+      await logout();
+    } catch (err) {
+      console.error('로그아웃 에러:', err);
+    }
+    
     setUser(null);
-    // localStorage도 정리
-    localStorage.removeItem('userId');
     onClose();
   };
   
   const [showLoginGuide, setShowLoginGuide] = useState(false);
 
   const handleHistoryClick = () => {
-    // Supabase Auth 기준으로 체크
     if (user) {
       onHistory();
       onClose();

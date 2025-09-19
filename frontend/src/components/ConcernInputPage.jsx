@@ -11,10 +11,13 @@ import { validateConcern } from '../utils/validation';
 import { MESSAGES } from '../constants';
 
 
-const ConcernInputPage = ({ role }) => {
+const ConcernInputPage = ({ role, onMenuClick }) => {
   const [concern, setConcern] = useState('');
   const [error, setError] = useState('');
   const inputRef = useRef(null);
+
+  // 디버깅: onMenuClick prop 확인
+  console.log('ConcernInputPage - onMenuClick:', onMenuClick);
   
   const { user, isLoggedIn } = useAuth();
   const { getAiAnswer } = useApi();
@@ -59,6 +62,24 @@ const ConcernInputPage = ({ role }) => {
 
   return (
     <PageLayout title={`${role || '역할 미지정'}으로서 고민을 한 줄로 정리해 보세요`}>
+      {onMenuClick && (
+        <div style={{ position: 'absolute', top: 16, right: 32, zIndex: 200 }}>
+          <button
+            aria-label="메뉴"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              fontSize: 36, 
+              cursor: 'pointer', 
+              color: '#ff9800', 
+              padding: 8 
+            }}
+            onClick={onMenuClick}
+          >
+            &#9776;
+          </button>
+        </div>
+      )}
       <Input
         ref={inputRef}
         type="text"
