@@ -14,14 +14,14 @@ export default function Header() {
           {showBackButton && (
             <button
               onClick={() => navigate(-1)}
-              className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
+              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
             >
-              <i className="ri-arrow-left-line text-amber-600 text-xl md:text-2xl"></i>
+              <i className="ri-arrow-left-line text-amber-600 text-lg md:text-xl"></i>
             </button>
           )}
           
           <h1 
-            className="text-3xl md:text-4xl lg:text-5xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent cursor-pointer"
+            className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent cursor-pointer"
             style={{ fontFamily: "Pacifico, serif" }}
             onClick={() => navigate('/')}
           >

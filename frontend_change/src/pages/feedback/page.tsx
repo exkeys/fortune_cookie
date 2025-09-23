@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import emailjs from '@emailjs/browser';
 import Button from '../../components/base/Button';
 import Card from '../../components/base/Card';
 import Header from '../../components/feature/Header';
+import { supabase } from '../../supabaseClient';
 
 export default function FeedbackPage() {
   const navigate = useNavigate();
@@ -14,13 +16,44 @@ export default function FeedbackPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // 로그인 상태 체크
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: auth } = await supabase.auth.getUser();
+        setIsLoggedIn(!!auth?.user?.id);
+      } catch (error) {
+        setIsLoggedIn(false);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // 실제로는 API로 피드백 전송
-    setTimeout(() => {
+    try {
+      // EmailJS로 피드백 전송 (임시로 직접 값 사용)
+      await emailjs.send(
+        'service_sr0er1a',
+        'template_ymik2rf',
+        {
+          feedback_type: feedback.type,
+          rating: feedback.rating,
+          message: feedback.message,
+          user_email: feedback.email || '미제공',
+          timestamp: new Date().toLocaleString('ko-KR')
+        },
+        'lnlCJFmsv00sk7C0l'
+      );
+
       setIsSubmitting(false);
       setIsSubmitted(true);
       
@@ -28,25 +61,72 @@ export default function FeedbackPage() {
       setTimeout(() => {
         navigate('/');
       }, 3000);
-    }, 1500);
+    } catch (error) {
+      console.error('피드백 전송 실패:', error);
+      setIsSubmitting(false);
+      alert('피드백 전송에 실패했습니다. 다시 시도해주세요.');
+    }
   };
 
   const handleRatingClick = (rating: number) => {
     setFeedback(prev => ({ ...prev, rating }));
   };
 
-  if (isSubmitted) {
+  // 로딩 중일 때
+  if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
         <Header />
         <div className="container mx-auto px-8 py-12 max-w-4xl">
           <Card className="p-12 text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-4 border-amber-300 border-t-transparent mx-auto mb-4"></div>
+            <p className="text-gray-600">로딩 중...</p>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  // 로그인하지 않은 경우
+  if (!isLoggedIn) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+        <Header />
+        <div className="container mx-auto px-8 py-12 max-w-6xl">
+          <Card className="p-20 md:p-24 lg:p-28 text-center bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+            <div className="text-9xl md:text-[12rem] lg:text-[15rem] xl:text-[18rem] mb-12">🔐</div>
+            <h3 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-800 mb-6">로그인이 필요해요</h3>
+            <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl text-gray-600 mb-12 leading-relaxed">
+              피드백을 보내려면 먼저 로그인해주세요
+            </p>
+            <Button 
+              onClick={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({ provider: 'kakao' });
+                if (error) console.error('로그인 에러:', error);
+              }}
+              size="lg"
+              className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl px-12 py-6 md:px-16 md:py-8 lg:px-20 lg:py-10 bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600"
+            >
+              카카오로 로그인하기
+            </Button>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (isSubmitted) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
+        <Header />
+        <div className="container mx-auto px-6 py-10 max-w-4xl">
+          <Card className="p-12 text-center">
             <div className="text-6xl mb-6">✨</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
               소중한 의견 감사합니다!
             </h2>
-            <p className="text-gray-600 mb-6">
-              더 나은 운세쿠키 서비스를 만들기 위해<br />
+            <p className="text-base text-gray-600 mb-6">
+              더 나은 포춘춘쿠키 서비스를 만들기 위해<br />
               소중히 활용하겠습니다.
             </p>
             <Button onClick={() => navigate('/')}>
@@ -62,11 +142,11 @@ export default function FeedbackPage() {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       <Header />
       
-      <div className="container mx-auto px-6 py-10 max-w-3xl">
+      <div className="container mx-auto px-6 py-10 max-w-4xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">피드백</h1>
-          <p className="text-gray-600">
-            운세쿠키를 더 좋게 만들어주세요
+          <p className="text-base text-gray-600">
+            포춘춘쿠키를 더 좋게 만들어주세요
           </p>
         </div>
 
@@ -139,7 +219,7 @@ export default function FeedbackPage() {
                 rows={5}
                 required
                 maxLength={500}
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent resize-none"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent resize-none text-sm"
               />
               <p className="text-xs text-gray-500 mt-1">
                 {feedback.message.length}/500자
@@ -156,12 +236,12 @@ export default function FeedbackPage() {
                 value={feedback.email}
                 onChange={(e) => setFeedback(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="답변이 필요한 경우 이메일을 입력해주세요"
-                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent"
+                className="w-full px-4 py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-300 focus:border-transparent text-sm"
               />
             </div>
 
             {/* 제출 버튼 */}
-            <div className="flex space-x-4">
+            <div className="flex space-x-3">
               <Button
                 type="button"
                 variant="outline"

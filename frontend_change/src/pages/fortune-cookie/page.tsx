@@ -199,26 +199,26 @@ export default function FortuneCookiePage() {
     <div className="min-h-screen bg-gradient-to-br from-amber-200 to-orange-200">
       <Header />
       
-      <div className="container mx-auto px-4 py-16 max-w-5xl">
+      <div className="container mx-auto px-4 py-12 max-w-4xl">
         {/* 역할 정보 */}
         {selectedRole && (
-          <Card className="p-8 md:p-10 mb-10 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 max-w-4xl mx-auto">
-            <div className="flex items-center space-x-5 md:space-x-6">
-              <div className={`w-16 h-16 md:w-20 md:h-20 lg:w-24 lg:h-24 rounded-full bg-gradient-to-r ${selectedRole.color} flex items-center justify-center text-white shadow-lg`}>
-                <i className={`${selectedRole.icon} text-2xl md:text-3xl lg:text-4xl`}></i>
+          <Card className="p-6 md:p-8 mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 max-w-4xl mx-auto">
+            <div className="flex items-center space-x-4 md:space-x-5">
+              <div className={`w-14 h-14 md:w-16 md:h-16 lg:w-20 lg:h-20 rounded-full bg-gradient-to-r ${selectedRole.color} flex items-center justify-center text-white shadow-lg`}>
+                <i className={`${selectedRole.icon} text-xl md:text-2xl lg:text-3xl`}></i>
               </div>
               <div className="flex-1">
-                <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800">{selectedRole.name} 상담</h3>
-                <p className="text-base md:text-lg lg:text-xl text-gray-600 mt-2">{concern}</p>
+                <h3 className="text-lg md:text-xl lg:text-2xl font-bold text-gray-800">{selectedRole.name} 상담</h3>
+                <p className="text-sm md:text-base lg:text-lg text-gray-600 mt-2">{concern}</p>
               </div>
             </div>
           </Card>
         )}
         
         {/* 포춘쿠키 영역 */}
-        <div className="text-center mb-12">
+        <div className="text-center mb-10">
           {!showFortune ? (
-            <Card className="p-20 md:p-24 lg:p-28 xl:p-32 bg-gradient-to-br from-white to-amber-50 max-w-5xl mx-auto">
+            <Card className="p-16 md:p-20 lg:p-24 xl:p-28 bg-gradient-to-br from-white to-amber-50 max-w-4xl mx-auto">
               <h2 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-800 mb-12">
                 {isLoadingFortune ? 'AI가 운세를 생성하고 있어요...' : !isOpened ? '당신의 운세쿠키가 준비되었습니다!' : '운세를 확인하는 중...'}
               </h2>
@@ -240,20 +240,20 @@ export default function FortuneCookiePage() {
             </Card>
           ) : (
             /* 운세 결과 */
-            <Card className="p-12 md:p-14 lg:p-16 bg-gradient-to-br from-white to-amber-50 shadow-xl animate-fade-in max-w-5xl mx-auto">
-              <div className="mb-8">
-                <div className="text-6xl md:text-7xl lg:text-8xl mb-6">🥠</div>
-                <h2 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-4">당신의 운세</h2>
-                <div className="w-24 h-2 md:w-32 md:h-3 bg-gradient-to-r from-amber-400 to-orange-400 mx-auto rounded-full"></div>
+            <Card className="p-10 md:p-12 lg:p-14 bg-gradient-to-br from-white to-amber-50 shadow-xl animate-fade-in max-w-4xl mx-auto">
+              <div className="mb-6">
+                <div className="text-5xl md:text-6xl lg:text-7xl mb-5">🥠</div>
+                <h2 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-3">당신의 운세</h2>
+                <div className="w-20 h-1.5 md:w-28 md:h-2 bg-gradient-to-r from-amber-400 to-orange-400 mx-auto rounded-full"></div>
               </div>
               
-              <div className="bg-white p-8 md:p-10 lg:p-12 rounded-xl shadow-inner mb-8">
-                <p className="text-xl md:text-2xl lg:text-3xl leading-relaxed text-gray-700 font-medium">
+              <div className="bg-white p-6 md:p-8 lg:p-10 rounded-xl shadow-inner mb-6">
+                <p className="text-lg md:text-xl lg:text-2xl leading-relaxed text-gray-700 font-medium">
                   "{fortuneMessage}"
                 </p>
               </div>
               
-              <div className="text-base md:text-lg lg:text-xl text-gray-500 mb-8">
+              <div className="text-sm md:text-base lg:text-lg text-gray-500 mb-6">
                 {new Date().toLocaleDateString('ko-KR', { 
                   year: 'numeric', 
                   month: 'long', 
@@ -263,41 +263,41 @@ export default function FortuneCookiePage() {
               </div>
               
               {/* 공유 버튼들 */}
-              <div className="space-y-6">
-                <div className="flex justify-center space-x-3 flex-wrap gap-3">
+              <div className="space-y-5">
+                <div className="flex justify-center space-x-2 flex-wrap gap-2">
                   <button
                     onClick={() => handleShare('kakao')}
                     disabled={isSharing}
-                    className="flex items-center space-x-2 px-5 py-3 md:px-6 md:py-3 bg-yellow-400 text-yellow-900 rounded-full hover:bg-yellow-500 transition-colors duration-300 shadow-md text-sm md:text-base lg:text-lg font-medium"
+                    className="flex items-center space-x-2 px-4 py-2 md:px-5 md:py-3 bg-yellow-400 text-yellow-900 rounded-full hover:bg-yellow-500 transition-colors duration-300 shadow-md text-xs md:text-sm lg:text-base font-medium"
                   >
-                    <i className="ri-kakao-talk-fill text-base md:text-lg"></i>
+                    <i className="ri-kakao-talk-fill text-sm md:text-base"></i>
                     <span>카카오톡</span>
                   </button>
                   
                   <button
                     onClick={() => handleShare('instagram')}
                     disabled={isSharing}
-                    className="flex items-center space-x-2 px-5 py-3 md:px-6 md:py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full hover:from-purple-600 hover:to-pink-600 transition-colors duration-300 shadow-md text-sm md:text-base lg:text-lg font-medium"
+                    className="flex items-center space-x-2 px-4 py-2 md:px-5 md:py-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-full hover:from-purple-600 hover:to-pink-600 transition-colors duration-300 shadow-md text-xs md:text-sm lg:text-base font-medium"
                   >
-                    <i className="ri-instagram-fill text-base md:text-lg"></i>
+                    <i className="ri-instagram-fill text-sm md:text-base"></i>
                     <span>인스타그램</span>
                   </button>
                   
                   <button
                     onClick={() => handleShare('twitter')}
                     disabled={isSharing}
-                    className="flex items-center space-x-2 px-5 py-3 md:px-6 md:py-3 bg-blue-400 text-white rounded-full hover:bg-blue-500 transition-colors duration-300 shadow-md text-sm md:text-base lg:text-lg font-medium"
+                    className="flex items-center space-x-2 px-4 py-2 md:px-5 md:py-3 bg-blue-400 text-white rounded-full hover:bg-blue-500 transition-colors duration-300 shadow-md text-xs md:text-sm lg:text-base font-medium"
                   >
-                    <i className="ri-twitter-fill text-base md:text-lg"></i>
+                    <i className="ri-twitter-fill text-sm md:text-base"></i>
                     <span>트위터</span>
                   </button>
                   
                   <button
                     onClick={() => handleShare('facebook')}
                     disabled={isSharing}
-                    className="flex items-center space-x-2 px-5 py-3 md:px-6 md:py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors duration-300 shadow-md text-sm md:text-base lg:text-lg font-medium"
+                    className="flex items-center space-x-2 px-4 py-2 md:px-5 md:py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors duration-300 shadow-md text-xs md:text-sm lg:text-base font-medium"
                   >
-                    <i className="ri-facebook-fill text-base md:text-lg"></i>
+                    <i className="ri-facebook-fill text-sm md:text-base"></i>
                     <span>페이스북</span>
                   </button>
                   
