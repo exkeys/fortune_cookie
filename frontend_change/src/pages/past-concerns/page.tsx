@@ -102,6 +102,7 @@ export default function PastConcernsPage() {
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
   
@@ -113,10 +114,13 @@ export default function PastConcernsPage() {
       const uid = auth?.user?.id;
       
       if (!uid) { 
-        setHistory([]); 
+        setHistory([]);
+        setIsLoggedIn(false);
         setIsLoading(false); 
         return; 
       }
+      
+      setIsLoggedIn(true);
       const { data, error } = await supabase
         .from('ai_answers')
         .select('id, created_at, persona, concern, ai_response')
@@ -267,7 +271,7 @@ export default function PastConcernsPage() {
             <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl text-gray-600">지금까지 받은 운세들을 다시 확인해보세요</p>
           </div>
           
-          {history.length > 0 && (
+          {isLoggedIn && history.length > 0 && (
             <div className="flex flex-col md:flex-row space-y-2 md:space-y-0 md:space-x-3">
               <Button
                 variant="outline"
@@ -288,7 +292,24 @@ export default function PastConcernsPage() {
           )}
         </div>
         
-        {history.length === 0 ? (
+        {!isLoggedIn ? (
+          /* 로그인 안내 */
+          <Card className="p-16 md:p-20 text-center">
+            <div className="text-8xl md:text-9xl lg:text-[10rem] mb-8">🔐</div>
+            <h3 className="text-2xl md:text-3xl lg:text-4xl font-bold text-gray-800 mb-4">로그인이 필요해요</h3>
+            <p className="text-lg md:text-xl lg:text-2xl text-gray-600 mb-8">과거 운세 기록을 보려면 먼저 로그인해주세요</p>
+            <Button 
+              onClick={async () => {
+                const { error } = await supabase.auth.signInWithOAuth({ provider: 'kakao' });
+                if (error) console.error('로그인 에러:', error);
+              }}
+              size="lg"
+              className="text-xl md:text-2xl px-8 py-4 md:px-12 md:py-6"
+            >
+              카카오로 로그인하기
+            </Button>
+          </Card>
+        ) : history.length === 0 ? (
           /* 빈 상태 */
           <Card className="p-16 md:p-20 text-center">
             <div className="text-8xl md:text-9xl lg:text-[10rem] mb-8">🥠</div>

@@ -162,7 +162,13 @@ export default function IntroPage() {
           <div className="space-y-6">
             <Button 
               size="lg"
-              onClick={() => navigate('/role-select')}
+              onClick={() => {
+                if (isLoggedIn) {
+                  navigate('/role-select');
+                } else {
+                  alert('로그인 후 이용해 주세요');
+                }
+              }}
               className="px-12 py-6 md:px-16 md:py-8 text-xl md:text-2xl lg:text-3xl shadow-2xl hover:shadow-amber-300/50"
             >
               <span className="flex items-center space-x-3">
