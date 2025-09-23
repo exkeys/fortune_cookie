@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Button from '../../components/base/Button';
@@ -39,7 +40,7 @@ export default function FeedbackPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
         <Header />
-        <div className="container mx-auto px-8 py-12 max-w-4xl">
+        <div className="container mx-auto px-4 py-8 max-w-2xl">
           <Card className="p-12 text-center">
             <div className="text-6xl mb-6">✨</div>
             <h2 className="text-2xl font-bold text-gray-800 mb-4">
@@ -62,7 +63,7 @@ export default function FeedbackPage() {
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       <Header />
       
-      <div className="container mx-auto px-6 py-10 max-w-3xl">
+      <div className="container mx-auto px-4 py-8 max-w-2xl">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-800 mb-2">피드백</h1>
           <p className="text-gray-600">

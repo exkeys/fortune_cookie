@@ -28,8 +28,7 @@ export default function IntroPage() {
 
   const handleFeedback = () => {
     setShowMenu(false);
-    // 피드백 페이지로 이동하거나 모달 표시
-    alert('피드백 기능은 곧 추가될 예정입니다!');
+    navigate('/feedback');
   };
   
   return (
