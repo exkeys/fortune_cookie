@@ -7,7 +7,7 @@ import ConcernInputPage from '../pages/concern-input/page';
 import FortuneCookiePage from '../pages/fortune-cookie/page';
 import PastConcernsPage from '../pages/past-concerns/page';
 import FeedbackPage from '../pages/feedback/page';
-import NotFound from '../pages/NotFound';
+import NotFoundPage from '../pages/not-found/page';
 
 const routes: RouteObject[] = [
   {
@@ -40,7 +40,7 @@ const routes: RouteObject[] = [
   },
   {
     path: '*',
-    element: <NotFound />,
+    element: <NotFoundPage />,
   },
 ];
 

@@ -1,9 +1,12 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Button from '../../components/base/Button';
-import Card from '../../components/base/Card';
 import Header from '../../components/feature/Header';
+import PageTitle from './components/PageTitle';
+import RoleGrid from './components/RoleGrid';
+import CustomRoleInput from './components/CustomRoleInput';
+import SelectedRoleDisplay from './components/SelectedRoleDisplay';
+import NextButton from './components/NextButton';
 
 interface Role {
   id: string;
@@ -19,7 +22,7 @@ const roles: Role[] = [
     name: 'CEO/리더',
     icon: 'ri-crown-line',
     description: '리더십과 경영 관련 조언',
-    color: 'from-purple-400 to-purple-600'
+    color: 'from-amber-400 to-yellow-500'
   },
   {
     id: 'designer',
@@ -119,134 +122,40 @@ export default function RoleSelectPage() {
     }
   };
   
-  // 버튼 활성화 조건
-  const isNextButtonEnabled = () => {
-    if (!selectedRole) return false;
-    if (selectedRole === 'other') {
-      return customRole.trim().length > 0;
-    }
-    return true;
-  };
+
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       <Header />
       
       <div className="container mx-auto px-4 py-12 max-w-full">
-        {/* 페이지 제목 */}
-        <div className="text-center mb-8">
-          <h1 className="text-2xl md:text-3xl lg:text-4xl xl:text-5xl font-bold text-gray-800 mb-4">
-            어떤 역할로 상담받고 싶으신가요?
-          </h1>
-          <p className="text-sm md:text-base lg:text-lg xl:text-xl text-gray-600">
-            선택한 역할에 맞는 맞춤형 조언을 받을 수 있습니다
-          </p>
-        </div>
+        <PageTitle />
         
-        {/* 역할 선택 그리드 */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-2 md:gap-3 lg:gap-4 mb-8 max-w-5xl mx-auto">
-          {roles.map((role) => (
-            <Card
-              key={role.id}
-              hover
-              className={`p-3 md:p-4 lg:p-5 text-center transition-all duration-300 ${
-                selectedRole === role.id 
-                  ? 'ring-4 ring-amber-300 ring-opacity-50 shadow-xl scale-105' 
-                  : 'hover:shadow-lg'
-              } ${isAnimating && selectedRole === role.id ? 'animate-pulse' : ''}`}
-              onClick={() => handleRoleSelect(role.id)}
-            >
-              <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-18 lg:h-18 xl:w-20 xl:h-20 mx-auto mb-2 rounded-full bg-gradient-to-r ${role.color} flex items-center justify-center text-white text-lg md:text-xl lg:text-2xl shadow-lg`}>
-                <i className={role.icon}></i>
-              </div>
-              <h3 className="text-xs md:text-sm lg:text-base xl:text-lg font-bold text-gray-800 mb-1">{role.name}</h3>
-              <p className="text-xs md:text-xs lg:text-sm xl:text-base text-gray-600 leading-relaxed">{role.description}</p>
-            </Card>
-          ))}
-        </div>
+        <RoleGrid
+          roles={roles}
+          selectedRole={selectedRole}
+          isAnimating={isAnimating}
+          onRoleSelect={handleRoleSelect}
+        />
         
-        {/* 기타 역할 선택시 커스텀 입력 */}
         {selectedRole === 'other' && (
-          <Card className="p-8 md:p-10 lg:p-12 mb-10 bg-gradient-to-r from-gray-50 to-gray-100 border-gray-200 max-w-4xl mx-auto">
-            <div className="text-center mb-6">
-              <h3 className="text-xl md:text-2xl lg:text-3xl font-bold text-gray-800 mb-3">어떤 역할인가요?</h3>
-              <p className="text-base md:text-lg lg:text-xl text-gray-600">예: 요리사, 간호사, 작가, 운동선수 등</p>
-            </div>
-            <div className="max-w-xl mx-auto">
-              <input
-                type="text"
-                value={customRole}
-                onChange={handleCustomRoleChange}
-                placeholder="역할을 입력해주세요"
-                className="w-full p-4 md:p-5 lg:p-6 text-lg md:text-xl lg:text-2xl border-2 border-gray-200 rounded-xl focus:border-amber-300 focus:outline-none focus:ring-2 focus:ring-amber-100 transition-all duration-300 text-gray-800 placeholder-gray-400 text-center"
-                maxLength={20}
-                autoFocus
-              />
-              <div className="text-right mt-3 text-sm md:text-base lg:text-lg text-gray-400">
-                {customRole.length}/20
-              </div>
-            </div>
-          </Card>
+          <CustomRoleInput
+            customRole={customRole}
+            onCustomRoleChange={handleCustomRoleChange}
+          />
         )}
         
-        {/* 선택된 역할 표시 */}
-        {selectedRole && selectedRole !== 'other' && (
-          <Card className="p-8 md:p-10 mb-10 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 max-w-4xl mx-auto">
-            <div className="flex items-center justify-center space-x-5 md:space-x-6">
-              <div className={`w-14 h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-full bg-gradient-to-r ${roles.find(r => r.id === selectedRole)?.color} flex items-center justify-center text-white shadow-lg`}>
-                <i className={`${roles.find(r => r.id === selectedRole)?.icon} text-xl md:text-2xl lg:text-3xl`}></i>
-              </div>
-              <div>
-                <h3 className="text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800">
-                  선택된 역할: {roles.find(r => r.id === selectedRole)?.name}
-                </h3>
-                <p className="text-base md:text-lg lg:text-xl text-gray-600">
-                  {roles.find(r => r.id === selectedRole)?.description}
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
+        <SelectedRoleDisplay
+          selectedRole={selectedRole}
+          roles={roles}
+          customRole={customRole}
+        />
         
-        {/* 커스텀 역할 선택시 표시 */}
-        {selectedRole === 'other' && customRole.trim() && (
-          <Card className="p-8 md:p-10 mb-10 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 max-w-4xl mx-auto">
-            <div className="flex items-center justify-center space-x-5 md:space-x-6">
-              <div className="w-14 h-14 md:w-16 md:h-16 lg:w-18 lg:h-18 rounded-full bg-gradient-to-r from-gray-400 to-gray-600 flex items-center justify-center text-white shadow-lg">
-                <i className="ri-user-line text-xl md:text-2xl lg:text-3xl"></i>
-              </div>
-              <div>
-                <h3 className="text-lg md:text-xl lg:text-2xl xl:text-3xl font-bold text-gray-800">
-                  선택된 역할: {customRole.trim()}
-                </h3>
-                <p className="text-base md:text-lg lg:text-xl text-gray-600">
-                  {customRole.trim()} 관련 조언
-                </p>
-              </div>
-            </div>
-          </Card>
-        )}
-        
-        {/* 다음 버튼 */}
-        <div className="text-center">
-          <Button
-            size="lg"
-            disabled={!isNextButtonEnabled()}
-            onClick={handleNext}
-            className="shadow-xl text-lg md:text-xl lg:text-2xl px-10 py-5 md:px-12 md:py-6"
-          >
-            <span className="flex items-center space-x-3">
-              <span>다음 단계로</span>
-              <i className="ri-arrow-right-line text-xl md:text-2xl lg:text-3xl"></i>
-            </span>
-          </Button>
-          
-          {selectedRole === 'other' && !customRole.trim() && (
-            <p className="mt-4 text-base md:text-lg lg:text-xl text-amber-600">
-              💡 역할을 입력해주세요
-            </p>
-          )}
-        </div>
+        <NextButton
+          selectedRole={selectedRole}
+          customRole={customRole}
+          onNext={handleNext}
+        />
       </div>
     </div>
   );
