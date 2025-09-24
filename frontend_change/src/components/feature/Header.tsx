@@ -34,7 +34,7 @@ export default function Header() {
             style={{ fontFamily: "Pacifico, serif" }}
             onClick={() => navigate('/')}
           >
-            운세쿠키
+            포춘쿠키
           </h1>
         </div>
       </div>

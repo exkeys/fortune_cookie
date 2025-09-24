@@ -22,7 +22,7 @@ const roles: Role[] = [
     name: 'CEO/리더',
     icon: 'ri-crown-line',
     description: '리더십과 경영 관련 조언',
-    color: 'from-amber-400 to-yellow-500'
+    color: 'from-gray-900 to-gray-800'
   },
   {
     id: 'designer',

@@ -43,7 +43,7 @@ const roles = [
     name: 'CEO/리더',
     icon: 'ri-crown-line',
     description: '리더십과 경영 관련 조언',
-    color: 'from-amber-400 to-yellow-500'
+    color: 'from-gray-900 to-gray-800'
   },
   {
     id: 'designer',
@@ -386,18 +386,19 @@ export default function PastConcernsPage() {
           />
         ) : (
           /* 메인 콘텐츠 */
-          <div className="space-y-8">
-            {/* 결과 헤더 */}
-            <div className="flex justify-between items-center">
-              <div className="flex items-center space-x-2">
-                <h2 className="text-sm lg:text-base xl:text-lg font-bold text-gray-800">
-                  {filteredHistory.length}개의 기록
-                </h2>
-                {filteredHistory.length !== history.length && (
-                  <span className="text-xs lg:text-sm xl:text-base text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
-                    전체 {history.length}개 중
-                  </span>
-                )}
+          <div className="w-[90%] md:w-[80%] lg:w-[70%] xl:w-[65%] mx-auto">
+            <div className="space-y-8">
+              {/* 결과 헤더 */}
+              <div className="flex justify-between items-center">
+                <div className="flex items-center space-x-2">
+                  <h2 className="text-sm lg:text-base xl:text-lg font-bold text-gray-800">
+                    {filteredHistory.length}개의 기록
+                  </h2>
+                  {filteredHistory.length !== history.length && (
+                    <span className="text-xs lg:text-sm xl:text-base text-gray-500 bg-gray-100 px-2 py-1 rounded-full">
+                      전체 {history.length}개 중
+                    </span>
+                  )}
               </div>
               
               {totalPages > 1 && (
@@ -450,6 +451,7 @@ export default function PastConcernsPage() {
               totalPages={totalPages}
               onPageChange={handlePageChange}
             />
+            </div>
           </div>
         )}
       </div>
