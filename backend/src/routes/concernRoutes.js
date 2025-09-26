@@ -3,8 +3,10 @@ import { ConcernController } from '../controllers/concernController.js';
 
 const router = Router();
 
-// AI 답변 생성
+// AI 답변 생성 (짧은)
 router.post('/ai', ConcernController.generateAIAnswer);
+// AI 답변 생성 (짧은+긴)
+router.post('/ai/both', ConcernController.generateBothAdvices);
 
 // 고민 저장
 router.post('/save', ConcernController.saveConcern);

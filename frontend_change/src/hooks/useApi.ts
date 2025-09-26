@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { API_ENDPOINTS } from '../constants';
 import { supabase } from '../supabaseClient';
@@ -29,31 +30,33 @@ export const useApi = () => {
     }
   };
 
+
   const getAiAnswer = async (persona: string, concern: string) => {
     return await request(API_ENDPOINTS.ai, { method: 'POST', body: JSON.stringify({ persona, concern }) });
   };
 
-  const saveConcern = async (persona: string, concern: string, aiAnswer: string, userId?: string) => {
+  const getAiBothAdvices = async (persona: string, concern: string) => {
+    return await request(API_ENDPOINTS.aiBoth, { method: 'POST', body: JSON.stringify({ persona, concern }) });
+  };
+
+  const saveConcern = async (persona: string, concern: string, aiAnswer: string, aiFeed: string, userId?: string) => {
     try {
       if (!userId) return { data: null, error: '로그인이 필요합니다' } as const;
-      
-      
       // upsert 사용: 동일한 user_id + persona + concern이 있으면 업데이트, 없으면 삽입
       const { error } = await supabase.from('ai_answers').upsert({ 
         user_id: userId, 
         persona, 
         concern, 
         ai_response: aiAnswer, 
+        ai_feed: aiFeed,
         is_saved: true,
         created_at: new Date().toISOString() // 업데이트 시에도 현재 시간으로 갱신하여 최신순 정렬
       }, {
         onConflict: 'user_id,persona,concern' // 충돌 시 기준 컬럼
       });
-      
       if (error) {
         return { data: null, error: `저장 실패: ${error.message}` } as const;
       }
-      
       return { data: { success: true }, error: null } as const;
     } catch (err: any) {
       return { data: null, error: err?.message || '저장 실패' } as const;
@@ -68,7 +71,7 @@ export const useApi = () => {
     });
   };
 
-  return { loading, error, request, getAiAnswer, saveConcern, saveConcernToBackend } as const;
+  return { loading, error, request, getAiAnswer, getAiBothAdvices, saveConcern, saveConcernToBackend } as const;
 };
 
 

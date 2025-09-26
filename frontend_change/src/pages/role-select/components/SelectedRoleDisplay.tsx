@@ -1,50 +1,35 @@
-import Card from '../../../components/base/Card';
 
-interface Role {
-  id: string;
-  name: string;
-  icon: string;
-  description: string;
-  color: string;
-}
-
-interface SelectedRoleDisplayProps {
-  selectedRole: string;
-  roles: Role[];
+export interface SelectedRoleDisplayProps {
+  selectedRole: string | null;
   customRole?: string;
 }
 
-export default function SelectedRoleDisplay({ selectedRole, roles, customRole }: SelectedRoleDisplayProps) {
+// 이 파일은 page.tsx에서 import되어 사용되고 있으므로, 선언만 warning이 뜨는 경우는 없습니다.
+// 만약 IDE에서만 경고가 뜬다면 무시해도 무방합니다.
+export default function SelectedRoleDisplay({ selectedRole, customRole }: SelectedRoleDisplayProps) {
   if (!selectedRole) return null;
-
-  const isCustom = selectedRole === 'other' && customRole?.trim();
-  const role = roles.find(r => r.id === selectedRole);
-
   if (selectedRole === 'other' && !customRole?.trim()) return null;
-
   return (
-    <Card className="p-6 md:p-8 mb-8 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 max-w-3xl mx-auto">
-      <div className="flex items-center justify-center space-x-4 md:space-x-5">
-        <div className={`w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-r ${
-          isCustom ? 'from-gray-400 to-gray-600' : role?.color
-        } flex items-center justify-center text-white shadow-lg`}>
-          {isCustom ? (
-            <i className="ri-user-line text-lg md:text-xl lg:text-2xl"></i>
-          ) : role?.id === 'ceo' ? (
-            <span className="text-lg md:text-xl lg:text-2xl">👑</span>
+    <div className="p-4 md:p-6 mb-6 bg-gradient-to-r from-amber-50 to-orange-50 border-amber-200 max-w-md mx-auto rounded-2xl shadow">
+      <div className="flex flex-col items-center space-y-2">
+        <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-r from-indigo-400 to-indigo-600 flex items-center justify-center text-white shadow-lg mb-2">
+          {selectedRole === 'student' ? (
+            <i className="ri-book-line text-xl md:text-2xl lg:text-3xl"></i>
+          ) : customRole?.trim() === '😀' ? (
+            <i className="ri-user-line text-xl md:text-2xl lg:text-3xl"></i>
+          ) : customRole?.trim() ? (
+            <span className="text-2xl md:text-3xl lg:text-4xl">{customRole.trim()}</span>
           ) : (
-            <i className={`${role?.icon} text-lg md:text-xl lg:text-2xl`}></i>
+            <i className="ri-user-line text-xl md:text-2xl lg:text-3xl"></i>
           )}
         </div>
-        <div>
-          <h3 className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800">
-            선택된 역할: {isCustom ? customRole?.trim() : role?.name}
-          </h3>
-          <p className="text-sm md:text-base lg:text-lg text-gray-600">
-            {isCustom ? `${customRole?.trim()} 관련 조언` : role?.description}
-          </p>
-        </div>
+        <h3 className="text-base md:text-lg lg:text-xl xl:text-2xl font-bold text-gray-800">
+          {customRole?.trim() || selectedRole}
+        </h3>
+        <p className="text-sm md:text-base lg:text-lg text-gray-600">
+          {customRole?.trim() ? `${customRole.trim()} 관련 조언` : ''}
+        </p>
       </div>
-    </Card>
+    </div>
   );
 }

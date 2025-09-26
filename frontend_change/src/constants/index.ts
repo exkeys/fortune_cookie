@@ -47,6 +47,7 @@ export const SIZES = {
 export const API_ENDPOINTS: ApiEndpoints = {
   baseUrl: 'http://localhost:4000',
   ai: '/api/concerns/ai',
+  aiBoth: '/api/concerns/ai/both',
   save: '/api/concerns/save',
   concerns: '/api/concerns',
 };

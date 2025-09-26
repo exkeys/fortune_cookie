@@ -30,7 +30,7 @@ export default function FortuneCookiePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { selectedRole, concern } = (location.state as LocationState) || {};
-  const { getAiAnswer, saveConcern } = useApi();
+  const { getAiBothAdvices, saveConcern } = useApi();
   
   const [isOpening, setIsOpening] = useState(false);
   const [isOpened, setIsOpened] = useState(false);
@@ -39,6 +39,7 @@ export default function FortuneCookiePage() {
   
   // AI 응답 받기 (실제 백엔드 연결)
   const [fortuneMessage, setFortuneMessage] = useState("");
+  const [longAdvice, setLongAdvice] = useState("");
   const [isLoadingFortune, setIsLoadingFortune] = useState(true);
   
   // 카카오 SDK 초기화
@@ -53,13 +54,14 @@ export default function FortuneCookiePage() {
     (async () => {
       if (selectedRole && concern) {
         try {
-          const { data } = await getAiAnswer(selectedRole.name, concern);
-          const aiAnswer = data?.answer || data?.message || "운세를 받지 못했습니다. 다시 시도해 주세요.";
-          setFortuneMessage(aiAnswer);
-          
-          // 자동 저장 제거 - 사용자가 "저장하기" 버튼을 클릭했을 때만 저장
+          const { data } = await getAiBothAdvices(selectedRole.name, concern);
+          const shortAdvice = data?.shortAdvice || data?.message || "운세를 받지 못했습니다. 다시 시도해 주세요.";
+          const longAdviceText = data?.longAdvice || "긴 조언을 받지 못했습니다.";
+          setFortuneMessage(shortAdvice);
+          setLongAdvice(longAdviceText);
         } catch (error) {
           setFortuneMessage("운세를 받지 못했습니다. 다시 시도해 주세요.");
+          setLongAdvice("긴 조언을 받지 못했습니다.");
         }
       }
       setIsLoadingFortune(false);
@@ -148,7 +150,7 @@ export default function FortuneCookiePage() {
       const uid = auth?.user?.id;
       
       if (uid && selectedRole && concern && fortuneMessage) {
-        const result = await saveConcern(selectedRole.name, concern, fortuneMessage, uid);
+        const result = await saveConcern(selectedRole.name, concern, fortuneMessage, longAdvice, uid);
         if (result.error) {
           console.error('저장 실패:', result.error);
           alert(`저장에 실패했습니다: ${result.error}`);
@@ -172,7 +174,7 @@ export default function FortuneCookiePage() {
 
   const handleFinish = () => {
     // 저장하지 않고 intro 페이지로 이동
-    navigate('/intro');
+    navigate('/');
   };
   
   const saveToHistory = () => {
@@ -181,9 +183,9 @@ export default function FortuneCookiePage() {
       date: new Date().toISOString(),
       role: selectedRole,
       concern,
-      fortune: fortuneMessage
+      fortune: fortuneMessage,
+      aiFeed: longAdvice
     };
-    
     const existingHistory = JSON.parse(localStorage.getItem('fortuneHistory') || '[]');
     const updatedHistory = [historyItem, ...existingHistory].slice(0, 50); // 최대 50개 저장
     localStorage.setItem('fortuneHistory', JSON.stringify(updatedHistory));
@@ -219,6 +221,7 @@ export default function FortuneCookiePage() {
             /* 운세 결과 */
             <FortuneResultDisplay
               fortuneMessage={fortuneMessage}
+              longAdvice={longAdvice}
               isSharing={isSharing}
               onShare={handleShare}
               onSaveAndViewHistory={handleSaveAndViewHistory}

@@ -45,6 +45,7 @@ export interface Routes {
 export interface ApiEndpoints {
   baseUrl: string;
   ai: string;
+  aiBoth: string;
   save: string;
   concerns: string;
 }

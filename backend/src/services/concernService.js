@@ -4,7 +4,7 @@ import { DatabaseError, ValidationError } from '../utils/errors.js';
 
 export class ConcernService {
   // 고민 저장
-  static async saveConcern(userId, persona, concern, aiAnswer) {
+  static async saveConcern(userId, persona, concern, aiAnswer, aiFeed) {
     try {
       logger.info('고민 저장 요청', { userId, persona, concern });
       
@@ -49,6 +49,7 @@ export class ConcernService {
           persona,
           concern,
           ai_response: aiAnswer,
+          ai_feed: aiFeed,
           is_saved: false
         });
       
@@ -69,6 +70,7 @@ export class ConcernService {
               persona,
               concern,
               ai_response: aiAnswer,
+              ai_feed: aiFeed,
               is_saved: false
             });
           

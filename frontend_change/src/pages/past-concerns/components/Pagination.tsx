@@ -8,16 +8,16 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
   if (totalPages <= 1) return null;
 
   return (
-    <div className="flex justify-center mt-16 lg:mt-20 xl:mt-24">
-      <div className="flex items-center space-x-3">
+    <div className="flex justify-center mt-10 lg:mt-14 xl:mt-16">
+      <div className="flex items-center space-x-2">
         <button
           onClick={() => onPageChange(Math.max(1, currentPage - 1))}
           disabled={currentPage === 1}
-          className="w-14 h-14 lg:w-16 lg:h-16 xl:w-18 xl:h-18 flex items-center justify-center rounded-xl bg-white border-2 border-gray-200 text-gray-400 hover:text-amber-500 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-sm"
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-amber-500 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
         >
-          <i className="ri-arrow-left-s-line text-lg lg:text-xl xl:text-2xl"></i>
+          <i className="ri-arrow-left-s-line text-base"></i>
         </button>
-        
+
         {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
           let page;
           if (totalPages <= 5) {
@@ -29,28 +29,29 @@ export default function Pagination({ currentPage, totalPages, onPageChange }: Pa
           } else {
             page = currentPage - 2 + i;
           }
-          
+
           return (
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={`w-14 h-14 lg:w-16 lg:h-16 xl:w-18 xl:h-18 flex items-center justify-center rounded-xl font-bold transition-all duration-300 text-lg lg:text-xl xl:text-2xl ${
+              className={`w-12 h-12 flex items-center justify-center rounded-full font-bold transition-all duration-200 text-base shadow-sm border ${
                 currentPage === page
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg scale-110'
-                  : 'bg-white border-2 border-gray-200 text-gray-600 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-600 shadow-sm'
+                  ? 'bg-gradient-to-r from-amber-400 to-orange-400 text-white border-amber-400 scale-105 shadow-lg'
+                  : 'bg-white border-gray-200 text-gray-700 hover:bg-amber-50 hover:border-amber-300 hover:text-amber-600'
               }`}
+              style={{ minWidth: '3rem', minHeight: '3rem' }}
             >
               {page}
             </button>
           );
         })}
-        
+
         <button
           onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))}
           disabled={currentPage === totalPages}
-          className="w-14 h-14 lg:w-16 lg:h-16 xl:w-18 xl:h-18 flex items-center justify-center rounded-xl bg-white border-2 border-gray-200 text-gray-400 hover:text-amber-500 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-sm"
+          className="w-12 h-12 flex items-center justify-center rounded-full bg-white border border-gray-200 text-gray-400 hover:text-amber-500 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-sm"
         >
-          <i className="ri-arrow-right-s-line text-lg lg:text-xl xl:text-2xl"></i>
+          <i className="ri-arrow-right-s-line text-base"></i>
         </button>
       </div>
     </div>

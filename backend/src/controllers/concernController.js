@@ -5,6 +5,21 @@ import { logger } from '../utils/logger.js';
 import { ValidationError } from '../utils/errors.js';
 
 export class ConcernController {
+  // 짧은/긴 AI 조언 모두 생성 (포춘+AI피드)
+  static async generateBothAdvices(req, res, next) {
+    try {
+      const validation = validateRequest(req, ['persona', 'concern']);
+      if (!validation.isValid) {
+        return res.status(400).json({ error: validation.error });
+      }
+      const { persona, concern } = req.body;
+      const { shortAdvice, longAdvice } = await AIService.generateBothAdvices(persona, concern);
+      res.json({ shortAdvice, longAdvice });
+    } catch (error) {
+      logger.error('AI 짧은/긴 조언 생성 컨트롤러 에러', error);
+      next(error);
+    }
+  }
   // AI 답변 생성
   static async generateAIAnswer(req, res, next) {
     try {
@@ -26,18 +41,15 @@ export class ConcernController {
   // 고민 저장
   static async saveConcern(req, res, next) {
     try {
-      const validation = validateRequest(req, ['persona', 'concern', 'aiAnswer', 'userId']);
+      const validation = validateRequest(req, ['persona', 'concern', 'aiAnswer', 'aiFeed', 'userId']);
       if (!validation.isValid) {
         return res.status(400).json({ error: validation.error });
       }
-      
-      const { persona, concern, aiAnswer, userId } = req.body;
-      
+      const { persona, concern, aiAnswer, aiFeed, userId } = req.body;
       if (!isUUID(userId)) {
         throw new ValidationError('유효한 userId가 필요합니다');
       }
-      
-      const result = await ConcernService.saveConcern(userId, persona, concern, aiAnswer);
+      const result = await ConcernService.saveConcern(userId, persona, concern, aiAnswer, aiFeed);
       res.json(result);
     } catch (error) {
       logger.error('고민 저장 컨트롤러 에러', error);

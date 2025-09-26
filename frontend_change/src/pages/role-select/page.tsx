@@ -1,12 +1,13 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import PageTitle from './components/PageTitle';
 import RoleGrid from './components/RoleGrid';
 import CustomRoleInput from './components/CustomRoleInput';
-import SelectedRoleDisplay from './components/SelectedRoleDisplay';
 import NextButton from './components/NextButton';
+import { supabase } from '../../supabaseClient';
+import { useAuth } from '../../hooks/useAuth';
 
 interface Role {
   id: string;
@@ -16,144 +17,203 @@ interface Role {
   color: string;
 }
 
-const roles: Role[] = [
-  {
-    id: 'ceo',
-    name: 'CEO/리더',
-    icon: 'ri-crown-line',
-    description: '리더십과 경영 관련 조언',
-    color: 'from-gray-900 to-gray-800'
-  },
-  {
-    id: 'designer',
-    name: '디자이너',
-    icon: 'ri-palette-line',
-    description: '창작과 디자인 영감',
-    color: 'from-pink-400 to-pink-600'
-  },
-  {
-    id: 'developer',
-    name: '개발자',
-    icon: 'ri-code-line',
-    description: '기술과 개발 관련 통찰',
-    color: 'from-blue-400 to-blue-600'
-  },
-  {
-    id: 'marketer',
-    name: '마케터',
-    icon: 'ri-megaphone-line',
-    description: '마케팅과 브랜딩 전략',
-    color: 'from-green-400 to-green-600'
-  },
+const initialRoles: Role[] = [
   {
     id: 'student',
     name: '학생',
     icon: 'ri-book-line',
     description: '학업과 진로 상담',
     color: 'from-indigo-400 to-indigo-600'
-  },
-  {
-    id: 'freelancer',
-    name: '프리랜서',
-    icon: 'ri-briefcase-line',
-    description: '독립적인 일과 자유로운 삶',
-    color: 'from-amber-400 to-amber-600'
-  },
-  {
-    id: 'parent',
-    name: '부모',
-    icon: 'ri-heart-line',
-    description: '육아와 가족 관계',
-    color: 'from-rose-400 to-rose-600'
-  },
-  {
-    id: 'other',
-    name: '기타',
-    icon: 'ri-user-line',
-    description: '직접 역할을 입력해보세요',
-    color: 'from-gray-400 to-gray-600'
   }
 ];
 
+
+
 export default function RoleSelectPage() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [roles, setRoles] = useState<Role[]>(initialRoles);
   const [selectedRole, setSelectedRole] = useState<string>('');
-  const [customRole, setCustomRole] = useState<string>('');
+  const [customRoles, setCustomRoles] = useState<{ [id: string]: string }>({});
   const [isAnimating, setIsAnimating] = useState(false);
-  
+  const [customRoleInputId, setCustomRoleInputId] = useState<string | null>(null);
+
+  // 1. 진입 시 custom_roles 불러오기
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from('custom_roles')
+        .select('id, role_name')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true });
+      if (!error && data) {
+        // 기존 roles(학생) + custom_roles
+        const customRoleObjs: Role[] = data.map((row: any) => ({
+          id: row.id,
+          name: row.role_name,
+          icon: 'ri-user-line',
+          description: `${row.role_name} 관련 조언`,
+          color: 'from-gray-400 to-gray-600',
+        }));
+        setRoles([initialRoles[0], ...customRoleObjs]);
+        // customRoles state도 동기화
+        const cr: { [id: string]: string } = {};
+        data.forEach((row: any) => { cr[row.id] = row.role_name; });
+        setCustomRoles(cr);
+      }
+    })();
+  }, [user?.id]);
+
+  // 2. 역할 삭제 (DB 반영)
+  const handleRemoveRole = async (roleId: string) => {
+    // 학생 역할은 DB에 없음
+    if (roleId === 'student') {
+      setRoles((prev) => prev.filter((r) => r.id !== roleId));
+      if (selectedRole === roleId) setSelectedRole('');
+      if (customRoleInputId === roleId) setCustomRoleInputId(null);
+      return;
+    }
+    setRoles((prev) => prev.filter((r) => r.id !== roleId));
+    setCustomRoles((prev) => {
+      const copy = { ...prev };
+      delete copy[roleId];
+      return copy;
+    });
+    if (selectedRole === roleId) setSelectedRole('');
+    if (customRoleInputId === roleId) setCustomRoleInputId(null);
+    // DB 삭제
+    if (user?.id) {
+      await supabase.from('custom_roles').delete().eq('id', roleId).eq('user_id', user.id);
+    }
+  };
+
+  // 3. +카드 클릭 시 커스텀 역할 추가 (DB 반영)
+  const handleAddRole = async () => {
+    if (roles.length >= 8 || !user?.id) return;
+    // DB에 빈 역할 추가
+    const { data, error } = await supabase
+      .from('custom_roles')
+      .insert([{ user_id: user.id, role_name: '' }])
+      .select('id');
+    if (!error && data && data[0]?.id) {
+      const newId = data[0].id;
+      setRoles((prev) => [
+        ...prev,
+        {
+          id: newId,
+          name: '직접 추가',
+          icon: 'ri-add-line',
+          description: '새로운 역할을 추가하세요',
+          color: 'from-gray-200 to-gray-400',
+        },
+      ]);
+      setSelectedRole(newId);
+      setCustomRoleInputId(newId);
+    }
+  };
+
+  // 4. 역할 선택
   const handleRoleSelect = (roleId: string) => {
     setSelectedRole(roleId);
     setIsAnimating(true);
-    if (roleId !== 'other') {
-      setCustomRole(''); // 기타가 아닌 역할 선택시 커스텀 역할 초기화
+    if (roleId !== 'student') {
+      setCustomRoleInputId(roleId);
+    } else {
+      setCustomRoleInputId(null);
     }
     setTimeout(() => setIsAnimating(false), 300);
   };
-  
+
+
+  // 5. 커스텀 역할 입력 (local state만)
   const handleCustomRoleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCustomRole(e.target.value);
+    if (!customRoleInputId) return;
+    const value = e.target.value;
+    setCustomRoles((prev) => ({ ...prev, [customRoleInputId]: value }));
   };
-  
+
+  // 저장하기 버튼 클릭 시 DB update 후 custom_roles 다시 불러오기
+  const handleCustomRoleSave = async () => {
+    if (!customRoleInputId || !user?.id) return;
+    const value = customRoles[customRoleInputId];
+    if (typeof value !== 'string') return;
+    await supabase
+      .from('custom_roles')
+      .update({ role_name: value })
+      .eq('id', customRoleInputId)
+      .eq('user_id', user.id);
+    // 저장 후 custom_roles 다시 불러와서 local state 갱신
+    const { data, error } = await supabase
+      .from('custom_roles')
+      .select('id, role_name')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: true });
+    if (!error && data) {
+      const customRoleObjs: Role[] = data.map((row: any) => ({
+        id: row.id,
+        name: row.role_name,
+        icon: 'ri-user-line',
+        description: `${row.role_name} 관련 조언`,
+        color: 'from-gray-400 to-gray-600',
+      }));
+      setRoles([initialRoles[0], ...customRoleObjs]);
+      const cr: { [id: string]: string } = {};
+      data.forEach((row: any) => { cr[row.id] = row.role_name; });
+      setCustomRoles(cr);
+    }
+    // 입력창 닫기
+    setCustomRoleInputId(null);
+  };
+
+  // 6. 다음 버튼
   const handleNext = () => {
     if (selectedRole) {
       let roleData;
-      
-      if (selectedRole === 'other' && customRole.trim()) {
-        // 사용자가 입력한 커스텀 역할
+      if (selectedRole !== 'student' && customRoles[selectedRole]?.trim()) {
         roleData = {
-          id: 'custom',
-          name: customRole.trim(),
+          id: selectedRole,
+          name: customRoles[selectedRole].trim(),
           icon: 'ri-user-line',
-          description: `${customRole.trim()} 관련 조언`,
-          color: 'from-gray-400 to-gray-600'
+          description: `${customRoles[selectedRole].trim()} 관련 조언`,
+          color: 'from-gray-400 to-gray-600',
         };
-      } else if (selectedRole !== 'other') {
-        // 기본 역할 중 하나
+      } else if (selectedRole === 'student') {
         roleData = roles.find(role => role.id === selectedRole);
       }
-      
       if (roleData) {
-        navigate('/concern-input', { 
-          state: { 
+        navigate('/concern-input', {
+          state: {
             selectedRole: roleData
-          } 
+          }
         });
       }
     }
   };
-  
 
-  
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
       <Header />
-      
       <div className="container mx-auto px-4 py-12 max-w-full">
         <PageTitle />
-        
         <RoleGrid
           roles={roles}
           selectedRole={selectedRole}
           isAnimating={isAnimating}
           onRoleSelect={handleRoleSelect}
+          onRemoveRole={handleRemoveRole}
+          onAddRole={handleAddRole}
         />
-        
-        {selectedRole === 'other' && (
+        {customRoleInputId && (
           <CustomRoleInput
-            customRole={customRole}
+            customRole={customRoles[customRoleInputId] || ''}
             onCustomRoleChange={handleCustomRoleChange}
+            onSave={handleCustomRoleSave}
           />
         )}
-        
-        <SelectedRoleDisplay
-          selectedRole={selectedRole}
-          roles={roles}
-          customRole={customRole}
-        />
-        
         <NextButton
           selectedRole={selectedRole}
-          customRole={customRole}
+          customRole={customRoles[selectedRole] || ''}
           onNext={handleNext}
         />
       </div>

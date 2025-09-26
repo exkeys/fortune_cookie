@@ -125,7 +125,7 @@ export default function PastConcernsPage() {
   const [filterRole, setFilterRole] = useState<string>('all');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const itemsPerPage = 12;
+  const itemsPerPage = 9;
   
   // Supabase에서 실제 기록 로드
   const loadHistory = async () => {
@@ -399,58 +399,55 @@ export default function PastConcernsPage() {
                       전체 {history.length}개 중
                     </span>
                   )}
-              </div>
-              
-              {totalPages > 1 && (
-                <div className="flex items-center space-x-1">
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="w-6 h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 flex items-center justify-center rounded bg-white border border-gray-200 text-gray-400 hover:text-amber-500 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-sm"
-                  >
-                    <i className="ri-arrow-left-s-line text-sm lg:text-base xl:text-lg"></i>
-                  </button>
-                  
-                  <span className="text-xs lg:text-sm xl:text-base font-medium text-gray-600 px-2 py-1 bg-white rounded border border-gray-200 shadow-sm">
-                    {currentPage} / {totalPages}
-                  </span>
-                  
-                  <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="w-6 h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 flex items-center justify-center rounded bg-white border border-gray-200 text-gray-400 hover:text-amber-500 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-sm"
-                  >
-                    <i className="ri-arrow-right-s-line text-sm lg:text-base xl:text-lg"></i>
-                  </button>
                 </div>
-              )}
-            </div>
-            
-            {/* 그리드/리스트 뷰 */}
-            <PastConcernGrid
-              items={currentItems}
-              startIndex={startIndex}
-              viewMode={viewMode}
-              formatDate={formatDate}
-              onItemClick={setSelectedItem}
-              onShareClick={(item, e) => {
-                e.stopPropagation();
-                const shareText = `🥠 운세쿠키 결과\n\n"${item.fortune}"\n\n받은 조언이에요!`;
-                navigator.clipboard.writeText(shareText);
-                alert('클립보드에 복사되었습니다!');
-              }}
-              onDeleteClick={(id, e) => {
-                e.stopPropagation();
-                setShowDeleteConfirm(id);
-              }}
-            />
-            
-            {/* 페이지네이션 하단 */}
-            <Pagination
-              currentPage={currentPage}
-              totalPages={totalPages}
-              onPageChange={handlePageChange}
-            />
+                {totalPages > 1 && (
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="w-6 h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 flex items-center justify-center rounded bg-white border border-gray-200 text-gray-400 hover:text-amber-500 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-sm"
+                    >
+                      <i className="ri-arrow-left-s-line text-sm lg:text-base xl:text-lg"></i>
+                    </button>
+                    <span className="text-xs lg:text-sm xl:text-base font-medium text-gray-600 px-2 py-1 bg-white rounded border border-gray-200 shadow-sm">
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="w-6 h-6 lg:w-8 lg:h-8 xl:w-10 xl:h-10 flex items-center justify-center rounded bg-white border border-gray-200 text-gray-400 hover:text-amber-500 hover:border-amber-300 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 shadow-sm"
+                    >
+                      <i className="ri-arrow-right-s-line text-sm lg:text-base xl:text-lg"></i>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* 그리드/리스트 뷰 - 높이 제한 및 스크롤 제거 */}
+              <PastConcernGrid
+                items={currentItems}
+                startIndex={startIndex}
+                viewMode={viewMode}
+                formatDate={formatDate}
+                onItemClick={setSelectedItem}
+                onShareClick={(item, e) => {
+                  e.stopPropagation();
+                  const shareText = `🥠 운세쿠키 결과\n\n"${item.fortune}"\n\n받은 조언이에요!`;
+                  navigator.clipboard.writeText(shareText);
+                  alert('클립보드에 복사되었습니다!');
+                }}
+                onDeleteClick={(id, e) => {
+                  e.stopPropagation();
+                  setShowDeleteConfirm(id);
+                }}
+              />
+
+              {/* 페이지네이션 하단 */}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                onPageChange={handlePageChange}
+              />
             </div>
           </div>
         )}
