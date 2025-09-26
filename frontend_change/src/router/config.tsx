@@ -1,6 +1,4 @@
-
 import type { RouteObject } from 'react-router-dom';
-import HomePage from '../pages/home/page';
 import IntroPage from '../pages/intro/page';
 import RoleSelectPage from '../pages/role-select/page';
 import ConcernInputPage from '../pages/concern-input/page';
@@ -13,10 +11,6 @@ const routes: RouteObject[] = [
   {
     path: '/',
     element: <IntroPage />,
-  },
-  {
-    path: '/home',
-    element: <HomePage />,
   },
   {
     path: '/role-select',
