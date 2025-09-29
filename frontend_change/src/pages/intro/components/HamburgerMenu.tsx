@@ -34,6 +34,7 @@ interface HamburgerMenuProps {
   onLogout: () => void;
   onPastConcerns: () => void;
   onFeedback: () => void;
+  onAdmin?: () => void;
 }
 
 export default function HamburgerMenu({
@@ -41,7 +42,8 @@ export default function HamburgerMenu({
   onLogin,
   onLogout,
   onPastConcerns,
-  onFeedback
+  onFeedback,
+  onAdmin
 }: HamburgerMenuProps) {
   const [showMenu, setShowMenu] = useState(false);
 
@@ -85,18 +87,26 @@ export default function HamburgerMenu({
                   variant="danger"
                 />
               )}
-              
+
               <MenuItem
                 icon="ri-history-line"
                 text="이전 운세 기록 보기"
                 onClick={() => handleMenuClick(onPastConcerns)}
               />
-              
+
               <MenuItem
                 icon="ri-feedback-line"
                 text="피드백"
                 onClick={() => handleMenuClick(onFeedback)}
               />
+
+              {onAdmin && (
+                <MenuItem
+                  icon="ri-shield-user-line"
+                  text="관리자"
+                  onClick={() => handleMenuClick(onAdmin)}
+                />
+              )}
             </div>
           </div>
         </>

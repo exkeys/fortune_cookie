@@ -25,6 +25,10 @@ export default function IntroPage() {
     navigate('/past-concerns');
   };
   
+  const handleAdmin = () => {
+    navigate('/admin');
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-200 via-orange-200 to-pink-200 relative overflow-hidden">
       <HamburgerMenu
@@ -33,12 +37,10 @@ export default function IntroPage() {
         onLogout={handleLogout}
         onPastConcerns={handlePastConcerns}
         onFeedback={handleFeedback}
+        onAdmin={handleAdmin}
       />
-      
       <BackgroundDecorations />
-      
       <FloatingIcons />
-      
       <IntroMainContent isLoggedIn={isLoggedIn} />
     </div>
   );

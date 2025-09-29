@@ -5,6 +5,8 @@ import ConcernInputPage from '../pages/concern-input/page';
 import FortuneCookiePage from '../pages/fortune-cookie/page';
 import PastConcernsPage from '../pages/past-concerns/page';
 import FeedbackPage from '../pages/feedback/page';
+
+import AdminPage from '../pages/admin/page';
 import NotFoundPage from '../pages/not-found/page';
 
 const routes: RouteObject[] = [
@@ -31,6 +33,10 @@ const routes: RouteObject[] = [
   {
     path: '/feedback',
     element: <FeedbackPage />,
+  },
+  {
+    path: '/admin',
+    element: <AdminPage />,
   },
   {
     path: '*',
