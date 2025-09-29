@@ -28,6 +28,7 @@ const getStatusColor = (status: string) => {
     case 'active': return 'bg-green-100 text-green-800 border-green-200';
     case 'inactive': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'banned': return 'bg-red-100 text-red-800 border-red-200';
+    case 'deleted': return 'bg-gray-100 text-gray-800 border-gray-200';
     default: return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
@@ -36,6 +37,7 @@ const getStatusText = (status: string) => {
     case 'active': return '활성';
     case 'inactive': return '비활성';
     case 'banned': return '차단됨';
+    case 'deleted': return '삭제됨';
     default: return '알 수 없음';
   }
 };
@@ -72,6 +74,7 @@ export default function UserDetailModal({
               <i className="ri-close-line text-lg"></i>
             </button>
           </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
             <div className="bg-gradient-to-r from-amber-50 to-yellow-50 p-6 rounded-xl border border-amber-100">
               <h4 className="font-bold text-gray-800 mb-4">계정 정보</h4>
@@ -94,7 +97,26 @@ export default function UserDetailModal({
                 </div>
               </div>
             </div>
+            
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100">
+              <h4 className="font-bold text-gray-800 mb-4">계정 상태</h4>
+              <div className="space-y-3 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-600">계정 상태</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(user.status)}`}>
+                    {getStatusText(user.status)}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-600">권한 레벨</span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getRoleColor(user.is_admin)}`}>
+                    {getRoleText(user.is_admin)}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
+          
           <div className="flex space-x-4">
             <Button
               variant="outline"

@@ -8,6 +8,7 @@ interface User {
   is_admin: boolean;
   created_at: string;
   last_login_at: string | null;
+  school?: string;
 }
 
 interface UsersTableProps {
@@ -28,6 +29,7 @@ const getStatusColor = (status: string) => {
     case 'active': return 'bg-green-100 text-green-800 border-green-200';
     case 'inactive': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     case 'banned': return 'bg-red-100 text-red-800 border-red-200';
+    case 'deleted': return 'bg-gray-100 text-gray-800 border-gray-200';
     default: return 'bg-gray-100 text-gray-800 border-gray-200';
   }
 };
@@ -36,6 +38,7 @@ const getStatusText = (status: string) => {
     case 'active': return '활성';
     case 'inactive': return '비활성';
     case 'banned': return '차단됨';
+    case 'deleted': return '삭제됨';
     default: return '알 수 없음';
   }
 };
@@ -47,7 +50,6 @@ const UsersTable = ({
   setShowUserModal,
   handleUserAction,
   searchTerm,
-  setSearchTerm,
 }: UsersTableProps) => {
 
   const filteredUsers = users.filter(user =>
@@ -77,7 +79,7 @@ const UsersTable = ({
               </th>
               <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">닉네임</th>
               <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">이메일</th>
-              <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">상태</th>
+              <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">학교</th>
               <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">가입일</th>
               <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">권한</th>
               <th className="px-4 py-4 text-left text-sm font-bold text-gray-800">상태</th>
@@ -105,7 +107,7 @@ const UsersTable = ({
                   <div className="font-bold text-gray-800">{user.nickname}</div>
                 </td>
                 <td className="px-4 py-4 text-gray-700 text-sm">{user.email}</td>
-                <td className="px-4 py-4 text-gray-700 text-sm">{user.status}</td>
+                <td className="px-4 py-4 text-gray-700 text-sm">{user.school || '-'}</td>
                 <td className="px-4 py-4 text-gray-700 text-sm">
                   {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' }) : ''}
                 </td>
