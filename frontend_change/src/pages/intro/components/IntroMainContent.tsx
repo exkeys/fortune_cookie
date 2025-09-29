@@ -74,12 +74,14 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
             </span>
           </Button>
           
-          <button
-            onClick={() => navigate('/past-concerns')}
-            className="block mx-auto text-amber-600 hover:text-amber-700 text-sm md:text-base lg:text-lg font-medium transition-colors duration-300"
-          >
-            이전 운세 기록 보기
-          </button>
+          {isLoggedIn && (
+            <button
+              onClick={() => navigate('/past-concerns')}
+              className="block mx-auto text-amber-600 hover:text-amber-700 text-sm md:text-base lg:text-lg font-medium transition-colors duration-300"
+            >
+              이전 운세 기록 보기
+            </button>
+          )}
         </div>
       </div>
     </div>

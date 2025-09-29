@@ -13,8 +13,8 @@ export const supabase = createClient(
   SUPABASE_SERVICE_ROLE_KEY || SUPABASE_ANON_KEY,
   {
     auth: {
-      persistSession: false,
-      autoRefreshToken: false,
+      persistSession: true,
+      autoRefreshToken: true,
     },
   }
 );

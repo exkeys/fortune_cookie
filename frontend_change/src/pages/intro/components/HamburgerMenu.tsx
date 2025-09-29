@@ -80,32 +80,31 @@ export default function HamburgerMenu({
                   onClick={() => handleMenuClick(onLogin)}
                 />
               ) : (
-                <MenuItem
-                  icon="ri-logout-circle-line"
-                  text="로그아웃"
-                  onClick={() => handleMenuClick(onLogout)}
-                  variant="danger"
-                />
-              )}
-
-              <MenuItem
-                icon="ri-history-line"
-                text="이전 운세 기록 보기"
-                onClick={() => handleMenuClick(onPastConcerns)}
-              />
-
-              <MenuItem
-                icon="ri-feedback-line"
-                text="피드백"
-                onClick={() => handleMenuClick(onFeedback)}
-              />
-
-              {onAdmin && (
-                <MenuItem
-                  icon="ri-shield-user-line"
-                  text="관리자"
-                  onClick={() => handleMenuClick(onAdmin)}
-                />
+                <>
+                  <MenuItem
+                    icon="ri-logout-circle-line"
+                    text="로그아웃"
+                    onClick={() => handleMenuClick(onLogout)}
+                    variant="danger"
+                  />
+                  <MenuItem
+                    icon="ri-history-line"
+                    text="이전 운세 기록 보기"
+                    onClick={() => handleMenuClick(onPastConcerns)}
+                  />
+                  <MenuItem
+                    icon="ri-feedback-line"
+                    text="피드백"
+                    onClick={() => handleMenuClick(onFeedback)}
+                  />
+                  {onAdmin && (
+                    <MenuItem
+                      icon="ri-shield-user-line"
+                      text="관리자"
+                      onClick={() => handleMenuClick(onAdmin)}
+                    />
+                  )}
+                </>
               )}
             </div>
           </div>

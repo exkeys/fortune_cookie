@@ -73,6 +73,30 @@ export default function AdminPage() {
         .from('ai_answers')
         .select('*', { count: 'exact', head: true })
         .gte('created_at', today.toISOString());
+
+      // 학교별 사용자 수 집계
+      let schoolStats: { school: string; users: number; fortunes: number }[] = [];
+      if (usersData && Array.isArray(usersData)) {
+        const schoolMap: Record<string, { users: number; fortunes: number }> = {};
+        for (const user of usersData) {
+          const school = user.school || '미입력';
+          if (!schoolMap[school]) schoolMap[school] = { users: 0, fortunes: 0 };
+          schoolMap[school].users += 1;
+        }
+        // 운세 수 집계 (ai_answers에서 school별)
+        const { data: aiAnswers } = await supabase
+          .from('ai_answers')
+          .select('id, user_id, school');
+        if (aiAnswers && Array.isArray(aiAnswers)) {
+          for (const ans of aiAnswers) {
+            const school = ans.school || '미입력';
+            if (!schoolMap[school]) schoolMap[school] = { users: 0, fortunes: 0 };
+            schoolMap[school].fortunes += 1;
+          }
+        }
+        schoolStats = Object.entries(schoolMap).map(([school, val]) => ({ school, users: val.users, fortunes: val.fortunes }));
+      }
+
       setStats({
         totalFortunes: totalFortunes ?? 0,
         todayFortunes: todayFortunes ?? 0,
@@ -81,7 +105,7 @@ export default function AdminPage() {
         popularRoles: [], // TODO: 실제 쿼리로 교체 가능
         userGrowth: [],
         fortuneGrowth: [],
-        schoolStats: []
+        schoolStats
       });
       setSystemHealth({
         cpu: 45,
@@ -208,6 +232,7 @@ export default function AdminPage() {
         {/* 대시보드 탭 */}
         {activeTab === 'dashboard' && stats && (
           <div className="space-y-6">
+
             {/* 통계 카드 */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
               <Card className="p-6 bg-gradient-to-r from-blue-500 to-purple-600 text-white">
@@ -248,6 +273,90 @@ export default function AdminPage() {
                   </div>
                   <i className="ri-shield-user-line text-3xl opacity-80"></i>
                 </div>
+              </Card>
+            </div>
+
+            {/* 시스템 상태 */}
+            {systemHealth && (
+              <Card className="p-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
+                  <i className="ri-pulse-line mr-2 text-green-500"></i>
+                  시스템 상태
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">CPU 사용률</span>
+                      <span className="font-bold text-gray-800">{systemHealth.cpu}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-blue-500 h-2 rounded-full" 
+                        style={{ width: `${systemHealth.cpu}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">메모리 사용률</span>
+                      <span className="font-bold text-gray-800">{systemHealth.memory}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-green-500 h-2 rounded-full" 
+                        style={{ width: `${systemHealth.memory}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-600">저장공간</span>
+                      <span className="font-bold text-gray-800">{systemHealth.storage}%</span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div 
+                        className="bg-amber-500 h-2 rounded-full" 
+                        style={{ width: `${systemHealth.storage}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            )}
+
+            {/* 학교별 사용자 수 표 - 시스템 상태 아래에 위치 */}
+            <div className="mt-8">
+              <Card className="p-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
+                <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                  <i className="ri-school-line mr-2 text-amber-500"></i>
+                  학교별 사용자 수
+                </h2>
+                {stats.schoolStats && stats.schoolStats.length > 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="min-w-full divide-y divide-amber-200">
+                      <thead>
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">순위</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">학교명</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">사용자 수</th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-amber-100">
+                        {stats.schoolStats
+                          .sort((a, b) => b.users - a.users)
+                          .map((school, idx) => (
+                            <tr key={school.school}>
+                              <td className="px-4 py-2 font-bold text-amber-600">{idx + 1}</td>
+                              <td className="px-4 py-2 text-gray-800">{school.school}</td>
+                              <td className="px-4 py-2 text-gray-700">{school.users}명</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="text-gray-500">학교별 사용자 데이터가 없습니다.</div>
+                )}
               </Card>
             </div>
 

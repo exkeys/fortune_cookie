@@ -156,7 +156,7 @@ const UsersTable = ({
                       }`}
                       title={user.status === 'banned' ? '차단 해제' : '사용자 차단'}
                     >
-                      {user.status === 'banned' ? '✅' : '🚫'}
+                      {user.status === 'banned' ? '🚫' : '✅'}
                     </button>
                     <button
                       onClick={() => handleUserAction('delete', user.id)}

@@ -4,7 +4,7 @@ import { supabase } from '../supabaseClient';
 import type { User as BaseUser } from '../types';
 
 interface AuthReturn {
-  user: (BaseUser & { is_admin?: boolean }) | null;
+  user: (BaseUser & { is_admin?: boolean; status?: string }) | null;
   isLoggedIn: boolean;
   isLoading: boolean;
   login: (provider?: string) => Promise<void>;
@@ -12,7 +12,7 @@ interface AuthReturn {
 }
 
 export const useAuth = (): AuthReturn => {
-  const [user, setUser] = useState<(BaseUser & { is_admin?: boolean }) | null>(null);
+  const [user, setUser] = useState<(BaseUser & { is_admin?: boolean; status?: string }) | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
 
@@ -25,10 +25,10 @@ export const useAuth = (): AuthReturn => {
           // users 테이블에서 is_admin 값도 가져오기
           const { data: adminData } = await supabase
             .from('users')
-            .select('is_admin')
+            .select('is_admin, status')
             .eq('id', data.user.id)
             .single();
-          setUser({ ...(data.user as BaseUser), is_admin: adminData?.is_admin });
+          setUser({ ...(data.user as BaseUser), is_admin: adminData?.is_admin, status: adminData?.status });
           setIsLoggedIn(true);
         } else {
           setUser(null);
@@ -44,10 +44,10 @@ export const useAuth = (): AuthReturn => {
         // users 테이블에서 is_admin 값도 가져오기
         const { data: adminData } = await supabase
           .from('users')
-          .select('is_admin')
+          .select('is_admin, status')
           .eq('id', session.user.id)
           .single();
-        setUser({ ...(session.user as BaseUser), is_admin: adminData?.is_admin });
+        setUser({ ...(session.user as BaseUser), is_admin: adminData?.is_admin, status: adminData?.status });
         setIsLoggedIn(true);
       } else {
         setUser(null);

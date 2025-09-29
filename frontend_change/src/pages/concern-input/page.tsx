@@ -1,5 +1,6 @@
 
 import { useState } from 'react';
+import { useAuth } from '../../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import SelectedRoleDisplay from './components/SelectedRoleDisplay';
@@ -19,10 +20,11 @@ interface LocationState {
 }
 
 export default function ConcernInputPage() {
+  useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const { selectedRole } = (location.state as LocationState) || {};
-  
+
   const [concern, setConcern] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [charCount, setCharCount] = useState(0);
@@ -52,24 +54,20 @@ export default function ConcernInputPage() {
     setCharCount(suggestion.length);
   };
   
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-200 to-orange-200">
       <Header />
-      
       <div className="container mx-auto px-3 py-8 max-w-3xl">
         <SelectedRoleDisplay selectedRole={selectedRole} />
-        
         <PageTitle />
-        
         <ConcernInputArea 
           concern={concern}
           charCount={charCount}
           maxChars={maxChars}
           onInputChange={handleInputChange}
         />
-        
         <SuggestedConcerns onSuggestionClick={handleSuggestionClick} />
-        
         <SubmitButton 
           concern={concern}
           isSubmitting={isSubmitting}
