@@ -52,9 +52,11 @@ const UsersTable = ({
   searchTerm,
 }: UsersTableProps) => {
 
+  const lower = searchTerm.toLowerCase();
   const filteredUsers = users.filter(user =>
-    (user.nickname?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.email?.toLowerCase().includes(searchTerm.toLowerCase()))
+    (user.nickname?.toLowerCase().includes(lower) ||
+      user.email?.toLowerCase().includes(lower) ||
+      user.school?.toLowerCase().includes(lower))
   );
 
   return (

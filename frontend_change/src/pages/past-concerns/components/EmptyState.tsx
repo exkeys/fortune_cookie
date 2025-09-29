@@ -35,9 +35,8 @@ export default function EmptyState({ isLoggedIn, onNavigateHome, onLogin }: Empt
       <Card className="p-20 md:p-24 lg:p-28 text-center bg-white/70 backdrop-blur-sm border-0 shadow-lg">
         <div className="text-9xl md:text-[12rem] lg:text-[15rem] xl:text-[18rem] mb-12">🎲</div>
         <h3 className="text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-bold text-gray-800 mb-6">아직 운세 기록이 없어요</h3>
-        <p className="text-xl md:text-2xl lg:text-3xl xl:text-4xl text-gray-600 mb-12 leading-relaxed">
-          첫 번째 운세쿠키를 열어보고<br className="block sm:hidden" />
-          소중한 조언을 받아보세요!
+        <p className="text-base md:text-lg lg:text-xl xl:text-2xl text-gray-600 mb-12 leading-relaxed">
+          첫 번째 운세쿠키를 열어보고<br className="block sm:hidden" /> 소중한 조언을 받아보세요!          
         </p>
         <Button 
           onClick={onNavigateHome}

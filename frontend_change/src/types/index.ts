@@ -2,6 +2,7 @@ export interface User {
   id: string;
   email?: string;
   created_at?: string;
+  school?: string;
 }
 
 export interface NavigationState {

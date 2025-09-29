@@ -6,9 +6,20 @@ import BackgroundDecorations from './components/BackgroundDecorations';
 import FloatingIcons from './components/FloatingIcons';
 import IntroMainContent from './components/IntroMainContent';
 
+import { useEffect } from 'react';
+
 export default function IntroPage() {
   const navigate = useNavigate();
   const { user, isLoggedIn, login, logout } = useAuth();
+  // 첫 로그인(학교 정보 없는 경우)에는 학교 선택 페이지로 이동
+  useEffect(() => {
+    if (user && !user.is_admin && !user['school']) {
+      navigate('/school-select');
+    }
+  }, [user, navigate]);
+  if (user && !user.is_admin && !user['school']) {
+    return null;
+  }
   // 차단된 계정이면 차단 안내 페이지 표시
   if (user && user.status === 'banned') {
     return (
@@ -57,7 +68,7 @@ export default function IntroPage() {
         onLogout={handleLogout}
         onPastConcerns={handlePastConcerns}
         onFeedback={handleFeedback}
-        onAdmin={handleAdmin}
+        {...(user?.is_admin ? { onAdmin: handleAdmin } : {})}
       />
       <BackgroundDecorations />
       <FloatingIcons />

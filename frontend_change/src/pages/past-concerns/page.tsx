@@ -378,7 +378,7 @@ export default function PastConcernsPage() {
           /* 빈 상태 */
           <EmptyState
             isLoggedIn={isLoggedIn}
-            onNavigateHome={() => navigate('/')}
+            onNavigateHome={() => navigate('/role-select')}
             onLogin={async () => {
               const { error } = await supabase.auth.signInWithOAuth({ provider: 'kakao' });
               if (error) console.error('로그인 에러:', error);
