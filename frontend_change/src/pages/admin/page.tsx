@@ -19,6 +19,7 @@ interface User {
   is_admin: boolean;
   created_at: string;
   last_login_at: string | null;
+  fortune_count?: number;
 }
 
 interface FortuneStats {
@@ -60,15 +61,28 @@ export default function AdminPage() {
       // 사용자 데이터 로드
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select('*')
+        .select('id, email, nickname, status, is_admin, created_at, last_login_at, last_logout_at, school, login_count, oauth_provider')
         .order('created_at', { ascending: false });
       let usersArr: any[] = [];
       if (usersError) {
         console.error('Error fetching users:', usersError);
         setUsers([]);
       } else {
-        setUsers(usersData as User[]);
         usersArr = usersData as any[];
+        console.log('AdminPage - Raw users data:', usersArr);
+        
+        // 각 사용자의 운세수(ai_answers 개수) 가져오기 (N+1 쿼리)
+        const usersWithFortune = await Promise.all(usersArr.map(async (u) => {
+          const { count } = await supabase
+            .from('ai_answers')
+            .select('*', { count: 'exact', head: true })
+            .eq('user_id', u.id);
+          return { ...u, fortune_count: count ?? 0 };
+        }));
+        
+        console.log('AdminPage - Users with fortune count:', usersWithFortune);
+        setUsers(usersWithFortune);
+        usersArr = usersWithFortune;
       }
       // 실제 Supabase에서 총 운세/오늘 운세 수 가져오기
       const { count: totalFortunes } = await supabase
@@ -186,7 +200,7 @@ export default function AdminPage() {
         case 'delete':
           await supabase
             .from('users')
-            .update({ status: 'deleted' })
+            .delete()
             .eq('id', userId);
           break;
       }

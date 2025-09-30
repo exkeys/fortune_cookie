@@ -20,11 +20,25 @@ export class AuthService {
       
       logger.info('카카오 사용자 정보 조회 성공', { email, nickname });
       
+      // 기존 사용자 정보 조회
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('created_at, login_count')
+        .eq('email', email)
+        .single();
+
       // Supabase에 upsert (중복 email 처리)
       const { data, error } = await supabase
         .from('users')
         .upsert(
-          [{ email, nickname }],
+          [{ 
+            email, 
+            nickname,
+            created_at: existingUser?.created_at || new Date().toISOString(), // 기존 생성일 유지
+            last_login_at: new Date().toISOString(),
+            status: 'active',
+            login_count: (existingUser?.login_count || 0) + 1
+          }],
           { onConflict: 'email' }
         )
         .select()
@@ -48,6 +62,29 @@ export class AuthService {
       }
       
       logger.error('카카오 로그인 예외', error);
+      throw error;
+    }
+  }
+
+  // 로그아웃
+  static async logout(userId) {
+    try {
+      logger.info('로그아웃 요청', { userId });
+      
+      const { error } = await supabase
+        .from('users')
+        .update({ last_logout_at: new Date().toISOString() })
+        .eq('id', userId);
+      
+      if (error) {
+        logger.error('로그아웃 시간 업데이트 실패', error);
+        throw new DatabaseError('로그아웃 처리에 실패했습니다');
+      }
+      
+      logger.info('로그아웃 성공', { userId });
+      return { success: true };
+    } catch (error) {
+      logger.error('로그아웃 예외', error);
       throw error;
     }
   }
