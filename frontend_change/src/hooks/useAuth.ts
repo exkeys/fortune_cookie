@@ -2,43 +2,6 @@ import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import type { User as BaseUser } from '../types';
 
-// 서버로 로그 전송 (진단: timestamp, visibilityState, pathname, tabId 포함)
-function getTabId() {
-  try {
-    const key = 'FC_TAB_ID';
-    let id = localStorage.getItem(key);
-    if (!id) {
-      id = Math.random().toString(36).slice(2, 10);
-      localStorage.setItem(key, id);
-    }
-    return id;
-  } catch (e) {
-    return 'unknown';
-  }
-}
-
-async function logToServer(message: string, data?: any) {
-  const payload = {
-    message,
-    data,
-    meta: {
-      ts: new Date().toISOString(),
-      visibility: typeof document !== 'undefined' ? document.visibilityState : 'unknown',
-      pathname: typeof location !== 'undefined' ? location.pathname : 'unknown',
-      tabId: getTabId(),
-    },
-  };
-  try {
-    await fetch('/api/log', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-  } catch (e) {
-    // best-effort logging
-  }
-}
-
 interface AuthReturn {
   user: (BaseUser & { is_admin?: boolean; status?: string }) | null;
   isLoggedIn: boolean;
@@ -51,246 +14,108 @@ export const useAuth = (): AuthReturn => {
   const [user, setUser] = useState<(BaseUser & { is_admin?: boolean; status?: string }) | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-
-  // 마지막으로 setUser한 user id를 기억 (반드시 함수 내부에 선언)
   const lastUserIdRef = useRef<string | null>(null);
-  const isInitializedRef = useRef(false);
-  const processingRef = useRef(false);
 
   useEffect(() => {
-    let isMounted = true;
-    
-    // 1. onAuthStateChange 리스너를 먼저 등록
-    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('[useAuth] onAuthStateChange event:', event, session);
+    // 사용자 상태를 설정하는 함수
+    const setUserState = async (session: any, isNewLogin: boolean = false) => {
+      if (!session?.user) return;
+
+      const meta = session.user.user_metadata || {};
+      const displayName = meta.nickname || meta.name || meta.full_name || (session.user.email ? session.user.email.split('@')[0] : '');
       
-      if (!isMounted) return;
-      
-      // 이벤트 타입에 따라 안전하게 처리: SIGNED_IN / INITIAL_SESSION / SIGNED_OUT 만 상태를 변경
-      if ((event === 'SIGNED_IN' || event === 'INITIAL_SESSION') && session?.user) {
-        // 이미 같은 user id로 setUser가 되어 있으면 중복 처리하지 않음
-        if (lastUserIdRef.current === session.user.id) {
-          logToServer('[useAuth] onAuthStateChange: DUPLICATE_USER', { event, session });
-          if (isMounted) setIsLoading(false);
-          return;
-        }
-        
-        // 이미 처리 중이면 무시
-        if (processingRef.current) {
-          logToServer('[useAuth] onAuthStateChange: ALREADY_PROCESSING', { event, session });
-          if (isMounted) setIsLoading(false);
-          return;
-        }
-        
-        processingRef.current = true;
-        isInitializedRef.current = true;
-        logToServer('[useAuth] onAuthStateChange: SIGNED_IN', { event, session });
-        console.log('[useAuth] handleUserSession 호출 전');
+      // 새 로그인인 경우에만 사용자 정보 업데이트
+      if (isNewLogin) {
         try {
-          await handleUserSession(session);
-          console.log('[useAuth] handleUserSession 호출 후');
-        } catch (error) {
-          console.error('[useAuth] handleUserSession 오류:', error);
-        } finally {
-          processingRef.current = false;
-          if (isMounted) {
-            console.log('[useAuth] setIsLoading(false) 호출');
-            setIsLoading(false);
-          }
+          const { data: existingUser } = await supabase
+            .from('users')
+            .select('login_count, created_at, last_login_at, last_logout_at')
+            .eq('id', session.user.id)
+            .single();
+          
+          const prevCount = existingUser?.login_count ?? 0;
+          const existingCreatedAt = existingUser?.created_at;
+
+          await supabase.from('users').upsert({
+            id: session.user.id,
+            email: session.user.email,
+            nickname: displayName,
+            status: 'active',
+            created_at: existingCreatedAt || new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            login_count: prevCount + 1,
+            last_login_at: new Date().toISOString(),
+            last_logout_at: null,
+          });
+        } catch (e) {
+          console.error('[useAuth] upsert users failed:', e);
         }
-        return;
       }
 
-      // SIGNED_OUT 이벤트 처리
-      if (event === 'SIGNED_OUT') {
-        logToServer('[useAuth] onAuthStateChange: SIGNED_OUT', { event, session });
-        lastUserIdRef.current = null;
-        isInitializedRef.current = false;
-        if (isMounted) {
-          setUser(null);
-          setIsLoggedIn(false);
-          setIsLoading(false);
-        }
-        return;
-      }
-
-      // 기타 이벤트는 로깅만
-      logToServer('[useAuth] onAuthStateChange: IGNORED', { event, session });
-    });
-
-    // 2. 초기 세션 확인 (fallback)
-    const initializeAuth = async () => {
+      // 사용자 정보 조회 및 상태 설정
       try {
-        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error('[useAuth] getSession error:', sessionError);
-          if (isMounted) {
-            setUser(null);
-            setIsLoggedIn(false);
-            setIsLoading(false);
-          }
-          return;
-        }
-        
-        console.log('[useAuth] getSession (init):', sessionData);
-        
-        // onAuthStateChange가 아직 호출되지 않았다면 직접 처리
-        if (!isInitializedRef.current && isMounted) {
-          if (sessionData?.session?.user) {
-            // 이미 같은 user id로 처리되었는지 확인
-            if (lastUserIdRef.current === sessionData.session.user.id) {
-              logToServer('[useAuth] getSession: DUPLICATE_USER', { session: sessionData.session });
-              if (isMounted) setIsLoading(false);
-              return;
-            }
-            
-            // 이미 처리 중이면 무시
-            if (processingRef.current) {
-              logToServer('[useAuth] getSession: ALREADY_PROCESSING', { session: sessionData.session });
-              if (isMounted) setIsLoading(false);
-              return;
-            }
-            
-            processingRef.current = true;
-            isInitializedRef.current = true;
-            console.log('[useAuth] getSession에서 handleUserSession 호출 전');
-            try {
-              await handleUserSession(sessionData.session);
-              console.log('[useAuth] getSession에서 handleUserSession 호출 후');
-            } catch (error) {
-              console.error('[useAuth] getSession handleUserSession 오류:', error);
-            } finally {
-              processingRef.current = false;
-            }
-          } else {
-            if (isMounted) {
-              setUser(null);
-              setIsLoggedIn(false);
-            }
-          }
-          if (isMounted) setIsLoading(false);
-        }
-      } catch (err) {
-        console.error('[useAuth] getSession (init) unexpected error:', err);
-        if (isMounted) {
-          setUser(null);
-          setIsLoggedIn(false);
-          setIsLoading(false);
-        }
-      }
-    };
-
-    // 초기화 실행
-    initializeAuth();
-
-    return () => {
-      isMounted = false;
-      listener?.subscription.unsubscribe();
-    };
-  }, []);
-
-  // 사용자 세션 처리 함수 분리
-  const handleUserSession = async (session: any) => {
-    console.log('[useAuth] handleUserSession 시작:', session.user.id);
-    
-    const meta = session.user.user_metadata || {};
-    const displayName = meta.nickname || meta.name || meta.full_name || (session.user.email ? session.user.email.split('@')[0] : '');
-    
-    // 먼저 기본 사용자 데이터로 설정 (데이터베이스 조회 실패해도 로그인 유지)
-    const defaultUserData = {
-      ...(session.user as BaseUser),
-      is_admin: false, // 기본값으로 설정, 나중에 업데이트
-      status: 'active',
-      school: 'unknown', // 기본값으로 설정하여 intro 페이지가 나오도록 함
-    };
-    
-    lastUserIdRef.current = session.user.id;
-    setUser(defaultUserData);
-    setIsLoggedIn(true);
-    console.log('[useAuth] 기본 사용자 데이터 설정 완료:', defaultUserData);
-    
-    // 백그라운드에서 데이터베이스 작업 수행 (실패해도 로그인은 유지)
-    const updateUserData = async () => {
-      try {
-        console.log('[useAuth] 사용자 정보 조회 시작');
-        
-        const selectPromise = supabase
+        const { data: userRow } = await supabase
           .from('users')
           .select('is_admin, status, school')
           .eq('id', session.user.id)
           .single();
         
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('select timeout')), 2000)
-        );
-        
-        const { data: userRow, error: userError } = await Promise.race([selectPromise, timeoutPromise]) as any;
-          
-        if (!userError && userRow) {
-          const updatedUserData = {
-            ...(session.user as BaseUser),
-            is_admin: userRow?.is_admin ?? false,
-            status: userRow?.status ?? 'active',
-            school: userRow?.school ?? undefined,
-          };
-          console.log('[useAuth] 사용자 데이터 업데이트:', updatedUserData);
-          setUser(updatedUserData);
-        } else {
-          console.error('[useAuth] select users failed:', userError);
-          // 데이터베이스 조회 실패 시에도 현재 사용자 정보로 업데이트 시도
-          const currentUser = session.user as BaseUser;
-          if (currentUser) {
-            const fallbackUserData = {
-              ...currentUser,
-              is_admin: false,
-              status: 'active',
-              school: undefined,
-            };
-            console.log('[useAuth] 폴백 사용자 데이터 설정:', fallbackUserData);
-            setUser(fallbackUserData);
-          }
-        }
+        setUser({
+          ...(session.user as BaseUser),
+          is_admin: userRow?.is_admin ?? false,
+          status: userRow?.status ?? 'active',
+          school: userRow?.school ?? undefined,
+        });
       } catch (e) {
         console.error('[useAuth] select users failed:', e);
+        setUser(session.user as BaseUser);
       }
+      
+      lastUserIdRef.current = session.user.id;
+      setIsLoggedIn(true);
+      setIsLoading(false);
     };
-    
-    // upsert 작업 (백그라운드에서 실행)
-    const upsertUserData = async () => {
-      try {
-        console.log('[useAuth] users 테이블 upsert 시작');
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('upsert timeout')), 3000)
-        );
-        
-        const upsertPromise = supabase.from('users').upsert({
-          id: session.user.id,
-          email: session.user.email,
-          nickname: displayName,
-          status: 'active',
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
-        });
-        
-        const { error: upsertError } = await Promise.race([upsertPromise, timeoutPromise]) as any;
-        
-        if (upsertError) {
-          console.error('[useAuth] upsert users error:', upsertError);
+
+    // onAuthStateChange 리스너 등록
+    const { data: listener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('[useAuth] onAuthStateChange event:', event, session);
+      
+      if (event === 'SIGNED_IN' && session?.user) {
+        // 새로운 로그인
+        await setUserState(session, true);
+        return;
+      }
+
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setIsLoggedIn(false);
+        setIsLoading(false);
+        lastUserIdRef.current = null;
+        return;
+      }
+
+      if (event === 'INITIAL_SESSION') {
+        if (session?.user) {
+          // 세션 복구 (새로고침 등)
+          await setUserState(session, false);
         } else {
-          console.log('[useAuth] users 테이블 upsert 완료');
+          // 세션이 없으면 로그아웃 상태로 설정
+          setUser(null);
+          setIsLoggedIn(false);
+          lastUserIdRef.current = null;
         }
-      } catch (e) {
-        console.error('[useAuth] upsert users failed:', e);
+        setIsLoading(false);
+        return;
       }
-    };
-    
-    // 백그라운드에서 데이터베이스 작업 실행
-    Promise.all([updateUserData(), upsertUserData()]).catch(e => {
-      console.error('[useAuth] background tasks failed:', e);
+
+      // 기타 이벤트는 로딩만 해제
+      if (event === 'TOKEN_REFRESHED') {
+        setIsLoading(false);
+      }
     });
-    
-    console.log('[useAuth] handleUserSession 완료');
-  };
+
+    return () => listener?.subscription.unsubscribe();
+  }, []);
 
 
   const login = async (provider: string = 'kakao') => {
@@ -299,6 +124,20 @@ export const useAuth = (): AuthReturn => {
   };
 
   const logout = async () => {
+    // 로그아웃 시간을 Supabase users 테이블에 직접 업데이트
+    if (user?.id) {
+      try {
+        await supabase
+          .from('users')
+          .update({ last_logout_at: new Date().toISOString() })
+          .eq('id', user.id);
+        console.log('[useAuth] logout time updated in users table');
+      } catch (e) {
+        console.error('[useAuth] logout time update failed:', e);
+        // 업데이트 실패해도 로그아웃은 계속 진행
+      }
+    }
+    
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   };
