@@ -42,9 +42,9 @@ interface SystemHealth {
 }
 
 export default function AdminPage() {
-  const { user, isLoading: authLoading } = useAuth();
+  const { user, isLoading: authLoading, isLoggedIn } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'analytics' | 'marketing' | 'settings' | 'system'>('dashboard');
-  const [isLoading, setIsLoading] = useState(true);
+  const [isAdminChecked, setIsAdminChecked] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<FortuneStats | null>(null);
   const [systemHealth, setSystemHealth] = useState<SystemHealth | null>(null);
@@ -52,11 +52,49 @@ export default function AdminPage() {
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [showUserModal, setShowUserModal] = useState<User | null>(null);
 
-  // 모든 데이터 로드
+  // 관리자 권한 확인 및 데이터 로드
   useEffect(() => {
-    if (!user || !user.id || !user.is_admin) return;
-    const fetchData = async () => {
-      setIsLoading(true);
+    const checkAdminAndLoadData = async () => {
+      // 인증 로딩이 완료될 때까지 대기
+      if (authLoading) {
+        console.log('[AdminPage] 인증 로딩 중...');
+        return;
+      }
+      
+      // 로그인되지 않은 경우
+      if (!isLoggedIn || !user) {
+        console.log('[AdminPage] 로그인되지 않음 또는 사용자 정보 없음');
+        setIsAdminChecked(true);
+        return;
+      }
+
+      console.log('[AdminPage] 사용자 정보 확인:', { userId: user.id, isAdmin: user.is_admin });
+
+      try {
+        // 관리자 권한 재확인
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('is_admin, status')
+          .eq('id', user.id)
+          .single();
+
+        if (userError) {
+          console.error('관리자 권한 확인 실패:', userError);
+          setIsAdminChecked(true);
+          return;
+        }
+
+        // 관리자가 아닌 경우
+        if (!userData?.is_admin) {
+          console.log('[AdminPage] 관리자가 아님');
+          setIsAdminChecked(true);
+          return;
+        }
+
+        console.log('[AdminPage] 관리자 권한 확인됨, 데이터 로드 시작');
+
+        // 관리자인 경우 데이터 로드
+        const fetchData = async () => {
       // 사용자 데이터 로드
       const { data: usersData, error: usersError } = await supabase
         .from('users')
@@ -149,10 +187,18 @@ export default function AdminPage() {
         responseTime: 180,
         errorRate: 0.2
       });
-      setIsLoading(false);
+        };
+        
+        await fetchData();
+      } catch (error) {
+        console.error('데이터 로드 실패:', error);
+      } finally {
+        setIsAdminChecked(true);
+      }
     };
-    fetchData();
-  }, [user]);
+
+    checkAdminAndLoadData();
+  }, [authLoading, isLoggedIn, user?.id]); // user 전체 대신 user.id만 의존성으로 설정
 
   const handleUserAction = async (action: string, userId?: string) => {
     if (!userId) return;
@@ -210,7 +256,8 @@ export default function AdminPage() {
     }
   };
 
-  if (authLoading || isLoading) {
+  // 로딩 중이거나 관리자 권한 확인 중인 경우
+  if (authLoading || !isAdminChecked) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
         <Header />
@@ -223,6 +270,7 @@ export default function AdminPage() {
     );
   }
 
+  // 관리자가 아닌 경우
   if (!user || !user.is_admin) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 flex flex-col items-center justify-center">
