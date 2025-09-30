@@ -10,6 +10,7 @@ interface User {
   is_admin: boolean;
   created_at: string;
   last_login_at: string | null;
+  last_logout_at?: string | null;
 }
 
 interface UsersTabProps {
@@ -39,7 +40,7 @@ const UsersTab: React.FC<UsersTabProps> = ({
           <div className="relative">
             <input
               type="text"
-              placeholder="사용자 검색..."
+              placeholder="이름, 학교, 이메일로 검색..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-transparent"
