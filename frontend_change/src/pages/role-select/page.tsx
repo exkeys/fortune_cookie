@@ -8,6 +8,7 @@ import CustomRoleInput from './components/CustomRoleInput';
 import NextButton from './components/NextButton';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { loadFormData, saveFormData, clearFormData, updateFormData } from '../../utils/formPersistence';
 
 interface Role {
   id: string;
@@ -38,9 +39,19 @@ export default function RoleSelectPage() {
   const [isAnimating, setIsAnimating] = useState(false);
   const [customRoleInputId, setCustomRoleInputId] = useState<string | null>(null);
 
-  // 1. 진입 시 custom_roles 불러오기
+  // 1. 진입 시 custom_roles 불러오기 및 저장된 폼 데이터 복원
   useEffect(() => {
     if (!user?.id) return;
+    
+    // 저장된 폼 데이터 복원
+    const savedData = loadFormData();
+    if (savedData?.selectedRole) {
+      setSelectedRole(savedData.selectedRole.id);
+    }
+    if (savedData?.customRole) {
+      setCustomRoles(prev => ({ ...prev, [savedData.customRole!]: savedData.customRole! }));
+    }
+    
     (async () => {
       const { data, error } = await supabase
         .from('custom_roles')
@@ -122,6 +133,13 @@ export default function RoleSelectPage() {
     } else {
       setCustomRoleInputId(null);
     }
+    
+    // 선택된 역할을 localStorage에 저장
+    const selectedRoleData = roles.find(role => role.id === roleId);
+    if (selectedRoleData) {
+      updateFormData({ selectedRole: selectedRoleData });
+    }
+    
     setTimeout(() => setIsAnimating(false), 300);
   };
 
@@ -182,6 +200,9 @@ export default function RoleSelectPage() {
         roleData = roles.find(role => role.id === selectedRole);
       }
       if (roleData) {
+        // 폼 데이터에 선택된 역할 저장
+        updateFormData({ selectedRole: roleData });
+        
         navigate('/concern-input', {
           state: {
             selectedRole: roleData
