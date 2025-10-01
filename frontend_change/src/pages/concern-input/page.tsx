@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '../../components/feature/Header';
@@ -8,6 +8,7 @@ import PageTitle from './components/PageTitle';
 import ConcernInputArea from './components/ConcernInputArea';
 import SuggestedConcerns from './components/SuggestedConcerns';
 import SubmitButton from './components/SubmitButton';
+import { loadFormData, updateFormData, clearFormData } from '../../utils/formPersistence';
 
 interface LocationState {
   selectedRole?: {
@@ -29,12 +30,23 @@ export default function ConcernInputPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [charCount, setCharCount] = useState(0);
   const maxChars = 100;
+
+  // 컴포넌트 마운트 시 저장된 폼 데이터 복원
+  useEffect(() => {
+    const savedData = loadFormData();
+    if (savedData?.concern) {
+      setConcern(savedData.concern);
+      setCharCount(savedData.concern.length);
+    }
+  }, []);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const value = e.target.value;
     if (value.length <= maxChars) {
       setConcern(value);
       setCharCount(value.length);
+      // 입력할 때마다 localStorage에 저장
+      updateFormData({ concern: value });
     }
   };
   
@@ -42,6 +54,9 @@ export default function ConcernInputPage() {
     if (!concern.trim()) return;
     setIsSubmitting(true);
     try {
+      // 최종 폼 데이터 저장
+      updateFormData({ concern: concern.trim() });
+      
       // AI 답변 생성은 Fortune 페이지에서 처리하도록 변경
       navigate('/fortune-cookie', { state: { selectedRole, concern: concern.trim() } });
     } finally {
@@ -52,6 +67,8 @@ export default function ConcernInputPage() {
   const handleSuggestionClick = (suggestion: string) => {
     setConcern(suggestion);
     setCharCount(suggestion.length);
+    // 제안 클릭 시에도 localStorage에 저장
+    updateFormData({ concern: suggestion });
   };
   
 

@@ -4,6 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import { useApi } from '../../hooks/useApi';
 import { supabase } from '../../supabaseClient';
+import { clearFormData } from '../../utils/formPersistence';
 import RoleInfoDisplay from './components/RoleInfoDisplay';
 import CookieAnimationArea from './components/CookieAnimationArea';
 import FortuneResultDisplay from './components/FortuneResultDisplay';
@@ -164,6 +165,9 @@ export default function FortuneCookiePage() {
       // localStorage에도 저장 (백업용)
       saveToHistory();
       
+      // 폼 데이터 삭제 (완료 시)
+      clearFormData();
+      
       // 과거 운세 기록 페이지로 이동
       navigate('/past-concerns');
     } catch (error) {
@@ -173,6 +177,9 @@ export default function FortuneCookiePage() {
   };
 
   const handleFinish = () => {
+    // 폼 데이터 삭제 (완료 시)
+    clearFormData();
+    
     // 저장하지 않고 intro 페이지로 이동
     navigate('/');
   };
