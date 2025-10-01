@@ -1,4 +1,5 @@
 // modal
+import { useState } from 'react';
 import Card from '../../../components/base/Card';
 import Button from '../../../components/base/Button';
 
@@ -10,6 +11,7 @@ interface User {
   is_admin: boolean;
   created_at: string;
   last_login_at: string | null;
+  last_logout_at?: string | null;
 }
 
 interface UserDetailModalProps {
@@ -51,6 +53,36 @@ export default function UserDetailModal({
   onBan,
   onUnban,
 }: UserDetailModalProps) {
+  const [showFullId, setShowFullId] = useState(false);
+  
+  // 디버깅을 위한 콘솔 로그
+  console.log('UserDetailModal - user data:', {
+    id: user.id,
+    last_login_at: user.last_login_at,
+    last_logout_at: user.last_logout_at,
+    created_at: user.created_at
+  });
+  
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Date formatting error:', error, 'Input:', dateString);
+      return 'N/A';
+    }
+  };
+
+  const truncateId = (id: string, maxLength: number = 10) => {
+    if (id.length <= maxLength) return id;
+    return showFullId ? id : `${id.substring(0, maxLength)}...`;
+  };
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
       <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white">
@@ -82,19 +114,37 @@ export default function UserDetailModal({
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
                   <span className="text-gray-600">가입일</span>
-                  <span className="font-bold text-gray-800">
-                    {user.created_at ? new Date(user.created_at).toLocaleDateString('ko-KR') : ''}
+                  <span className="font-bold text-gray-800 text-xs">
+                    {formatDate(user.created_at)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">마지막 로그인</span>
-                  <span className="font-bold text-gray-800">
-                    {user.last_login_at ? new Date(user.last_login_at).toLocaleDateString('ko-KR') : 'N/A'}
+                  <span className="text-gray-600 text-xs">마지막 로그인</span>
+                  <span className="font-bold text-gray-800 text-xs">
+                    {formatDate(user.last_login_at || null)}
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">사용자 ID</span>
-                  <span className="font-bold text-gray-800">{user.id}</span>
+                  <span className="text-gray-600 text-xs">마지막 로그아웃</span>
+                  <span className="font-bold text-gray-800 text-xs">
+                    {formatDate(user.last_logout_at || null)}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-600 text-xs">사용자 ID</span>
+                  <div className="flex items-center space-x-2">
+                    <span className="font-bold text-gray-800 font-mono text-xs break-all">
+                      {truncateId(user.id || '')}
+                    </span>
+                    {(user.id?.length || 0) > 10 && (
+                      <button
+                        onClick={() => setShowFullId(!showFullId)}
+                        className="text-blue-500 hover:text-blue-700 text-xs font-medium px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
+                      >
+                        {showFullId ? '접기' : '더보기'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

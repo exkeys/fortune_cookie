@@ -20,6 +20,7 @@ export class ConcernService {
           logger.warn('사용자를 찾을 수 없음, 사용자 생성 시도', { userId, userError });
           
           // 사용자가 없으면 기본 사용자 정보로 생성 시도
+          const currentTime = new Date().toISOString();
           const { error: createError } = await supabase
             .from('users')
             .insert({
@@ -28,7 +29,10 @@ export class ConcernService {
               nickname: '사용자',
               oauth_provider: 'temp',
               status: 'active',
-              login_count: 0
+              login_count: 0,
+              created_at: currentTime, // 새 사용자이므로 현재 시간이 생성일
+              last_login_at: currentTime,
+              last_logout_at: null
             });
           
           if (createError) {

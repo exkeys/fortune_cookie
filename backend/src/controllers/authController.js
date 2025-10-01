@@ -20,4 +20,22 @@ export class AuthController {
       next(error);
     }
   }
+
+  // 로그아웃
+  static async logout(req, res, next) {
+    try {
+      const validation = validateRequest(req, ['userId']);
+      if (!validation.isValid) {
+        return res.status(400).json({ error: validation.error });
+      }
+      
+      const { userId } = req.body;
+      const result = await AuthService.logout(userId);
+      
+      res.json(result);
+    } catch (error) {
+      logger.error('로그아웃 컨트롤러 에러', error);
+      next(error);
+    }
+  }
 }
