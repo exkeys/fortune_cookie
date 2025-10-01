@@ -8,6 +8,7 @@ import PastConcernsPage from '../pages/past-concerns/page';
 import FeedbackPage from '../pages/feedback/page';
 import SchoolSelectPage from '../pages/school-select/page';
 import AdminPage from '../pages/admin/page';
+import SettingsPage from '../pages/settings/page';
 import NotFoundPage from '../pages/not-found/page';
 
 const routes: RouteObject[] = [
@@ -42,6 +43,10 @@ const routes: RouteObject[] = [
   {
     path: '/feedback',
     element: <FeedbackPage />,
+  },
+  {
+    path: '/settings',
+    element: <SettingsPage />,
   },
   {
     path: '/admin',

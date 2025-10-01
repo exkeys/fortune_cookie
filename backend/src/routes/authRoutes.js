@@ -9,4 +9,7 @@ router.post('/kakao', AuthController.kakaoLogin);
 // 로그아웃
 router.post('/logout', AuthController.logout);
 
+// 회원탈퇴
+router.post('/delete-account', AuthController.deleteAccount);
+
 export default router;

@@ -244,10 +244,19 @@ export default function AdminPage() {
             .eq('id', userId);
           break;
         case 'delete':
-          await supabase
-            .from('users')
-            .delete()
-            .eq('id', userId);
+          // 백엔드 API를 통해 사용자 데이터 완전 삭제
+          const deleteResponse = await fetch('/api/auth/delete-account', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId }),
+          });
+
+          if (!deleteResponse.ok) {
+            const errorData = await deleteResponse.json();
+            throw new Error(errorData.error || '사용자 삭제에 실패했습니다');
+          }
           break;
       }
       

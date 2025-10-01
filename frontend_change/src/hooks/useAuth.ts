@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '../supabaseClient';
 import type { User as BaseUser } from '../types';
+import { clearAllUserData, clearSessionData } from '../utils/dataCleanup';
 
 // 서버로 로그 전송 (진단: timestamp, visibilityState, pathname, tabId 포함)
 function getTabId() {
@@ -45,6 +46,7 @@ interface AuthReturn {
   isLoading: boolean;
   login: (provider?: string) => Promise<void>;
   logout: () => Promise<void>;
+  deleteAccount: () => Promise<void>;
 }
 
 export const useAuth = (): AuthReturn => {
@@ -111,6 +113,8 @@ export const useAuth = (): AuthReturn => {
           setIsLoggedIn(false);
           setIsLoading(false);
         }
+        // 로그아웃 시 세션 데이터만 정리
+        clearSessionData();
         return;
       }
 
@@ -303,7 +307,66 @@ export const useAuth = (): AuthReturn => {
     if (error) throw error;
   };
 
-  return { user, isLoggedIn, isLoading, login, logout };
+  const deleteAccount = async () => {
+    try {
+      // 1. 현재 사용자 정보 가져오기
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (!user) throw new Error('사용자를 찾을 수 없습니다');
+
+      const userId = user.id;
+      logToServer('[useAuth] deleteAccount: 회원탈퇴 시작', { userId });
+
+      // 2. 백엔드에 회원탈퇴 요청
+      try {
+        const response = await fetch('/api/auth/delete-account', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ userId }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || '회원탈퇴 처리에 실패했습니다');
+        }
+
+        const result = await response.json();
+        logToServer('[useAuth] deleteAccount: 백엔드 삭제 완료', result);
+      } catch (apiError) {
+        console.error('[useAuth] 백엔드 회원탈퇴 실패:', apiError);
+        // 백엔드 오류가 있어도 클라이언트 정리는 진행
+      }
+
+      // 3. Supabase Auth에서 사용자 삭제 시도
+      try {
+        // Supabase는 클라이언트에서 직접 사용자 삭제를 지원하지 않으므로 로그아웃으로 대체
+        await supabase.auth.signOut();
+      } catch (authError) {
+        console.warn('[useAuth] Supabase 로그아웃 실패:', authError);
+      }
+
+      // 4. 클라이언트 측 모든 데이터 정리
+      clearAllUserData();
+      
+      // 5. 상태 초기화
+      lastUserIdRef.current = null;
+      isInitializedRef.current = false;
+      setUser(null);
+      setIsLoggedIn(false);
+      setIsLoading(false);
+
+      logToServer('[useAuth] deleteAccount: 회원탈퇴 완료', { userId });
+      
+    } catch (error) {
+      logToServer('[useAuth] deleteAccount: 회원탈퇴 실패', { error });
+      console.error('[useAuth] 회원탈퇴 실패:', error);
+      throw error;
+    }
+  };
+
+  return { user, isLoggedIn, isLoading, login, logout, deleteAccount };
 };
 
 

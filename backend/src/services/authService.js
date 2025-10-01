@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { supabase } from '../config/database.js';
+import { supabase, supabaseAdmin } from '../config/database.js';
 import { logger } from '../utils/logger.js';
 import { ExternalServiceError, DatabaseError } from '../utils/errors.js';
 
@@ -85,6 +85,62 @@ export class AuthService {
       return { success: true };
     } catch (error) {
       logger.error('로그아웃 예외', error);
+      throw error;
+    }
+  }
+
+  // 회원탈퇴
+  static async deleteAccount(userId) {
+    try {
+      logger.info('회원탈퇴 요청', { userId });
+      
+      // 1. 사용자의 모든 고민 기록 삭제
+      const { error: concernsError } = await supabase
+        .from('ai_answers')
+        .delete()
+        .eq('user_id', userId);
+      
+      if (concernsError) {
+        logger.error('고민 기록 삭제 실패', concernsError);
+        throw new DatabaseError('사용자 데이터 삭제에 실패했습니다');
+      }
+
+      // 2. 사용자 정보를 deleted 상태로 변경 (완전 삭제 대신 비활성화)
+      const { error: userError } = await supabase
+        .from('users')
+        .update({ 
+          status: 'deleted',
+          deleted_at: new Date().toISOString(),
+          email: null, // 개인정보 제거
+          nickname: '삭제된 사용자',
+          last_logout_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+      
+      if (userError) {
+        logger.error('사용자 정보 삭제 처리 실패', userError);
+        throw new DatabaseError('회원탈퇴 처리에 실패했습니다');
+      }
+
+      // 3. Supabase Auth에서 사용자 완전 삭제 (Admin API 사용)
+      try {
+        const { data: deleteResult, error: deleteError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+        
+        if (deleteError) {
+          logger.error('Supabase Auth 사용자 삭제 실패', deleteError);
+          // Auth 삭제가 실패해도 데이터는 이미 정리되었으므로 경고만 출력
+        } else {
+          logger.info('Supabase Auth 사용자 삭제 성공', { userId, deleteResult });
+        }
+      } catch (authError) {
+        logger.error('Supabase Auth 삭제 중 예외', authError);
+        // Auth 삭제 실패는 치명적이지 않음
+      }
+      
+      logger.info('회원탈퇴 성공', { userId });
+      return { success: true, message: '회원탈퇴가 완료되었습니다' };
+    } catch (error) {
+      logger.error('회원탈퇴 예외', error);
       throw error;
     }
   }

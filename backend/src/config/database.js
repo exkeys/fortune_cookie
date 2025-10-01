@@ -5,7 +5,7 @@ dotenv.config();
 
 // Supabase 클라이언트 설정 (서버는 service role 키를 우선 사용)
 const SUPABASE_URL = process.env.SUPABASE_URL;
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_KEY; // .env에서는 SERVICE_KEY로 되어있음
 const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY;
 
 export const supabase = createClient(
@@ -15,6 +15,18 @@ export const supabase = createClient(
     auth: {
       persistSession: true,
       autoRefreshToken: true,
+    },
+  }
+);
+
+// 관리자 권한 Supabase 클라이언트 (사용자 삭제 등에 사용)
+export const supabaseAdmin = createClient(
+  SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
     },
   }
 );

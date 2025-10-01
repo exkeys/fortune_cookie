@@ -38,4 +38,22 @@ export class AuthController {
       next(error);
     }
   }
+
+  // 회원탈퇴
+  static async deleteAccount(req, res, next) {
+    try {
+      const validation = validateRequest(req, ['userId']);
+      if (!validation.isValid) {
+        return res.status(400).json({ error: validation.error });
+      }
+      
+      const { userId } = req.body;
+      const result = await AuthService.deleteAccount(userId);
+      
+      res.json(result);
+    } catch (error) {
+      logger.error('회원탈퇴 컨트롤러 에러', error);
+      next(error);
+    }
+  }
 }
