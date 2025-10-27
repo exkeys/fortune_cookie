@@ -58,6 +58,7 @@ export const useAuth = (): AuthReturn => {
   const lastUserIdRef = useRef<string | null>(null);
   const isInitializedRef = useRef(false);
   const processingRef = useRef(false);
+  const isCooldownRedirectRef = useRef<boolean>(false); // 쿨다운 리다이렉트 방지 플래그
 
   useEffect(() => {
     let isMounted = true;
@@ -106,6 +107,13 @@ export const useAuth = (): AuthReturn => {
       // SIGNED_OUT 이벤트 처리
       if (event === 'SIGNED_OUT') {
         logToServer('[useAuth] onAuthStateChange: SIGNED_OUT', { event, session });
+        
+        // 🚫 쿨다운 리다이렉트 중이면 무한 루프 방지
+        if (isCooldownRedirectRef.current || sessionStorage.getItem('cooldown-redirect') === 'true') {
+          console.log('[useAuth] 🚫 쿨다운 리다이렉트로 인한 SIGNED_OUT - 무시');
+          return;
+        }
+        
         lastUserIdRef.current = null;
         isInitializedRef.current = false;
         if (isMounted) {
@@ -197,6 +205,60 @@ export const useAuth = (): AuthReturn => {
   const handleUserSession = async (session: any) => {
     console.log('[useAuth] handleUserSession 시작:', session.user.id);
     
+    // 🚫 쿨다운 리다이렉트 중이면 처리 중지
+    if (isCooldownRedirectRef.current || sessionStorage.getItem('cooldown-redirect') === 'true') {
+      console.log('[useAuth] 🚫 쿨다운 리다이렉트 중 - 처리 중지');
+      return;
+    }
+    
+    // ✅ 재가입 제한 체크 (OAuth 성공 직후)
+    try {
+      console.log('[useAuth] 🛡️ 재가입 제한 체크 시작:', session.user.email);
+      
+      const response = await fetch('/api/auth/validate-login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          email: session.user.email 
+        })
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.log('[useAuth] 🚫 재가입 제한 감지:', errorData);
+        
+        if (errorData.isRestricted) {
+          // 24시간 재가입 제한 - 리다이렉트 플래그 설정
+          isCooldownRedirectRef.current = true;
+          sessionStorage.setItem('cooldown-redirect', 'true');
+          
+          console.log('[useAuth] 강제 로그아웃 실행');
+          await supabase.auth.signOut();
+          
+          setUser(null);
+          setIsLoggedIn(false);
+          
+          // 전용 페이지로 이동 (즉시 & 강제)
+          console.log('[useAuth] 🚫 쿨다운 페이지로 강제 이동');
+          
+          // 현재 페이지가 쿨다운 페이지가 아닌 경우에만 이동
+          if (window.location.pathname !== '/account-cooldown') {
+            window.location.replace('/account-cooldown');
+          }
+          
+          return;
+        }
+      }
+      
+      console.log('[useAuth] ✅ 재가입 제한 체크 통과');
+      
+    } catch (validationError) {
+      console.error('[useAuth] 재가입 제한 체크 실패:', validationError);
+      // 네트워크 오류 등은 무시하고 계속 진행 (서비스 중단 방지)
+    }
+    
     const meta = session.user.user_metadata || {};
     const displayName = meta.nickname || meta.name || meta.full_name || (session.user.email ? session.user.email.split('@')[0] : '');
     
@@ -267,14 +329,15 @@ export const useAuth = (): AuthReturn => {
         // 먼저 기존 사용자 정보 조회 (status 확인용)
         const { data: existingUser } = await supabase
           .from('users')
-          .select('status')
+          .select('status, is_admin')
           .eq('id', session.user.id)
           .maybeSingle();
         
         console.log('[useAuth] 기존 사용자 상태 확인:', {
           userId: session.user.id,
           email: session.user.email,
-          existingStatus: existingUser?.status || 'none'
+          existingStatus: existingUser?.status || 'none',
+          isAdmin: existingUser?.is_admin || false
         });
         
         // 밴된 사용자면 즉시 로그아웃 처리

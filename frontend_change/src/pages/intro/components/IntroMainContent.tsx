@@ -30,6 +30,7 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
     message: '',
     icon: ''
   });
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false); // 중복 요청 방지
   
   useEffect(() => {
     const timer = setTimeout(() => setShowContent(true), 500);
@@ -39,6 +40,14 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
   // 접근 권한 체크 함수
   const checkAccessPermission = async () => {
     if (!user?.id) return false;
+    
+    // 중복 요청 방지
+    if (isCheckingAccess) {
+      console.log('접근 권한 체크 중복 요청 방지');
+      return false;
+    }
+    
+    setIsCheckingAccess(true);
     
     try {
       console.log('인트로에서 접근 권한 체크 시작...', { userId: user.id });
@@ -185,14 +194,26 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
         isOpen: true,
         title,
         message: errorMessage,
-        icon
+        icon,
+        actionButton: {
+          text: '새로고침',
+          onClick: () => window.location.reload()
+        }
       });
       return false;
+    } finally {
+      setIsCheckingAccess(false); // 중복 요청 방지 상태 리셋
     }
   };
 
   // 시작하기 버튼 핸들러
   const handleStartClick = async () => {
+    // 접근 권한 체크 중이면 무시
+    if (isCheckingAccess) {
+      console.log('접근 권한 체크 중 - 버튼 클릭 무시');
+      return;
+    }
+    
     if (!isLoggedIn) {
       setModal({
         isOpen: true,
@@ -278,11 +299,20 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
           <Button 
             size="md"
             onClick={handleStartClick}
-            className="px-8 py-4 md:px-10 md:py-5 text-base md:text-lg lg:text-xl shadow-xl hover:shadow-amber-300/50"
+            disabled={isCheckingAccess}
+            className={`px-8 py-4 md:px-10 md:py-5 text-base md:text-lg lg:text-xl shadow-xl ${
+              isCheckingAccess 
+                ? 'opacity-50 cursor-not-allowed' 
+                : 'hover:shadow-amber-300/50'
+            }`}
           >
             <span className="flex items-center space-x-2">
-              <span>운세보기 시작하기</span>
-              <i className="ri-arrow-right-line text-lg md:text-xl"></i>
+              <span>{isCheckingAccess ? '권한 확인 중...' : '운세보기 시작하기'}</span>
+              {isCheckingAccess ? (
+                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
+              ) : (
+                <i className="ri-arrow-right-line text-lg md:text-xl"></i>
+              )}
             </span>
           </Button>
         </div>

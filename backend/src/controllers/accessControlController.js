@@ -49,17 +49,42 @@ export class AccessControlController {
    * 전체 접근 권한 체크 (접근 권한 + 일일 제한)
    */
   static async checkFullAccess(req, res, next) {
+    const startTime = Date.now();
+    
     try {
       const { userId } = req.query;
+      const clientIP = req.ip || req.connection.remoteAddress;
+      
+      logger.info('전체 접근 권한 체크 요청', { 
+        userId, 
+        clientIP,
+        userAgent: req.get('User-Agent')?.substring(0, 100) // 100자로 제한
+      });
       
       if (!userId || !isUUID(userId)) {
+        logger.warn('유효하지 않은 사용자 ID 요청', { userId, clientIP });
         return res.status(400).json({ error: '유효한 사용자 ID가 필요합니다' });
       }
       
       const result = await AccessControlService.checkFullAccess(userId);
+      const responseTime = Date.now() - startTime;
+      
+      logger.info('전체 접근 권한 체크 응답', { 
+        userId, 
+        canAccess: result.canAccess,
+        canUse: result.canUse,
+        responseTime: `${responseTime}ms`,
+        hasReason: !!result.reason
+      });
+      
       res.json(result);
     } catch (error) {
-      logger.error('전체 접근 권한 체크 컨트롤러 에러', error);
+      const responseTime = Date.now() - startTime;
+      logger.error('전체 접근 권한 체크 컨트롤러 에러', { 
+        error: error.message,
+        responseTime: `${responseTime}ms`,
+        userId: req.query.userId
+      });
       next(error);
     }
   }

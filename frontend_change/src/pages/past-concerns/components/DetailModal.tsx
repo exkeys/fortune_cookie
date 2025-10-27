@@ -1,5 +1,7 @@
+import { useState } from 'react';
 import Button from '../../../components/base/Button';
 import Card from '../../../components/base/Card';
+import AiFeedModal from './AiFeedModal';
 
 interface Role {
   id: string;
@@ -15,6 +17,7 @@ interface HistoryItem {
   role?: Role;
   concern?: string;
   fortune: string;
+  aiFeed?: string; // AI 피드 추가
 }
 
 interface DetailModalProps {
@@ -26,6 +29,14 @@ interface DetailModalProps {
   onDelete: () => void;
 }
 
+// 텍스트 자르기 함수 (80자 제한)
+const truncateText = (text: string, maxLength: number = 35): { text: string; isTruncated: boolean } => {
+  if (!text || text.length <= maxLength) {
+    return { text: text || '', isTruncated: false };
+  }
+  return { text: text.substring(0, maxLength) + '...', isTruncated: true };
+};
+
 export default function DetailModal({
   item,
   formatDate,
@@ -34,6 +45,7 @@ export default function DetailModal({
   onNewFortune,
   onDelete
 }: DetailModalProps) {
+  const [isAiFeedModalOpen, setIsAiFeedModalOpen] = useState(false);
   return (
     <div 
       className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
@@ -101,6 +113,29 @@ export default function DetailModal({
               </p>
             </div>
           </div>
+
+          {/* AI 피드 섹션 */}
+          {item.aiFeed && (
+            <div className="mb-8">
+              <h4 className="font-bold text-gray-800 mb-4 text-lg flex items-center">
+                <i className="ri-robot-line mr-2 text-blue-500"></i>
+                AI 피드
+              </h4>
+              <div 
+                className="bg-gradient-to-r from-blue-50 to-cyan-50 p-6 rounded-xl border-l-4 border-blue-400 cursor-pointer hover:shadow-md transition-shadow"
+                onClick={() => setIsAiFeedModalOpen(true)}
+              >
+                {(() => {
+                  const { text } = truncateText(item.aiFeed);
+                  return (
+                    <p className="text-gray-700 leading-relaxed text-lg">
+                      {text}
+                    </p>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
           
           {/* 액션 버튼들 */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -133,6 +168,14 @@ export default function DetailModal({
           </div>
         </div>
       </Card>
+
+      {/* AI 피드 전용 모달 */}
+      {isAiFeedModalOpen && item.aiFeed && (
+        <AiFeedModal 
+          aiFeed={item.aiFeed}
+          onClose={() => setIsAiFeedModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

@@ -17,7 +17,7 @@ export default function CookieAnimationArea({
   return (
     <Card className="p-16 md:p-20 lg:p-24 xl:p-28 bg-gradient-to-br from-white to-amber-50 max-w-4xl mx-auto">
       <h2 className="text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-gray-800 mb-12">
-        {isLoadingFortune ? 'AI가 운세를 생성하고 있어요...' : !isOpened ? '당신의 운세쿠키가 준비되었습니다!' : '운세를 확인하는 중...'}
+        {isLoadingFortune ? '운세쿠키를 준비하고 있어요...' : !isOpened ? '당신의 운세쿠키가 준비되었습니다!' : '운세를 확인하는 중...'}
       </h2>
       
       <div className="mb-16 transform scale-150 md:scale-175 lg:scale-200 xl:scale-225">

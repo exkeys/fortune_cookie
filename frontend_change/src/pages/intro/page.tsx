@@ -13,6 +13,16 @@ export default function IntroPage() {
   const navigate = useNavigate();
   const { user, isLoggedIn, login, logout } = useAuth();
   
+  // 🚫 쿨다운 상태 체크 (최우선)
+  useEffect(() => {
+    const isCooldownRedirect = sessionStorage.getItem('cooldown-redirect') === 'true';
+    if (isCooldownRedirect) {
+      console.log('[IntroPage] 🚫 쿨다운 상태 감지 - 쿨다운 페이지로 이동');
+      navigate('/account-cooldown');
+      return;
+    }
+  }, [navigate]);
+  
   // OAuth 콜백 처리 (URL에 토큰이 있는 경우)
   useEffect(() => {
     const handleOAuthCallback = async () => {

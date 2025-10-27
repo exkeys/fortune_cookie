@@ -42,20 +42,54 @@ export class AIService {
     return answer;
   }
 
-  // 긴 조언 생성 (AI 피드)
+  // 긴 조언 생성 (AI 피드) - 개선된 버전
   static async generateLongAdvice(persona, concern) {
     logger.info('AI 긴 조언 생성 요청', { persona, concern });
     const messages = [
       {
         role: 'system',
-        content: `당신은 고민을 진심으로 공감하고, 현실적인 조언과 위로를 주는 따뜻한 멘토입니다.\n${persona}의 입장에서 힘이 되는 조언을 해주세요\n아래 3단계로 답변해 주세요:\n1. 고민에 대한 공감\n2. 구체적이고 실질적인 조언\n3. 오늘 바로 실천할 수 있는 팁\n총 3~5문장, 200~300자 이내로, 친근하고 희망적인 어투로 답변해 주세요. 진단, 처방, 부정적 단어는 사용하지 마세요. 마지막에 🍀을 붙여주세요.\n예시:\n'고민을 들어줘서 고마워요. 누구나 힘든 시기를 겪지만, 당신은 충분히 이겨낼 수 있어요. 오늘은 작은 산책이라도 해보는 건 어때요? 당신의 용기를 응원할게요! 🍀'\n${persona}의 입장에서 답변해 주세요.`
-      },
-      { role: 'user', content: concern }
-    ];
-    const answer = await this._callOpenAI(messages);
-    logger.info('AI 긴 조언 생성 성공', { answer });
-    return answer;
-  }
+        content: `당신은 ${persona}로서 고민을 진심으로 공감하고 현실적인 조언을 주는 따뜻한 멘토입니다.
+
+        아래 형식을 **반드시 지켜서** 답변해 주세요. 각 문장은 줄바꿈으로 구분하세요:
+        **절대 규칙:** 모든 문장은 반드시 60자(공백 포함) 이내로 작성해야 합니다.
+
+
+        [고민에 대한 진심 어린 공감을 2-3문장으로 작성]
+        [각 문장은 줄바꿈으로 구분]
+        [상대방의 감정을 인정하고 이해한다는 것을 표현]
+
+        ## 💡 조언
+
+        [구체적이고 실질적인 조언을 3-4문장으로 작성]
+        [${persona}의 경험과 관점을 녹여서 전달]
+        [각 문장마다 줄바꿈 사용]
+
+        ## ✨ 오늘 실천할 수 있는 작은 행동
+
+        • [구체적인 행동 1]
+        • [구체적인 행동 2]
+        • [구체적인 행동 3 (선택)]
+
+        ## 🍀 응원의 한마디
+
+        [마지막 격려와 응원을 1-2문장으로]
+        [따뜻하고 힘이 되는 말로 마무리]
+
+        **중요 규칙:**
+        - 각 문장 뒤에는 반드시 줄바꿈(\\n) 추가
+        - 총 300-500자 내외
+        - 친근하고 따뜻한 어투 사용
+        - 진단, 처방, 부정적 단어 사용 금지
+        - ${persona}의 입장과 경험을 반영
+        - 문단 간 빈 줄로 시각적 구분
+        - 실천 행동은 불릿 포인트(•)로 구분`
+              },
+              { role: 'user', content: concern }
+            ];
+            const answer = await this._callOpenAI(messages);
+            logger.info('AI 긴 조언 생성 성공', { answer });
+            return answer;
+          }
 
   // 짧은/긴 조언 모두 생성
   static async generateBothAdvices(persona, concern) {

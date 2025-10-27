@@ -84,8 +84,14 @@ export default function UserDetailModal({
     return showFullId ? id : `${id.substring(0, maxLength)}...`;
   };
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onClose}
+    >
+      <Card 
+        className="max-w-2xl w-full max-h-[90vh] overflow-y-auto bg-white"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="p-8">
           <div className="flex justify-between items-start mb-8">
             <div>

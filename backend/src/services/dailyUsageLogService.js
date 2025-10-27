@@ -34,6 +34,18 @@ export class DailyUsageLogService {
     try {
       logger.info('오늘 사용 여부 확인 요청', { userId });
       
+      // 관리자는 일일 제한 우회
+      const { data: user } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', String(userId))
+        .single();
+
+      if (user?.is_admin) {
+        logger.info('관리자 일일 제한 우회', { userId });
+        return { hasUsedToday: false, count: 0 }; // 관리자는 항상 사용 가능
+      }
+      
       // === 테스트용: 1분 제한 (운영시 주석 해제 필요) ===
       const now = new Date();
       const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전

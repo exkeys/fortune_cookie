@@ -60,7 +60,7 @@ export class AccessControlService {
         };
       }
 
-      // 3. 탈퇴한 사용자 체크
+      // 3. 탈퇴한 사용자 체크 (완전 삭제)
       if (user.status === 'deleted') {
         logger.info('삭제된 사용자 접근 차단', { userId, userStatus: user.status });
         return {
@@ -68,6 +68,7 @@ export class AccessControlService {
           reason: '탈퇴한 계정입니다.'
         };
       }
+
 
       // 4. 관리자는 학교 기간 체크 우회
       if (user.is_admin) {
@@ -159,27 +160,63 @@ export class AccessControlService {
     try {
       logger.info('학교별 일일 사용 제한 체크', { userId, userSchool });
 
-      // 관리자는 일일 제한 체크 우회
-      const { data: user } = await supabase
-        .from('users')
-        .select('is_admin')
-        .eq('id', String(userId))
-        .single();
+      // userId 유효성 재검증
+      if (!userId || typeof userId !== 'string') {
+        logger.error('유효하지 않은 userId', { userId, type: typeof userId });
+        return { canUse: false, reason: '사용자 정보가 올바르지 않습니다.' };
+      }
 
-      if (user?.is_admin) {
-        logger.info('관리자 일일 제한 체크 우회', { userId });
-        return { canUse: true };
+      // 관리자는 일일 제한 체크 우회 (에러 처리 강화)
+      try {
+        const { data: user, error: userError } = await supabase
+          .from('users')
+          .select('is_admin')
+          .eq('id', String(userId))
+          .single();
+
+        if (userError) {
+          logger.error('사용자 조회 실패 (일일 제한 체크)', { userId, userError });
+          // 조회 실패 시 안전하게 제한 적용
+          return { canUse: false, reason: '사용자 정보 확인에 실패했습니다.' };
+        }
+
+        if (user?.is_admin) {
+          logger.info('관리자 일일 제한 체크 우회', { userId });
+          return { canUse: true };
+        }
+      } catch (adminCheckError) {
+        logger.error('관리자 체크 중 예외', { userId, adminCheckError });
+        // 관리자 체크 실패 시에도 일반 사용자로 처리 계속
       }
 
       // === 테스트용: 1분 제한 (운영시 주석 해제 필요) ===
-      const now = new Date();
-      const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
+      let data, error, count;
+      
+      try {
+        const now = new Date();
+        const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
 
-      const { data, error, count } = await supabase
-        .from('daily_usage_log')
-        .select('*', { count: 'exact' })
-        .eq('user_id', String(userId))
-        .gte('used_at', oneMinuteAgo.toISOString());
+        const result = await supabase
+          .from('daily_usage_log')
+          .select('*', { count: 'exact' })
+          .eq('user_id', String(userId))
+          .gte('used_at', oneMinuteAgo.toISOString());
+        
+        data = result.data;
+        error = result.error;
+        count = result.count;
+
+        logger.info('일일 사용 로그 조회 결과', { 
+          userId, 
+          count, 
+          hasError: !!error,
+          oneMinuteAgo: oneMinuteAgo.toISOString()
+        });
+      } catch (queryError) {
+        logger.error('일일 사용 로그 조회 중 예외', { userId, queryError });
+        // 쿼리 실패 시 안전하게 사용 허용 (서비스 중단 방지)
+        return { canUse: true };
+      }
 
       // === 운영용: 24시간 제한 (현재 주석 처리됨) ===
       // const today = new Date();
@@ -199,7 +236,8 @@ export class AccessControlService {
 
       if (error) {
         logger.error('일일 사용 제한 체크 실패', { userId, userSchool, error });
-        throw new DatabaseError('사용 제한 확인에 실패했습니다');
+        // DB 오류 시 안전하게 사용 허용 (서비스 중단 방지)
+        return { canUse: true };
       }
 
       const hasUsedToday = count > 0;
@@ -242,7 +280,18 @@ export class AccessControlService {
         return accessResult;
       }
 
-      // 2. 일일 사용 제한 체크
+      // 2. 관리자는 일일 사용 제한 우회
+      if (accessResult.user.is_admin) {
+        logger.info('관리자 - 일일 사용 제한 우회', { userId });
+        return {
+          canAccess: true,
+          canUse: true, // 관리자는 항상 사용 가능
+          user: accessResult.user,
+          schoolPeriod: accessResult.schoolPeriod
+        };
+      }
+
+      // 3. 일일 사용 제한 체크 (일반 사용자만)
       const usageResult = await this.checkDailyUsageLimit(userId, accessResult.user.school);
 
       if (!usageResult.canUse) {
@@ -255,7 +304,7 @@ export class AccessControlService {
         };
       }
 
-      // 3. 모든 체크 통과
+      // 4. 모든 체크 통과
       return {
         canAccess: true,
         canUse: true,

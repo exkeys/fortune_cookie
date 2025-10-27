@@ -13,6 +13,7 @@ import NotFoundPage from '../pages/not-found/page';
 import OAuthCallbackPage from '../pages/oauth-callback/page';
 import AuthCallbackPage from '../pages/auth-callback/page';
 import AccountBannedPage from '../pages/account-banned/page';
+import AccountCooldownPage from '../pages/account-cooldown/page';
 
 const routes: RouteObject[] = [
   {
@@ -66,6 +67,10 @@ const routes: RouteObject[] = [
   {
     path: '/account-banned',
     element: <AccountBannedPage />,
+  },
+  {
+    path: '/account-cooldown',
+    element: <AccountCooldownPage />,
   },
   {
     path: '*',

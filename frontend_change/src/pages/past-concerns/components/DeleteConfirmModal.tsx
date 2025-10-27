@@ -13,8 +13,14 @@ export default function DeleteConfirmModal({
   onCancel
 }: DeleteConfirmModalProps) {
   return (
-    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-      <Card className="p-8 max-w-md w-full bg-white">
+    <div 
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+      onClick={onCancel}
+    >
+      <Card 
+        className="p-8 max-w-md w-full bg-white"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <i className="ri-delete-bin-line text-2xl text-red-500"></i>

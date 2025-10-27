@@ -27,6 +27,7 @@ interface HistoryItem {
   };
   concern?: string;
   fortune: string;
+  aiFeed?: string; // AI 피드 추가
 }
 
 interface Role {
@@ -175,7 +176,7 @@ export default function PastConcernsPage() {
       setIsLoggedIn(true);
       const { data, error } = await supabase
         .from('ai_answers')
-        .select('id, created_at, persona, concern, ai_response')
+        .select('id, created_at, persona, concern, ai_response, ai_feed')
         .eq('user_id', uid)
         .order('created_at', { ascending: false });
         
@@ -187,6 +188,7 @@ export default function PastConcernsPage() {
         role: row.persona ? getRoleFromPersona(row.persona) : undefined,
         concern: row.concern,
         fortune: row.ai_response,
+        aiFeed: row.ai_feed, // AI 피드 매핑 추가
       }));
       
       setHistory(mapped);

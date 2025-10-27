@@ -46,20 +46,35 @@ export default function RoleSelectPage() {
     
     const initializePage = async () => {
       try {
-        // 1. 오늘 사용 여부 체크
-        console.log('오늘 사용 여부 확인 중...');
-        const response = await fetch(`/api/daily-usage-logs/check-today?userId=${user.id}`);
+        // 사용자 정보가 완전히 로드될 때까지 잠시 대기 (admin 정보 확실히 로드)
+        await new Promise(resolve => setTimeout(resolve, 100));
         
-        if (response.ok) {
-          const { hasUsedToday: usedToday } = await response.json();
-          setHasUsedToday(usedToday);
-          console.log('오늘 사용 여부:', usedToday);
-          
-          if (usedToday) {
-            return; // 이미 사용했으면 더 이상 진행하지 않음
-          }
+        console.log('[role-select] 사용자 정보 확인:', { 
+          userId: user.id, 
+          isAdmin: user.is_admin,
+          email: user.email 
+        });
+        
+        // 1. 관리자는 일일 사용 제한 우회
+        if (user.is_admin) {
+          console.log('[role-select] 관리자 - 일일 사용 제한 우회');
+          setHasUsedToday(false); // 관리자는 항상 사용 가능
         } else {
-          console.error('사용 여부 체크 실패');
+          // 1. 오늘 사용 여부 체크 (일반 사용자만)
+          console.log('오늘 사용 여부 확인 중...');
+          const response = await fetch(`/api/daily-usage-logs/check-today?userId=${user.id}`);
+          
+          if (response.ok) {
+            const { hasUsedToday: usedToday } = await response.json();
+            setHasUsedToday(usedToday);
+            console.log('오늘 사용 여부:', usedToday);
+            
+            if (usedToday) {
+              return; // 이미 사용했으면 더 이상 진행하지 않음
+            }
+          } else {
+            console.error('사용 여부 체크 실패');
+          }
         }
 
         // 2. 저장된 폼 데이터 복원
@@ -96,7 +111,7 @@ export default function RoleSelectPage() {
     };
 
     initializePage();
-  }, [user?.id]);
+  }, [user?.id, user?.is_admin]); // is_admin 변경도 감지
 
   // 2. 역할 삭제 (DB 반영)
   const handleRemoveRole = async (roleId: string) => {

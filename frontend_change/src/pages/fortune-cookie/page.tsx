@@ -52,7 +52,7 @@ export default function FortuneCookiePage() {
     }
   }, []);
 
-  // 페이지 로드 시 AI 답변 가져오기
+  // 페이지 로드 시 랜덤 운세 즉시 가져오기
   useEffect(() => {
     (async () => {
       if (selectedRole && concern) {
@@ -64,7 +64,7 @@ export default function FortuneCookiePage() {
           // setFortuneMessage(shortAdvice);
           // setLongAdvice(longAdviceText);
           
-          // JSON 파일에서 랜덤 조언 가져오기
+          // JSON 파일에서 랜덤 조언 즉시 가져오기 (빠른 로딩)
           const response = await fetch('/data/short-advices.json');
           const advicesData = await response.json();
           const randomAdvice = advicesData.advices[Math.floor(Math.random() * advicesData.advices.length)];
@@ -72,16 +72,28 @@ export default function FortuneCookiePage() {
           // JSON 필드명이 "text"로 되어 있음
           setFortuneMessage(randomAdvice.text);
           
-          // 긴 조언은 기존 AI 백엔드 사용
-          const { data } = await getAiBothAdvices(selectedRole.name, concern);
-          const longAdviceText = data?.longAdvice || "긴 조언을 받지 못했습니다.";
-          setLongAdvice(longAdviceText);
+          // 랜덤 운세는 즉시 로딩 완료 처리
+          setIsLoadingFortune(false);
+          
+          // 긴 조언은 백그라운드에서 별도로 로딩 (시간이 걸려도 OK)
+          (async () => {
+            try {
+              const { data } = await getAiBothAdvices(selectedRole.name, concern);
+              const longAdviceText = data?.longAdvice || "긴 조언을 받지 못했습니다.";
+              setLongAdvice(longAdviceText);
+            } catch (error) {
+              console.error('긴 조언 로딩 실패:', error);
+              setLongAdvice("긴 조언을 받지 못했습니다.");
+            }
+          })();
         } catch (error) {
           setFortuneMessage("운세를 받지 못했습니다. 다시 시도해 주세요.");
           setLongAdvice("긴 조언을 받지 못했습니다.");
+          setIsLoadingFortune(false);
         }
+      } else {
+        setIsLoadingFortune(false);
       }
-      setIsLoadingFortune(false);
     })();
   }, [selectedRole, concern]);
   
@@ -93,8 +105,8 @@ export default function FortuneCookiePage() {
         setIsOpened(true);
         setTimeout(() => {
           setShowFortune(true);
-        }, 500);
-      }, 2000);
+        }, 500); // 운세 표시 시간 늘림 (300ms → 600ms)
+      }, 2900); // 쿠키 열리는 시간 늘림 (800ms → 1.5초)
     }
   };
   

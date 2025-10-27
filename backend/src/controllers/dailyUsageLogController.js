@@ -31,6 +31,8 @@ export class DailyUsageLogController {
     try {
       const { userId } = req.query;
       
+      logger.info('일일 사용 여부 체크 요청', { userId });
+      
       if (!userId) {
         return res.status(400).json({ error: 'userId 쿼리 파라미터가 필요합니다' });
       }
@@ -40,6 +42,13 @@ export class DailyUsageLogController {
       }
       
       const result = await DailyUsageLogService.hasUsedToday(userId);
+      
+      logger.info('일일 사용 여부 체크 응답', { 
+        userId, 
+        hasUsedToday: result.hasUsedToday,
+        count: result.count
+      });
+      
       res.json(result);
     } catch (error) {
       logger.error('오늘 사용 여부 확인 컨트롤러 에러', error);
