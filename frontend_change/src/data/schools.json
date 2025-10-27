@@ -1,0 +1,148 @@
+{
+  "schools": [
+    {
+      "id": "school-001",
+      "name": "가톨릭대학교 (부천)",
+      "region": "경기도",
+      "type": "대학교"
+    },
+    {
+      "id": "school-002", 
+      "name": "가톨릭대학교 (성심)",
+      "region": "경기도",
+      "type": "대학교"
+    },
+    {
+      "id": "school-003",
+      "name": "강남대학교",
+      "region": "경기도", 
+      "type": "대학교"
+    },
+    {
+      "id": "school-004",
+      "name": "건국대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-005",
+      "name": "경기대학교",
+      "region": "경기도",
+      "type": "대학교"
+    },
+    {
+      "id": "school-006",
+      "name": "경희대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-007",
+      "name": "고려대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-008",
+      "name": "국민대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-009",
+      "name": "단국대학교",
+      "region": "경기도",
+      "type": "대학교"
+    },
+    {
+      "id": "school-010",
+      "name": "동국대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-011",
+      "name": "명지대학교",
+      "region": "경기도",
+      "type": "대학교"
+    },
+    {
+      "id": "school-012",
+      "name": "서강대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-013",
+      "name": "서울대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-014",
+      "name": "성균관대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-015",
+      "name": "세종대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-016",
+      "name": "숙명여자대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-017",
+      "name": "숭실대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-018",
+      "name": "연세대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-019",
+      "name": "이화여자대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-020",
+      "name": "인하대학교",
+      "region": "인천광역시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-021",
+      "name": "중앙대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-022",
+      "name": "한국외국어대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-023",
+      "name": "한양대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    },
+    {
+      "id": "school-024",
+      "name": "홍익대학교",
+      "region": "서울특별시",
+      "type": "대학교"
+    }
+  ]
+}
