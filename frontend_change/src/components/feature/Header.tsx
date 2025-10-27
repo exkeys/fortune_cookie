@@ -4,9 +4,10 @@ import { useAuth } from '../../hooks/useAuth';
 
 interface HeaderProps {
   disableBackButton?: boolean;
+  disableHomeButton?: boolean;
 }
 
-export default function Header({ disableBackButton = false }: HeaderProps) {
+export default function Header({ disableBackButton = false, disableHomeButton = false }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { isLoggedIn } = useAuth();
@@ -53,9 +54,13 @@ export default function Header({ disableBackButton = false }: HeaderProps) {
             )}
             
             <h1 
-              className="text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent cursor-pointer"
+              className={`text-2xl md:text-3xl lg:text-4xl font-bold bg-gradient-to-r from-amber-600 to-orange-600 bg-clip-text text-transparent ${disableHomeButton ? '' : 'cursor-pointer'}`}
               style={{ fontFamily: "Pacifico, serif" }}
-              onClick={() => navigate('/')}
+              onClick={() => {
+                if (!disableHomeButton) {
+                  navigate('/');
+                }
+              }}
             >
               포춘쿠키
             </h1>

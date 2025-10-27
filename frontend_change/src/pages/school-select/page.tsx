@@ -1,12 +1,18 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { supabase } from '../../supabaseClient';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../components/base/Card';
 import Button from '../../components/base/Button';
+import schoolsData from '../../data/schools.json';
 
-const SCHOOL_LIST = [
-  '서울대학교', '연세대학교', '고려대학교', '부산대학교', '동아대학교', '성균관대학교', '한양대학교', '경희대학교', '중앙대학교', '기타'
-];
+interface School {
+  id: number;
+  name: string;
+  category: string;
+}
+
+// schools.json이 배열 형태로 변경됨
+const schoolsArray = Array.isArray(schoolsData) ? (schoolsData as School[]) : (schoolsData as { schools: School[] }).schools;
 
 export default function SchoolSelectPage() {
   const [search, setSearch] = useState('');
@@ -15,9 +21,20 @@ export default function SchoolSelectPage() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const filteredSchools = SCHOOL_LIST.filter(s => s.includes(search)).concat(
-    customSchool && !SCHOOL_LIST.includes(customSchool) ? [customSchool] : []
-  );
+  // 학교 검색 필터링
+  const filteredSchools = useMemo(() => {
+    const filtered = schoolsArray.filter((school: School) =>
+      school.name.toLowerCase().includes(search.toLowerCase()) ||
+      (school.category && school.category.toLowerCase().includes(search.toLowerCase()))
+    );
+    
+    // 커스텀 학교 추가
+    if (customSchool && !schoolsArray.some((s: School) => s.name === customSchool)) {
+      return [...filtered, customSchool];
+    }
+    
+    return filtered;
+  }, [search, customSchool]);
 
   const handleSelect = (school: string) => {
     setSelected(school);
@@ -68,15 +85,24 @@ export default function SchoolSelectPage() {
           }}
         />
         <div className="max-h-48 overflow-y-auto mb-4">
-          {filteredSchools.map(school => (
-            <button
-              key={school}
-              className={`block w-full text-left px-4 py-2 rounded-lg mb-1 ${selected === school ? 'bg-amber-200 font-bold' : 'hover:bg-amber-50'}`}
-              onClick={() => handleSelect(school)}
-            >
-              {school}
-            </button>
-          ))}
+          {filteredSchools.map((school: string | any) => {
+            // school이 객체면 name 속성, 문자열이면 그대로 사용
+            const schoolName = typeof school === 'string' ? school : school.name;
+            const schoolCategory = typeof school === 'object' ? school.category : '';
+            
+            return (
+              <button
+                key={schoolName}
+                className={`block w-full text-left px-4 py-2 rounded-lg mb-1 ${selected === schoolName ? 'bg-amber-200 font-bold' : 'hover:bg-amber-50'}`}
+                onClick={() => handleSelect(schoolName)}
+              >
+                <div className="font-medium">{schoolName}</div>
+                {schoolCategory && (
+                  <div className="text-sm text-gray-500">{schoolCategory}</div>
+                )}
+              </button>
+            );
+          })}
         </div>
         <Button
           size="lg"

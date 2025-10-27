@@ -64,9 +64,7 @@ export default function IntroPage() {
       navigate('/school-select');
     }
   }, [user?.id, user?.is_admin, user?.school, navigate]); // user 전체 대신 필요한 속성만 의존성으로 설정
-  if (user && !user.is_admin && (user['school'] === null || user['school'] === undefined)) {
-    return null;
-  }
+  
   // 차단된 계정이면 차단 페이지로 리다이렉트
   useEffect(() => {
     if (user && user.status === 'banned') {
@@ -74,6 +72,11 @@ export default function IntroPage() {
       navigate('/account-banned');
     }
   }, [user?.status, navigate]);
+
+  // 학교 선택이 필요한 경우 로딩 상태 표시
+  if (user && !user.is_admin && (user['school'] === null || user['school'] === undefined)) {
+    return null;
+  }
   const handleLogin = async () => {
     await login('kakao');
   };

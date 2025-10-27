@@ -8,7 +8,7 @@ import PageTitle from './components/PageTitle';
 import ConcernInputArea from './components/ConcernInputArea';
 import SuggestedConcerns from './components/SuggestedConcerns';
 import SubmitButton from './components/SubmitButton';
-import { loadFormData, updateFormData, clearFormData } from '../../utils/formPersistence';
+import { loadFormData, updateFormData } from '../../utils/formPersistence';
 
 interface LocationState {
   selectedRole?: {

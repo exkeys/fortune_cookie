@@ -39,7 +39,7 @@ export class AccessControlService {
       // 1. 사용자 정보 조회 - UUID를 명시적으로 string으로 처리
       const { data: user, error: userError } = await supabase
         .from('users')
-        .select('id, status, school, nickname, email')
+        .select('id, status, school, nickname, email, is_admin')
         .eq('id', String(userId))
         .single();
 
@@ -51,9 +51,9 @@ export class AccessControlService {
         };
       }
 
-      // 2. 밴된 사용자 체크 (최우선 - 학교 기간과 상관없이 무조건 차단)
+      // 2. 밴된 사용자 체크 (최우선 - 관리자 포함 모든 사용자 차단)
       if (user.status === 'banned') {
-        logger.info('밴된 사용자 접근 차단', { userId, userStatus: user.status });
+        logger.info('밴된 사용자 접근 차단', { userId, userStatus: user.status, isAdmin: user.is_admin });
         return {
           canAccess: false,
           reason: '차단된 계정입니다. 관리자에게 문의하세요.'
@@ -69,7 +69,16 @@ export class AccessControlService {
         };
       }
 
-      // 4. 학교 정보가 없는 경우
+      // 4. 관리자는 학교 기간 체크 우회
+      if (user.is_admin) {
+        logger.info('관리자 접근 - 학교 기간 체크 우회', { userId });
+        return {
+          canAccess: true,
+          user: user
+        };
+      }
+
+      // 5. 학교 정보가 없는 경우
       if (!user.school) {
         logger.info('학교 정보 없음', { userId });
         return {
@@ -78,7 +87,7 @@ export class AccessControlService {
         };
       }
 
-      // 5. 학교 기간 설정 확인
+      // 6. 학교 기간 설정 확인
       const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD 형식
       const activeSchoolPeriods = await SchoolPeriodService.getActiveSchoolPeriods(today);
       const userSchoolPeriod = activeSchoolPeriods.schoolPeriods.find(
@@ -97,7 +106,7 @@ export class AccessControlService {
         };
       }
 
-      // 6. 현재 날짜가 허용 기간 내인지 확인
+      // 7. 현재 날짜가 허용 기간 내인지 확인
       const currentDate = new Date();
       const startDate = new Date(userSchoolPeriod.start_date);
       const endDate = new Date(userSchoolPeriod.end_date + 'T23:59:59'); // 종료일 포함
@@ -118,7 +127,7 @@ export class AccessControlService {
         };
       }
 
-      // 7. 모든 검사를 통과한 경우
+      // 8. 모든 검사를 통과한 경우
       logger.info('사용자 접근 승인', { 
         userId, 
         userSchool: user.school,
@@ -149,6 +158,18 @@ export class AccessControlService {
   static async checkDailyUsageLimit(userId, userSchool) {
     try {
       logger.info('학교별 일일 사용 제한 체크', { userId, userSchool });
+
+      // 관리자는 일일 제한 체크 우회
+      const { data: user } = await supabase
+        .from('users')
+        .select('is_admin')
+        .eq('id', String(userId))
+        .single();
+
+      if (user?.is_admin) {
+        logger.info('관리자 일일 제한 체크 우회', { userId });
+        return { canUse: true };
+      }
 
       // === 테스트용: 1분 제한 (운영시 주석 해제 필요) ===
       const now = new Date();

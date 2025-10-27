@@ -96,46 +96,34 @@ export default function AdminPage() {
 
         // 관리자인 경우 데이터 로드
         const fetchData = async () => {
-      // 사용자 데이터 로드
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, email, nickname, status, is_admin, created_at, last_login_at, last_logout_at, school, login_count, oauth_provider')
-        .order('created_at', { ascending: false });
-      let usersArr: any[] = [];
-      if (usersError) {
-        console.error('Error fetching users:', usersError);
-        setUsers([]);
-      } else {
-        usersArr = usersData as any[];
-        console.log('AdminPage - Raw users data:', usersArr);
+      try {
+        // 사용자 데이터 로드 - 백엔드 API 사용 (service_role key로 모든 사용자 조회)
+        console.log('AdminPage - 백엔드 API로 사용자 목록 조회 시작');
+        const response = await fetch('/api/admin/users');
         
-        // 각 사용자의 운세수(ai_answers 개수) 가져오기 (N+1 쿼리)
-        const usersWithFortune = await Promise.all(usersArr.map(async (u) => {
-          const { count } = await supabase
-            .from('ai_answers')
-            .select('*', { count: 'exact', head: true })
-            .eq('user_id', u.id);
-          return { ...u, fortune_count: count ?? 0 };
-        }));
+        if (!response.ok) {
+          throw new Error(`사용자 목록 조회 실패: ${response.status}`);
+        }
         
-        console.log('AdminPage - Users with fortune count:', usersWithFortune);
-        setUsers(usersWithFortune);
-        usersArr = usersWithFortune;
-      }
-      // 실제 Supabase에서 총 운세/오늘 운세 수 가져오기
-      const { count: totalFortunes } = await supabase
-        .from('ai_answers')
-        .select('*', { count: 'exact', head: true });
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      const { count: todayFortunes } = await supabase
-        .from('ai_answers')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', today.toISOString());
+        const { users } = await response.json();
+        const usersArr = users || [];
+        console.log('AdminPage - 사용자 목록 조회 성공:', usersArr);
+        setUsers(usersArr);
+        
+        // 실제 Supabase에서 총 운세/오늘 운세 수 가져오기
+        const { count: totalFortunes } = await supabase
+          .from('ai_answers')
+          .select('*', { count: 'exact', head: true });
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const { count: todayFortunes } = await supabase
+          .from('ai_answers')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', today.toISOString());
 
-      // 학교별 사용자 수 및 운세 수 집계
-      let schoolStats: { school: string; users: number; fortunes: number }[] = [];
-      if (Array.isArray(usersArr) && usersArr.length > 0) {
+        // 학교별 사용자 수 및 운세 수 집계
+        let schoolStats: { school: string; users: number; fortunes: number }[] = [];
+        if (Array.isArray(usersArr) && usersArr.length > 0) {
         const schoolMap: { [school: string]: { users: number; fortunes: number } } = {};
         // 운세 데이터 전체 가져오기 (school별 집계 위해)
         const { data: allFortunes } = await supabase
@@ -193,23 +181,27 @@ export default function AdminPage() {
         fortuneGrowth: [],
         schoolStats
       });
-      setSystemHealth({
-        cpu: 45,
-        memory: 62,
-        storage: 78,
-        uptime: '15일 3시간',
-        responseTime: 180,
-        errorRate: 0.2
-      });
+        setSystemHealth({
+          cpu: 45,
+          memory: 62,
+          storage: 78,
+          uptime: '15일 3시간',
+          responseTime: 180,
+          errorRate: 0.2
+        });
+      } catch (error) {
+        console.error('데이터 로드 중 오류:', error);
+        setUsers([]);
+      }
         };
         
         await fetchData();
-      } catch (error) {
-        console.error('데이터 로드 실패:', error);
-      } finally {
-        setIsAdminChecked(true);
-      }
-    };
+    } catch (error) {
+      console.error('데이터 로드 실패:', error);
+    } finally {
+      setIsAdminChecked(true);
+    }
+  };
 
     checkAdminAndLoadData();
   }, [authLoading, isLoggedIn, user?.id]); // user 전체 대신 user.id만 의존성으로 설정
@@ -218,33 +210,25 @@ export default function AdminPage() {
     if (!userId) return;
 
     try {
+      // 백엔드 API를 통해 사용자 작업 수행
+      let apiEndpoint = '/api/admin/users';
+      let updateData: any = {};
+      
       switch (action) {
         case 'makeAdmin':
-          await supabase
-            .from('users')
-            .update({ is_admin: true })
-            .eq('id', userId);
+          updateData = { userId, field: 'is_admin', value: true };
           break;
         case 'removeAdmin':
-          await supabase
-            .from('users')
-            .update({ is_admin: false })
-            .eq('id', userId);
+          updateData = { userId, field: 'is_admin', value: false };
           break;
         case 'ban':
-          await supabase
-            .from('users')
-            .update({ status: 'banned' })
-            .eq('id', userId);
+          updateData = { userId, field: 'status', value: 'banned' };
           break;
         case 'unban':
-          await supabase
-            .from('users')
-            .update({ status: 'active' })
-            .eq('id', userId);
+          updateData = { userId, field: 'status', value: 'active' };
           break;
         case 'delete':
-          // 백엔드 API를 통해 사용자 데이터 완전 삭제
+          // 삭제는 별도 API 사용
           const deleteResponse = await fetch('/api/auth/delete-account', {
             method: 'POST',
             headers: {
@@ -258,20 +242,42 @@ export default function AdminPage() {
             throw new Error(errorData.error || '사용자 삭제에 실패했습니다');
           }
           break;
+        default:
+          throw new Error('알 수 없는 작업입니다');
       }
       
-      // 데이터 새로고침
-      const { data } = await supabase
-        .from('users')
-        .select('*')
-        .order('created_at', { ascending: false });
+      // 삭제가 아닌 경우 업데이트 API 호출
+      if (action !== 'delete') {
+        const updateResponse = await fetch(apiEndpoint, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(updateData),
+        });
+        
+        if (!updateResponse.ok) {
+          const errorData = await updateResponse.json();
+          throw new Error(errorData.error || '사용자 업데이트에 실패했습니다');
+        }
+      }
       
-      if (data) {
-        setUsers(data as User[]);
+      // 데이터 새로고침 - 백엔드 API 사용
+      console.log('사용자 작업 후 데이터 새로고침 시작');
+      const refreshResponse = await fetch('/api/admin/users');
+      
+      if (refreshResponse.ok) {
+        const { users } = await refreshResponse.json();
+        setUsers(users || []);
+        console.log('사용자 데이터 새로고침 완료:', users?.length, '명');
+      } else {
+        const errorText = await refreshResponse.text();
+        console.error('데이터 새로고침 실패:', refreshResponse.status, errorText);
+        throw new Error(`새로고침 실패: ${refreshResponse.status}`);
       }
     } catch (error: any) {
       // 에러 메시지 및 status 코드 alert로 출력
-      let msg = 'Error performing user action';
+      let msg = '사용자 작업 실패';
       if (error?.message) msg += `: ${error.message}`;
       if (error?.status) msg += ` (status: ${error.status})`;
       alert(msg);

@@ -8,7 +8,7 @@ import CustomRoleInput from './components/CustomRoleInput';
 import NextButton from './components/NextButton';
 import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
-import { loadFormData, saveFormData, clearFormData, updateFormData } from '../../utils/formPersistence';
+import { loadFormData, updateFormData } from '../../utils/formPersistence';
 
 interface Role {
   id: string;

@@ -134,6 +134,7 @@ export class SchoolPeriodService {
         .single();
       
       if (error) {
+        
         logger.error('학교 기간 조회 실패', error);
         throw new DatabaseError('학교 기간을 찾을 수 없습니다');
       }

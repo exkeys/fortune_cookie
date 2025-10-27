@@ -576,3 +576,77 @@ localStorage (백업)
 | **localStorage** | 로컬 백업 | 백업 기록 (최대 50개) |
 | **React State** | 임시 상태 | 페이지간 데이터 전달 (location.state) |
 
+---
+
+## 🔧 짧은 AI 조언 시스템 (주석처리됨)
+
+### 📋 **현재 상태**
+- **위치**: `frontend_change/src/pages/fortune-cookie/page.tsx` (55-85줄)
+- **상태**: 주석처리됨 (JSON 파일로 대체)
+- **데이터 소스**: `frontend_change/public/data/short-advices.json`
+
+### 🔄 **복원 방법**
+
+#### 1️⃣ **주석 해제**
+`frontend_change/src/pages/fortune-cookie/page.tsx` 파일에서 다음 부분의 주석을 해제:
+
+```typescript
+// 주석 해제할 부분 (60-65줄)
+const { data } = await getAiBothAdvices(selectedRole.name, concern);
+const shortAdvice = data?.shortAdvice || data?.message || "운세를 받지 못했습니다. 다시 시도해 주세요.";
+const longAdviceText = data?.longAdvice || "긴 조언을 받지 못했습니다.";
+setFortuneMessage(shortAdvice);
+setLongAdvice(longAdviceText);
+```
+
+#### 2️⃣ **JSON 파일 로직 제거**
+다음 부분을 주석처리하거나 삭제:
+
+```typescript
+// 제거할 부분 (67-72줄)
+const response = await fetch('/data/short-advices.json');
+const advicesData = await response.json();
+const randomAdvice = advicesData.advices[Math.floor(Math.random() * advicesData.advices.length)];
+setFortuneMessage(randomAdvice.message);
+```
+
+#### 3️⃣ **긴 조언 API 호출 정리**
+중복된 API 호출을 하나로 통합:
+
+```typescript
+// 통합된 형태
+const { data } = await getAiBothAdvices(selectedRole.name, concern);
+const shortAdvice = data?.shortAdvice || data?.message || "운세를 받지 못했습니다. 다시 시도해 주세요.";
+const longAdviceText = data?.longAdvice || "긴 조언을 받지 못했습니다.";
+setFortuneMessage(shortAdvice);
+setLongAdvice(longAdviceText);
+```
+
+### 📊 **JSON 데이터 구조**
+현재 사용 중인 JSON 파일 (`public/data/short-advices.json`):
+
+```json
+{
+  "advices": [
+    {
+      "id": 1,
+      "message": "오늘은 새로운 시작의 날입니다. 작은 변화가 큰 행운을 가져다줄 것입니다."
+    },
+    {
+      "id": 2,
+      "message": "당신의 직감을 믿으세요. 마음이 이끄는 방향이 올바른 길입니다."
+    },
+    {
+      "id": 3,
+      "message": "주변 사람들과의 소통이 예상치 못한 기회를 만들어낼 것입니다."
+    }
+  ]
+}
+```
+
+### ⚙️ **현재 동작 방식**
+1. **JSON 파일 로드**: `/data/short-advices.json`에서 조언 목록 가져오기
+2. **랜덤 선택**: `Math.random()`으로 3개 중 하나 선택
+3. **표시**: 선택된 조언을 포춘쿠키 메시지로 표시
+4. **긴 조언**: 기존 AI 백엔드 API 유지 (변경 없음)
+

@@ -1,7 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Card from '../../../components/base/Card';
 import Button from '../../../components/base/Button';
 import schoolsData from '../../../data/schools.json';
+
+interface School {
+  id: number;
+  name: string;
+  category: string;
+}
 
 interface SchoolPeriod {
   id?: string;
@@ -11,6 +17,9 @@ interface SchoolPeriod {
   created_at?: string;
   updated_at?: string;
 }
+
+// schools.json이 배열 형태로 변경됨
+const schoolsArray = Array.isArray(schoolsData) ? (schoolsData as School[]) : (schoolsData as { schools: School[] }).schools;
 
 const SettingsTab: React.FC = () => {
   const [schoolPeriods, setSchoolPeriods] = useState<SchoolPeriod[]>([]);
@@ -25,22 +34,34 @@ const SettingsTab: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // 학교 검색 필터링
-  const filteredSchools = schoolsData.schools.filter(school =>
-    school.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    school.region.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredSchools = useMemo(() => {
+    return schoolsArray.filter((school: School) => {
+      const schoolName = (school.name || '').toLowerCase();
+      const schoolCategory = (school.category || '').toLowerCase();
+      const searchLower = searchTerm.toLowerCase().trim();
+      
+      // 공백 제거된 학교명에서 검색
+      const schoolNameNoSpace = schoolName.replace(/\s+/g, '');
+      const searchNoSpace = searchLower.replace(/\s+/g, '');
+      
+      // 원본 검색 및 공백 제거 검색 모두 시도
+      const matches = 
+        schoolName.includes(searchLower) || 
+        schoolCategory.includes(searchLower) ||
+        schoolNameNoSpace.includes(searchNoSpace);
+      
+      return matches;
+    });
+  }, [searchTerm]);
 
   // 학교 기간 목록 조회
   const fetchSchoolPeriods = async () => {
     try {
       setLoading(true);
-      console.log('학교 기간 목록 조회 시작...');
       const response = await fetch('/api/school-periods');
-      console.log('API 응답 상태:', response.status);
       
       if (response.ok) {
         const data = await response.json();
-        console.log('받은 데이터:', data);
         setSchoolPeriods(data.schoolPeriods || []);
       } else {
         const errorText = await response.text();
@@ -77,15 +98,11 @@ const SettingsTab: React.FC = () => {
         endDate: formData.end_date
       };
       
-      console.log('API 요청:', method, url, payload);
-      
       const response = await fetch(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
-      console.log('API 응답 상태:', response.status);
 
       if (response.ok) {
         alert(editingId ? '수정되었습니다.' : '추가되었습니다.');
@@ -188,7 +205,7 @@ const SettingsTab: React.FC = () => {
                   />
                   <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-y-auto">
                     {filteredSchools.length > 0 ? (
-                      filteredSchools.map((school) => (
+                      filteredSchools.map((school: School) => (
                         <button
                           key={school.id}
                           type="button"
@@ -196,7 +213,7 @@ const SettingsTab: React.FC = () => {
                           className="w-full px-3 py-2 text-left hover:bg-amber-50 border-b border-gray-100 last:border-b-0"
                         >
                           <div className="font-medium">{school.name}</div>
-                          <div className="text-sm text-gray-500">{school.region}</div>
+                          <div className="text-sm text-gray-500">{school.category || ''}</div>
                         </button>
                       ))
                     ) : (

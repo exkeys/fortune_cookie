@@ -57,10 +57,24 @@ export default function FortuneCookiePage() {
     (async () => {
       if (selectedRole && concern) {
         try {
+          // AI 백엔드 호출 부분 주석처리 - JSON 파일로 대체
+          // const { data } = await getAiBothAdvices(selectedRole.name, concern);
+          // const shortAdvice = data?.shortAdvice || data?.message || "운세를 받지 못했습니다. 다시 시도해 주세요.";
+          // const longAdviceText = data?.longAdvice || "긴 조언을 받지 못했습니다.";
+          // setFortuneMessage(shortAdvice);
+          // setLongAdvice(longAdviceText);
+          
+          // JSON 파일에서 랜덤 조언 가져오기
+          const response = await fetch('/data/short-advices.json');
+          const advicesData = await response.json();
+          const randomAdvice = advicesData.advices[Math.floor(Math.random() * advicesData.advices.length)];
+          
+          // JSON 필드명이 "text"로 되어 있음
+          setFortuneMessage(randomAdvice.text);
+          
+          // 긴 조언은 기존 AI 백엔드 사용
           const { data } = await getAiBothAdvices(selectedRole.name, concern);
-          const shortAdvice = data?.shortAdvice || data?.message || "운세를 받지 못했습니다. 다시 시도해 주세요.";
           const longAdviceText = data?.longAdvice || "긴 조언을 받지 못했습니다.";
-          setFortuneMessage(shortAdvice);
           setLongAdvice(longAdviceText);
         } catch (error) {
           setFortuneMessage("운세를 받지 못했습니다. 다시 시도해 주세요.");
@@ -241,7 +255,7 @@ export default function FortuneCookiePage() {
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-200 to-orange-200">
-      <Header disableBackButton={true} />
+      <Header disableBackButton={true} disableHomeButton={true} />
       
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {selectedRole && (
