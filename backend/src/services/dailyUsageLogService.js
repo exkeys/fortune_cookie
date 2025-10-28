@@ -47,32 +47,32 @@ export class DailyUsageLogService {
       }
       
       // === 테스트용: 1분 제한 (운영시 주석 해제 필요) ===
-      const now = new Date();
-      const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
+      // const now = new Date();
+      // const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
+      
+      // const { data, error, count } = await supabase
+      //   .from('daily_usage_log')
+      //   .select('*', { count: 'exact' })
+      //   .eq('user_id', String(userId))
+      //   .gte('used_at', oneMinuteAgo.toISOString());
+      
+      // === 운영용: 24시간 제한 (운영시 활성화) ===
+      // 오늘 날짜의 시작 (00:00:00)
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayStart = today.toISOString();
+      
+      // 오늘 날짜의 끝 (23:59:59)
+      const todayEnd = new Date();
+      todayEnd.setHours(23, 59, 59, 999);
+      const todayEndStr = todayEnd.toISOString();
       
       const { data, error, count } = await supabase
         .from('daily_usage_log')
         .select('*', { count: 'exact' })
         .eq('user_id', String(userId))
-        .gte('used_at', oneMinuteAgo.toISOString());
-      
-      // === 운영용: 24시간 제한 (현재 주석 처리됨) ===
-      // 오늘 날짜의 시작 (00:00:00)
-      // const today = new Date();
-      // today.setHours(0, 0, 0, 0);
-      // const todayStart = today.toISOString();
-      // 
-      // 오늘 날짜의 끝 (23:59:59)
-      // const todayEnd = new Date();
-      // todayEnd.setHours(23, 59, 59, 999);
-      // const todayEndStr = todayEnd.toISOString();
-      // 
-      // const { data, error, count } = await supabase
-      //   .from('daily_usage_log')
-      //   .select('*', { count: 'exact' })
-      //   .eq('user_id', userId)
-      //   .gte('used_at', todayStart)
-      //   .lte('used_at', todayEndStr);
+        .gte('used_at', todayStart)
+        .lte('used_at', todayEndStr);
       
       if (error) {
         logger.error('오늘 사용 여부 확인 실패', error);

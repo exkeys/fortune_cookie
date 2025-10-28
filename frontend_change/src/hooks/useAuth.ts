@@ -326,10 +326,10 @@ export const useAuth = (): AuthReturn => {
       try {
         console.log('[useAuth] users 테이블 upsert 시작');
         
-        // 먼저 기존 사용자 정보 조회 (status 확인용)
+        // 먼저 기존 사용자 정보 조회 (status, login_count 확인용)
         const { data: existingUser } = await supabase
           .from('users')
-          .select('status, is_admin')
+          .select('status, is_admin, login_count')
           .eq('id', session.user.id)
           .maybeSingle();
         
@@ -337,7 +337,8 @@ export const useAuth = (): AuthReturn => {
           userId: session.user.id,
           email: session.user.email,
           existingStatus: existingUser?.status || 'none',
-          isAdmin: existingUser?.is_admin || false
+          isAdmin: existingUser?.is_admin || false,
+          loginCount: existingUser?.login_count || 0
         });
         
         // 밴된 사용자면 즉시 로그아웃 처리
@@ -351,7 +352,7 @@ export const useAuth = (): AuthReturn => {
         const timeoutPromise = new Promise((_, reject) => 
           setTimeout(() => reject(new Error('upsert timeout')), 3000)
         );
-        
+          
         // upsert 데이터 준비 - status는 기존값 유지하거나 신규시에만 active
         const upsertData: any = {
           id: session.user.id,
@@ -359,6 +360,8 @@ export const useAuth = (): AuthReturn => {
           nickname: displayName,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
+          last_login_at: new Date().toISOString(), // 마지막 로그인 시간 업데이트
+          login_count: (existingUser?.login_count || 0) + 1, // 로그인 횟수 증가
         };
         
         // 기존 사용자가 없는 경우에만 status를 active로 설정

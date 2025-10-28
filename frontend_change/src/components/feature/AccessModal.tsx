@@ -8,6 +8,7 @@ interface AccessModalProps {
     text: string;
     onClick: () => void;
   };
+  cancelButtonText?: string; // 취소 버튼 텍스트 커스터마이징
 }
 
 export default function AccessModal({ 
@@ -16,7 +17,8 @@ export default function AccessModal({
   title, 
   message, 
   icon,
-  actionButton 
+  actionButton,
+  cancelButtonText = "메인으로 돌아가기 🏠"
 }: AccessModalProps) {
   if (!isOpen) return null;
 
@@ -31,7 +33,7 @@ export default function AccessModal({
       {/* 모달 컨테이너 */}
       <div className="flex items-center justify-center min-h-screen px-4 py-6">
         <div 
-          className="relative bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all"
+          className="relative bg-white rounded-2xl shadow-2xl max-w-2xl w-full mx-4 transform transition-all"
           onClick={(e) => e.stopPropagation()}
         >
           {/* 모달 헤더 */}
@@ -49,11 +51,11 @@ export default function AccessModal({
             </div>
             
             {/* 버튼 영역 */}
-            <div className="flex flex-col space-y-3">
+            <div className="flex flex-row gap-4 justify-center">
               {actionButton && (
                 <button
                   onClick={actionButton.onClick}
-                  className="w-full px-4 py-3 bg-amber-500 text-white rounded-lg font-medium hover:bg-amber-600 transition-colors"
+                  className="flex-1 max-w-xs px-8 py-4 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-lg font-bold hover:from-purple-600 hover:to-pink-600 transition-all shadow-lg hover:shadow-xl"
                 >
                   {actionButton.text}
                 </button>
@@ -61,9 +63,9 @@ export default function AccessModal({
               
               <button
                 onClick={onClose}
-                className="w-full px-4 py-3 bg-gray-500 text-white rounded-lg font-medium hover:bg-gray-600 transition-colors"
+                className="flex-1 max-w-xs px-8 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 text-white rounded-lg font-bold hover:from-blue-600 hover:to-cyan-600 transition-all shadow-lg hover:shadow-xl"
               >
-                확인
+                {cancelButtonText}
               </button>
             </div>
           </div>

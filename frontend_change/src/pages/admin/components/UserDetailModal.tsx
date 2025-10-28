@@ -127,13 +127,13 @@ export default function UserDetailModal({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 text-xs">마지막 로그인</span>
-                  <span className="font-bold text-gray-800 text-xs">
+                  <span className="font-bold text-gray-800 text-[11px]">
                     {formatDate(user.last_login_at || null)}
                   </span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 text-xs">마지막 로그아웃</span>
-                  <span className="font-bold text-gray-800 text-xs">
+                  <span className="font-bold text-gray-800 text-[11px]">
                     {formatDate(user.last_logout_at || null)}
                   </span>
                 </div>

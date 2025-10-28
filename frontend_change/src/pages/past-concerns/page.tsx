@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import { supabase } from '../../supabaseClient';
+import { useAuth } from '../../hooks/useAuth';
 import PageHeader from './components/PageHeader';
 import LoadingState from './components/LoadingState';
 import EmptyState from './components/EmptyState';
@@ -117,6 +118,7 @@ const getRoleFromPersona = (persona: string) => {
 export default function PastConcernsPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -128,6 +130,7 @@ export default function PastConcernsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCopyModal, setShowCopyModal] = useState(false);
+  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
   const [accessModal, setAccessModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -137,6 +140,7 @@ export default function PastConcernsPage() {
       text: string;
       onClick: () => void;
     };
+    cancelButtonText?: string;
   }>({
     isOpen: false,
     title: '',
@@ -146,18 +150,157 @@ export default function PastConcernsPage() {
   const itemsPerPage = 9;
   
   // 모달 헬퍼 함수들
-  const showAccessModal = (title: string, message: string, icon: string, actionButton?: { text: string; onClick: () => void }) => {
+  const showAccessModal = (title: string, message: string, icon: string, actionButton?: { text: string; onClick: () => void }, cancelButtonText?: string) => {
     setAccessModal({
       isOpen: true,
       title,
       message,
       icon,
-      actionButton
+      actionButton,
+      cancelButtonText
     });
   };
 
   const closeAccessModal = () => {
     setAccessModal(prev => ({ ...prev, isOpen: false }));
+  };
+
+  // 접근 권한 체크 함수 (IntroMainContent와 동일)
+  const checkAccessPermission = async (userId: string) => {
+    if (!userId) return false;
+    
+    // 중복 요청 방지
+    if (isCheckingAccess) {
+      console.log('접근 권한 체크 중복 요청 방지');
+      return false;
+    }
+    
+    setIsCheckingAccess(true);
+    
+    try {
+      console.log('과거 고민에서 접근 권한 체크 시작...', { userId });
+      const response = await fetch(`/api/access-control/check-full-access?userId=${userId}`);
+      
+      console.log('API 응답 상태:', response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API 응답 에러:', { status: response.status, text: errorText });
+        
+        showAccessModal(
+          'API 연결 오류',
+          `서버와의 연결에 문제가 있습니다.\n\n응답 코드: ${response.status}\n오류 내용: ${errorText || '알 수 없는 오류'}\n\n잠시 후 다시 시도해주세요.`,
+          '🔌'
+        );
+        return false;
+      }
+      
+      const data = await response.json();
+      console.log('접근 권한 체크 결과:', data);
+      
+      // 접근 불가능한 경우
+      if (!data.canAccess) {
+        let icon = '🚫';
+        let title = '서비스 이용 제한';
+        let message = data.reason || '서비스 이용이 제한되었습니다.';
+        let actionButton = undefined;
+        
+        if (data.reason?.includes('차단된')) {
+          icon = '🚫';
+          title = '계정 차단';
+          message = '죄송합니다. 현재 계정이 차단된 상태입니다.\n\n서비스 이용에 문제가 있어 관리자에 의해 차단되었습니다. 자세한 내용은 관리자에게 문의해 주세요.';
+          
+        } else if (data.reason?.includes('학교 정보가 설정되지')) {
+          icon = '🏫';
+          title = '학교 선택 필요';
+          message = '포춘쿠키 서비스를 이용하려면 먼저 학교를 선택해야 합니다.\n\n"학교 선택하기" 버튼을 눌러 소속 학교를 등록해 주세요.';
+          actionButton = {
+            text: '학교 선택하기',
+            onClick: () => {
+              closeAccessModal();
+              navigate('/school-select');
+            }
+          };
+          
+        } else if (data.reason?.includes('이용 기간이 설정되지')) {
+          const schoolMatch = data.reason.match(/(.+)의 이용 기간이/);
+          const schoolName = schoolMatch ? schoolMatch[1] : '해당 학교';
+          
+          icon = '📅';
+          title = '이용 기간 미설정';
+          message = `${schoolName}의 포춘쿠키 서비스 이용 기간이 아직 설정되지 않았습니다.\n\n관리자가 이용 기간을 설정하면 서비스를 이용하실 수 있습니다. 관리자에게 문의해 주세요.`;
+          
+        } else if (data.reason?.includes('이용 기간(') && data.reason.includes('이 아닙니다')) {
+          const periodMatch = data.reason.match(/(.+)의 이용 기간\((.+) ~ (.+)\)이 아닙니다/);
+          const schoolName = periodMatch ? periodMatch[1] : '해당 학교';
+          const startDate = periodMatch ? periodMatch[2] : '';
+          const endDate = periodMatch ? periodMatch[3] : '';
+          
+          const currentDate = new Date();
+          const startDateObj = new Date(startDate);
+          const endDateObj = new Date(endDate);
+          
+          let statusMessage = '';
+          if (currentDate < startDateObj) {
+            statusMessage = '아직 이용 기간이 시작되지 않았습니다.';
+          } else if (currentDate > endDateObj) {
+            statusMessage = '이용 기간이 종료되었습니다.';
+          }
+          
+          icon = '📅';
+          title = '이용 기간 종료';
+          message = `${schoolName}의 포춘쿠키 서비스 이용 기간이 아닙니다.\n\n📅 이용 기간: ${startDate} ~ ${endDate}\n${statusMessage}\n\n새로운 이용 기간에 대해서는 관리자에게 문의해 주세요.`;
+          
+        } else {
+          message = `서비스 이용이 일시적으로 제한되었습니다.\n\n상세 내용: ${data.reason}\n\n문제가 지속되면 관리자에게 문의해 주세요.`;
+        }
+        
+        showAccessModal(title, message, icon, actionButton);
+        return false;
+      }
+      
+      // 일일 사용 제한에 걸린 경우
+      if (!data.canUse) {
+        const message = `하루에 하나씩만 받을 수 있어요.\n\n내일 다시 찾아와 주세요! 🌅`;
+        
+        showAccessModal(
+          '오늘의 포춘쿠키를 이미 받으셨어요!',
+          message,
+          '🍪',
+          {
+            text: '지난 고민 보기 📝',
+            onClick: () => {
+              closeAccessModal();
+              // 이미 지난 고민 페이지에 있으므로 모달만 닫기
+            }
+          }
+        );
+        return false;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('접근 권한 체크 실패:', error);
+      
+      let errorMessage = '접근 권한 확인 중 오류가 발생했습니다.';
+      let icon = '⚠️';
+      let title = '연결 오류';
+      
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        title = '서버 연결 실패';
+        errorMessage = '서버에 연결할 수 없습니다.\n\n네트워크 연결을 확인하고 다시 시도해주세요.';
+        icon = '🌐';
+      } else if (error instanceof SyntaxError) {
+        title = '응답 처리 오류';
+        errorMessage = '서버 응답을 처리하는 중 오류가 발생했습니다.\n\n잠시 후 다시 시도해주세요.';
+        icon = '🔧';
+      }
+      
+      showAccessModal(title, errorMessage, icon);
+      return false;
+    } finally {
+      setIsCheckingAccess(false);
+    }
   };
   
   // Supabase에서 실제 기록 로드
@@ -493,7 +636,41 @@ export default function PastConcernsPage() {
           /* 빈 상태 */
           <EmptyState
             isLoggedIn={isLoggedIn}
-            onNavigateHome={() => navigate('/role-select')}
+            onNavigateHome={async () => {
+              if (!user?.id) {
+                console.error('사용자 정보를 가져올 수 없습니다.');
+                return;
+              }
+              
+              // 접근 권한 체크 (학교 밴 > 일일 사용 제한 순서)
+              const canAccess = await checkAccessPermission(user.id);
+              
+              if (!canAccess) {
+                return; // 이미 모달이 표시됨
+              }
+              
+              // 관리자는 바로 이동 (일일 제한 없음)
+              if (user.is_admin) {
+                console.log('관리자 - 바로 포춘쿠키 페이지로 이동');
+                navigate('/role-select');
+                return;
+              }
+              
+              // 일반 사용자는 사전 안내 모달 표시
+              showAccessModal(
+                '포춘쿠키 이용 안내',
+                '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
+                '💡',
+                {
+                  text: '확인',
+                  onClick: () => {
+                    closeAccessModal();
+                    navigate('/role-select');
+                  }
+                },
+                '취소'
+              );
+            }}
             onLogin={async () => {
               const { error } = await supabase.auth.signInWithOAuth({ provider: 'kakao' });
               if (error) console.error('로그인 에러:', error);
@@ -703,6 +880,7 @@ export default function PastConcernsPage() {
         message={accessModal.message}
         icon={accessModal.icon}
         actionButton={accessModal.actionButton}
+        cancelButtonText={accessModal.cancelButtonText}
       />
 
       {/* 복사 완료 모달 */}

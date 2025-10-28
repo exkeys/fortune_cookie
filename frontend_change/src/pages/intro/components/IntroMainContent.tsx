@@ -18,6 +18,7 @@ interface ModalState {
     text: string;
     onClick: () => void;
   };
+  cancelButtonText?: string;
 }
 
 export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) {
@@ -69,7 +70,13 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
       }
       
       const data = await response.json();
-      console.log('접근 권한 체크 결과:', data);
+      console.log('🔍 접근 권한 체크 결과 (상세):', {
+        canAccess: data.canAccess,
+        canUse: data.canUse,
+        reason: data.reason,
+        user: data.user,
+        fullResponse: data
+      });
       
       // 접근 불가능한 경우
       if (!data.canAccess) {
@@ -146,22 +153,15 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
       
       // 일일 사용 제한에 걸린 경우
       if (!data.canUse) {
-        // 학교명 추출
-        let schoolName = '해당 학교';
-        if (data.reason?.includes(' 학생은')) {
-          const schoolMatch = data.reason.match(/(.+) 학생은/);
-          if (schoolMatch) schoolName = schoolMatch[1];
-        }
-        
-        const message = `오늘은 이미 포춘쿠키를 받으셨습니다! 🍪\n\n${schoolName} 학생은 하루에 한 번만 포춘쿠키를 받을 수 있습니다.\n\n⏰ 내일 다시 방문하시거나, 지난 고민들을 다시 살펴보세요.`;
+        const message = `하루에 하나씩만 받을 수 있어요.\n\n내일 다시 찾아와 주세요! 🌅`;
         
         setModal({
           isOpen: true,
-          title: '오늘의 포춘쿠키 완료',
+          title: '오늘의 포춘쿠키를 이미 받으셨어요!',
           message,
           icon: '🍪',
           actionButton: {
-            text: '지난 고민 보기',
+            text: '지난 고민 보기 📝',
             onClick: () => {
               setModal(prev => ({ ...prev, isOpen: false }));
               navigate('/past-concerns');
@@ -236,18 +236,43 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
       return;
     }
 
-    console.log('시작하기 버튼 클릭:', { 
+    console.log('시작하기 버튼 클릭 - 접근 권한 체크 시작:', { 
       userId: user.id, 
       userSchool: user.school,
-      userStatus: user.status 
+      userStatus: user.status,
+      isAdmin: user.is_admin
     });
 
-    // 백그라운드에서 권한 체크 (UI 변경 없음)
+    // 먼저 접근 권한 체크 (이미 사용했는지 확인)
     const canAccess = await checkAccessPermission();
     
-    if (canAccess) {
-      navigate('/role-select');
+    // 이미 사용했거나 다른 제한에 걸리면 해당 모달이 이미 표시됨
+    if (!canAccess) {
+      return;
     }
+    
+    // 관리자는 바로 이동 (일일 제한 없음)
+    if (user.is_admin) {
+      console.log('관리자 - 사전 안내 모달 생략하고 바로 이동');
+      navigate('/role-select');
+      return;
+    }
+    
+    // 일반 사용자는 사전 안내 모달 표시
+    setModal({
+      isOpen: true,
+      title: '포춘쿠키 이용 안내',
+      message: '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
+      icon: '💡',
+      actionButton: {
+        text: '확인',
+        onClick: () => {
+          setModal(prev => ({ ...prev, isOpen: false }));
+          navigate('/role-select'); // 이미 체크했으니 바로 이동
+        }
+      },
+      cancelButtonText: '취소'
+    });
   };
 
   // 모달 닫기
@@ -326,6 +351,7 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
         message={modal.message}
         icon={modal.icon}
         actionButton={modal.actionButton}
+        cancelButtonText={modal.cancelButtonText}
       />
     </div>
   );

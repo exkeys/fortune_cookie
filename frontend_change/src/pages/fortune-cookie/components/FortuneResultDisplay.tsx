@@ -44,7 +44,7 @@ export default function FortuneResultDisplay({
           <span className="text-lg">💡</span>
           <span>AI 피드</span>
         </div>
-  <AiFeedModal open={aiFeedOpen} onClose={() => setAiFeedOpen(false)} message={longAdvice || fortuneMessage} />
+  <AiFeedModal open={aiFeedOpen} onClose={() => setAiFeedOpen(false)} message={longAdvice || "AI가 답변을 생성 중입니다..."} />
       </div>
 
       <div className="text-sm md:text-base lg:text-lg text-gray-500 mb-6">

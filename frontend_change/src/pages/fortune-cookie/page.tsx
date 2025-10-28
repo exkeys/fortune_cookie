@@ -107,7 +107,7 @@ export default function FortuneCookiePage() {
         setTimeout(() => {
           setShowFortune(true);
         }, 500); // 운세 표시 시간 늘림 (300ms → 600ms)
-      }, 2900); // 쿠키 열리는 시간 늘림 (800ms → 1.5초)
+      }, 3000); // 쿠키 열리는 시간 늘림 (800ms → 1.5초)
     }
   };
   

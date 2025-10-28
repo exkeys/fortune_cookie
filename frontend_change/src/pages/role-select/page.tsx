@@ -38,46 +38,14 @@ export default function RoleSelectPage() {
   const [customRoles, setCustomRoles] = useState<{ [id: string]: string }>({});
   const [isAnimating, setIsAnimating] = useState(false);
   const [customRoleInputId, setCustomRoleInputId] = useState<string | null>(null);
-  const [hasUsedToday, setHasUsedToday] = useState<boolean>(false);
 
-  // 1. 진입 시 오늘 사용 여부 체크 및 custom_roles 불러오기
+  // 1. 진입 시 custom_roles 불러오기
   useEffect(() => {
     if (!user?.id) return;
     
     const initializePage = async () => {
       try {
-        // 사용자 정보가 완전히 로드될 때까지 잠시 대기 (admin 정보 확실히 로드)
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        console.log('[role-select] 사용자 정보 확인:', { 
-          userId: user.id, 
-          isAdmin: user.is_admin,
-          email: user.email 
-        });
-        
-        // 1. 관리자는 일일 사용 제한 우회
-        if (user.is_admin) {
-          console.log('[role-select] 관리자 - 일일 사용 제한 우회');
-          setHasUsedToday(false); // 관리자는 항상 사용 가능
-        } else {
-          // 1. 오늘 사용 여부 체크 (일반 사용자만)
-          console.log('오늘 사용 여부 확인 중...');
-          const response = await fetch(`/api/daily-usage-logs/check-today?userId=${user.id}`);
-          
-          if (response.ok) {
-            const { hasUsedToday: usedToday } = await response.json();
-            setHasUsedToday(usedToday);
-            console.log('오늘 사용 여부:', usedToday);
-            
-            if (usedToday) {
-              return; // 이미 사용했으면 더 이상 진행하지 않음
-            }
-          } else {
-            console.error('사용 여부 체크 실패');
-          }
-        }
-
-        // 2. 저장된 폼 데이터 복원
+        // 1. 저장된 폼 데이터 복원
         const savedData = loadFormData();
         if (savedData?.selectedRole) {
           setSelectedRole(savedData.selectedRole.id);
@@ -86,7 +54,7 @@ export default function RoleSelectPage() {
           setCustomRoles(prev => ({ ...prev, [savedData.customRole!]: savedData.customRole! }));
         }
         
-        // 3. custom_roles 불러오기
+        // 2. custom_roles 불러오기
         const { data, error } = await supabase
           .from('custom_roles')
           .select('id, role_name')
@@ -111,7 +79,7 @@ export default function RoleSelectPage() {
     };
 
     initializePage();
-  }, [user?.id, user?.is_admin]); // is_admin 변경도 감지
+  }, [user?.id]);
 
   // 2. 역할 삭제 (DB 반영)
   const handleRemoveRole = async (roleId: string) => {
@@ -249,38 +217,6 @@ export default function RoleSelectPage() {
     }
   };
 
-  // 오늘 이미 사용한 경우
-  if (hasUsedToday) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
-        <Header />
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center max-w-md mx-auto p-8">
-            <div className="text-8xl mb-6">🍪</div>
-            <h2 className="text-3xl font-bold text-gray-800 mb-4">오늘의 포춘쿠키를 이미 받으셨어요!</h2>
-            <p className="text-xl text-gray-600 mb-6 leading-relaxed">
-              하루에 하나씩만 받을 수 있어요.<br />
-              내일 다시 찾아와 주세요! 🌅
-            </p>
-            <div className="space-y-4">
-              <button
-                onClick={() => navigate('/past-concerns')}
-                className="w-full px-6 py-3 bg-amber-500 text-white rounded-lg font-bold hover:bg-amber-600 transition-colors"
-              >
-                지난 고민 보기 📝
-              </button>
-              <button
-                onClick={() => navigate('/')}
-                className="w-full px-6 py-3 bg-gray-500 text-white rounded-lg font-bold hover:bg-gray-600 transition-colors"
-              >
-                메인으로 돌아가기 🏠
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">

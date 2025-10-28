@@ -5,14 +5,84 @@
 ---
 
 ## 📋 목차
-1. [프로젝트 개요](#-프로젝트-개요)
-2. [폴더 구조](#-폴더-구조)
-3. [핵심 설정](#️-핵심-설정)
-4. [API 엔드포인트](#-api-엔드포인트)
-5. [서비스별 상세 분석](#-서비스별-상세-분석)
-6. [데이터베이스](#-데이터베이스)
-7. [일일 사용 제한 시스템](#-일일-사용-제한-시스템)
-8. [개발 & 운영](#-개발--운영)
+1. [🔄 테스트/운영 설정 전환 가이드](#-테스트운영-설정-전환-가이드) ⚡
+2. [프로젝트 개요](#-프로젝트-개요)
+3. [폴더 구조](#-폴더-구조)
+4. [핵심 설정](#️-핵심-설정)
+5. [API 엔드포인트](#-api-엔드포인트)
+6. [서비스별 상세 분석](#-서비스별-상세-분석)
+7. [데이터베이스](#-데이터베이스)
+8. [일일 사용 제한 시스템](#-일일-사용-제한-시스템)
+9. [개발 & 운영](#-개발--운영)
+
+---
+
+## 🔄 테스트/운영 설정 전환 가이드
+
+### 📍 **현재 상태** (2025년 10월 28일 기준)
+- **Daily Usage 체크**: 운영용 (24시간 제한) ✅
+- **로그 자동 삭제**: 운영용 (24시간 이전 로그 삭제) ✅
+- **스케줄러**: 운영용 (1시간마다 실행) ✅
+
+### 🚀 **테스트용으로 전환하기**
+
+#### 1️⃣ **일일 사용 제한을 1분으로 변경** 
+📂 `backend/src/services/dailyUsageLogService.js` (49-57줄)
+📂 `backend/src/services/accessControlService.js` (192-219줄)
+
+```javascript
+// 운영용 코드를 주석 처리하고
+// === 운영용: 24시간 제한 (운영시 활성화) ===
+// const today = new Date();
+// today.setHours(0, 0, 0, 0);
+// ...
+
+// 테스트용 코드 주석 해제
+// === 테스트용: 1분 제한 (테스트시 주석 해제 필요) ===
+const now = new Date();
+const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
+// ...
+```
+
+#### 2️⃣ **로그 삭제를 1분으로 변경**
+📂 `backend/src/utils/scheduler.js` (37-66줄)
+
+```javascript
+// 운영용 함수를 주석 처리하고
+// === 운영용: 24시간 이전 로그 삭제 (기본값) ===
+// export const cleanupOldUsageLogs = async () => {
+// ...
+
+// 테스트용 함수 주석 해제  
+// === 테스트용: 1분 이전 로그 삭제 (테스트시 주석 해제 필요) ===
+export const cleanupOldUsageLogs = async () => {
+  const minutesToKeep = 1; // 1분 이전 로그 삭제
+  // ...
+```
+
+### 🏭 **운영용으로 전환하기**
+
+#### 1️⃣ **일일 사용 제한을 24시간으로 변경**
+📂 `backend/src/services/dailyUsageLogService.js` + `accessControlService.js`
+- 테스트용 1분 코드 → 주석 처리
+- 운영용 24시간 코드 → 주석 해제
+
+#### 2️⃣ **로그 삭제를 24시간으로 변경**  
+📂 `backend/src/utils/scheduler.js`
+- 테스트용 1분 삭제 함수 → 주석 처리
+- 운영용 24시간 삭제 함수 → 주석 해제
+
+#### 3️⃣ **스케줄러 빈도를 30초로 변경**
+📂 `backend/src/utils/scheduler.js` (130-153줄)
+- 운영용 1시간 스케줄러 → 주석 처리
+- 테스트용 30초 스케줄러 → 주석 해제
+
+### ⚡ **빠른 체크리스트**
+- [ ] `dailyUsageLogService.js` - 테스트(1분)/운영(24시간) 설정 확인
+- [ ] `accessControlService.js` - 테스트(1분)/운영(24시간) 설정 확인  
+- [ ] `scheduler.js` - 로그 삭제 테스트(1분)/운영(24시간) 설정 확인
+- [ ] `scheduler.js` - 스케줄러 빈도 테스트(30초)/운영(1시간) 설정 확인
+- [ ] 서버 재시작 후 로그 확인
 
 ---
 
@@ -375,7 +445,7 @@ DELETE /api/daily-usage-logs/old        # 오래된 로그 삭제
 ### ⚙️ **테스트/운영 설정 전환**
 
 #### 📍 **파일 위치 1: `backend/src/services/dailyUsageLogService.js`**
-**현재 상태**: 테스트용 (1분 제한)
+**현재 상태**: 운영용 (24시간 제한)
 ```javascript
 // === 테스트용: 1분 제한 (운영시 주석 해제 필요) ===
 const now = new Date();
@@ -388,70 +458,89 @@ const { data, error, count } = await supabase
   .gte('used_at', oneMinuteAgo.toISOString());
 ```
 
-**운영용으로 전환**: 아래 주석을 해제하고 위 테스트용 코드 주석 처리
+**테스트용으로 전환**: 현재 활성화된 운영용 코드를 주석 처리하고 위 테스트용 주석을 해제
 ```javascript
-// === 운영용: 24시간 제한 (현재 주석 처리됨) ===
-// const today = new Date();
-// today.setHours(0, 0, 0, 0);
-// const todayStart = today.toISOString();
-// 
-// const todayEnd = new Date();
-// todayEnd.setHours(23, 59, 59, 999);
-// const todayEndStr = todayEnd.toISOString();
-// 
-// const { data, error, count } = await supabase
-//   .from('daily_usage_log')
-//   .select('*', { count: 'exact' })
-//   .eq('user_id', userId)
-//   .gte('used_at', todayStart)
-//   .lte('used_at', todayEndStr);
+// === 운영용: 24시간 제한 (운영시 활성화) ===
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const todayStart = today.toISOString();
+
+const todayEnd = new Date();
+todayEnd.setHours(23, 59, 59, 999);
+const todayEndStr = todayEnd.toISOString();
+
+const { data, error, count } = await supabase
+  .from('daily_usage_log')
+  .select('*', { count: 'exact' })
+  .eq('user_id', userId)
+  .gte('used_at', todayStart)
+  .lte('used_at', todayEndStr);
 ```
 
-#### 📍 **파일 위치 2: `backend/src/utils/scheduler.js`**
-**현재 상태**: 테스트용 (30초마다 2분 이전 로그 삭제)
+#### 📍 **파일 위치 2: `backend/src/services/accessControlService.js`**
+**현재 상태**: 운영용 (24시간 제한)
 
-**운영용으로 전환**: 
-1. 테스트용 `cleanupOldUsageLogs` 함수를 주석 처리
-2. 테스트용 `startScheduler` 함수를 주석 처리  
-3. 운영용 주석을 모두 해제
+#### 📍 **파일 위치 3: `backend/src/utils/scheduler.js`**
+**현재 상태**: 운영용 (24시간 이전 로그 삭제) ✅
 
-**테스트용 (현재 활성)**:
+**테스트용으로 전환**: 
+1. 운영용 `cleanupOldUsageLogs` 함수를 주석 처리
+2. 테스트용 `cleanupOldUsageLogs` 주석을 해제
+3. 테스트용 스케줄러 설정으로 변경
+
+**테스트용 (현재 주석 처리됨)**:
 ```javascript
-// === 테스트용: 30초마다 로그 정리 실행 ===
-export const startScheduler = () => {
-  setInterval(() => {
-    cleanupOldUsageLogs();
-  }, 30000); // 30초마다 실행
-};
-```
-
-**운영용 (현재 주석 처리됨)**:
-```javascript
-// === 운영용: 1시간마다 실행 ===
-// export const startScheduler = () => {
-//   // 1시간마다 24시간 이전 로그 삭제
-//   setInterval(() => {
-//     cleanupOldUsageLogs();
-//   }, 60 * 60 * 1000); // 1시간마다 실행
-//   
-//   logger.info('스케줄러 시작됨 (운영용) - 1시간마다 24시간 이전 로그 정리');
+// === 테스트용: 1분 이전 로그 삭제 (테스트시 주석 해제 필요) ===
+// export const cleanupOldUsageLogs = async () => {
+//   try {
+//     // 테스트용: 1분 이전 로그 삭제 (회원탈퇴한 사용자 포함)
+//     const minutesToKeep = 1;
+//     const cutoffTime = new Date();
+//     cutoffTime.setMinutes(cutoffTime.getMinutes() - minutesToKeep);
+//     // ... 나머지 코드
+//   }
 // };
 ```
 
-**운영용 로그 정리 로직**:
+**운영용 (현재 활성화됨)**:
 ```javascript
-// === 운영용: 24시간(1일) 이후 로그 삭제 ===
-// // 운영용: 24시간(1일) 이전 로그 삭제 (회원탈퇴한 사용자 포함)
-// const hoursToKeep = 24;
-// const cutoffTime = new Date();
-// cutoffTime.setHours(cutoffTime.getHours() - hoursToKeep);
+// === 운영용: 24시간 이전 로그 삭제 (기본값) ===
+export const cleanupOldUsageLogs = async () => {
+  try {
+    // 운영용: 24시간(1일) 이전 로그 삭제 (회원탈퇴한 사용자 포함)
+    const hoursToKeep = 24;
+    const cutoffTime = new Date();
+    cutoffTime.setHours(cutoffTime.getHours() - hoursToKeep);
+    // ... 나머지 코드
+  }
+};
+```
+
+**테스트용 스케줄러 (현재 주석 처리됨)**:
+```javascript
+// === 스케줄러 시작 함수 (테스트용) ===
+// export const startScheduler = () => {
+//   setInterval(async () => {
+//     await cleanupExpiredData(); // 30초마다 실행
+//   }, 30000);
+// };
+```
+
+**운영용 스케줄러 (현재 활성화됨)**:
+```javascript
+// === 운영용: 1시간마다 실행 (기본값) ===
+export const startScheduler = () => {
+  setInterval(async () => {
+    await cleanupExpiredData(); // 1시간마다 실행
+  }, 60 * 60 * 1000);
+};
 ```
 
 ### 🔄 **동작 흐름**
 1. **접근 권한 체크**: 페이지 진입 → 밴 상태 체크 → 학교 날짜 체크 → 일일 제한 체크
 2. **사용 기록**: 역할 선택 → "다음 단계로" 클릭 → `daily_usage_log` 삽입
 3. **자동 정리**: 스케줄러 → 오래된 로그 삭제 → 스토리지 절약
-4. **회원탈퇴 보존**: 회원탈퇴해도 1분 동안 로그 보존 (테스트용) → 재가입 시 제한 유지
+4. **회원탈퇴 보존**: 회원탈퇴해도 24시간 동안 로그 보존 (운영용) → 재가입 시 제한 유지
 
 ### 🛡️ **통합 접근 제어 시스템**
 
@@ -466,7 +555,7 @@ GET /api/access-control/check-full-access   # 모든 권한 체크 (권장)
 1. **🚫 밴 체크** - 최우선 (학교/날짜 상관없이 차단)
 2. **🏫 학교 정보 체크** - 사용자에게 학교가 설정되어 있는지
 3. **📅 학교 날짜 체크** - 관리자가 설정한 해당 학교의 이용 기간 내인지
-4. **⏰ 일일 사용 제한** - 해당 학교 사용자의 1분 제한 (테스트용)
+4. **⏰ 일일 사용 제한** - 해당 학교 사용자의 24시간 제한 (운영용)
 
 #### 📋 **체크 결과**
 ```javascript

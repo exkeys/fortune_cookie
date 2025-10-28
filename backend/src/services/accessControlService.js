@@ -190,17 +190,52 @@ export class AccessControlService {
       }
 
       // === 테스트용: 1분 제한 (운영시 주석 해제 필요) ===
+      // let data, error, count;
+      
+      // try {
+      //   const now = new Date();
+      //   const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
+
+      //   const result = await supabase
+      //     .from('daily_usage_log')
+      //     .select('*', { count: 'exact' })
+      //     .eq('user_id', String(userId))
+      //     .gte('used_at', oneMinuteAgo.toISOString());
+      
+      //   data = result.data;
+      //   error = result.error;
+      //   count = result.count;
+
+      //   logger.info('일일 사용 로그 조회 결과', { 
+      //     userId, 
+      //     count, 
+      //     hasError: !!error,
+      //     oneMinuteAgo: oneMinuteAgo.toISOString()
+      //   });
+      // } catch (queryError) {
+      //   logger.error('일일 사용 로그 조회 중 예외', { userId, queryError });
+      //   // 쿼리 실패 시 안전하게 사용 허용 (서비스 중단 방지)
+      //   return { canUse: true };
+      // }
+
+      // === 운영용: 24시간 제한 (운영시 활성화) ===
       let data, error, count;
       
       try {
-        const now = new Date();
-        const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
-
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStart = today.toISOString();
+        
+        const todayEnd = new Date();
+        todayEnd.setHours(23, 59, 59, 999);
+        const todayEndStr = todayEnd.toISOString();
+        
         const result = await supabase
           .from('daily_usage_log')
           .select('*', { count: 'exact' })
           .eq('user_id', String(userId))
-          .gte('used_at', oneMinuteAgo.toISOString());
+          .gte('used_at', todayStart)
+          .lte('used_at', todayEndStr);
         
         data = result.data;
         error = result.error;
@@ -210,29 +245,14 @@ export class AccessControlService {
           userId, 
           count, 
           hasError: !!error,
-          oneMinuteAgo: oneMinuteAgo.toISOString()
+          todayStart,
+          todayEnd: todayEndStr
         });
       } catch (queryError) {
         logger.error('일일 사용 로그 조회 중 예외', { userId, queryError });
         // 쿼리 실패 시 안전하게 사용 허용 (서비스 중단 방지)
         return { canUse: true };
       }
-
-      // === 운영용: 24시간 제한 (현재 주석 처리됨) ===
-      // const today = new Date();
-      // today.setHours(0, 0, 0, 0);
-      // const todayStart = today.toISOString();
-      // 
-      // const todayEnd = new Date();
-      // todayEnd.setHours(23, 59, 59, 999);
-      // const todayEndStr = todayEnd.toISOString();
-      // 
-      // const { data, error, count } = await supabase
-      //   .from('daily_usage_log')
-      //   .select('*', { count: 'exact' })
-      //   .eq('user_id', userId)
-      //   .gte('used_at', todayStart)
-      //   .lte('used_at', todayEndStr);
 
       if (error) {
         logger.error('일일 사용 제한 체크 실패', { userId, userSchool, error });
