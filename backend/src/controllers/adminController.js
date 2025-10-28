@@ -56,10 +56,28 @@ export class AdminController {
 
       logger.info('사용자 업데이트 요청', { userId, field, value });
       
+      // 먼저 기존 사용자 정보 조회 (created_at 보존을 위해)
+      const { data: existingUser, error: fetchError } = await supabaseAdmin
+        .from('users')
+        .select('created_at')
+        .eq('id', userId)
+        .single();
+      
+      if (fetchError) {
+        logger.error('기존 사용자 정보 조회 실패', fetchError);
+        return res.status(500).json({ error: '사용자 정보 조회에 실패했습니다' });
+      }
+      
+      // 업데이트 데이터 준비 (created_at 보존)
+      const updateData = {
+        [field]: value,
+        created_at: existingUser.created_at // 기존 created_at 값 유지
+      };
+      
       // supabaseAdmin으로 관리자 권한으로 업데이트
       const { data, error } = await supabaseAdmin
         .from('users')
-        .update({ [field]: value })
+        .update(updateData)
         .eq('id', userId)
         .select()
         .single();
@@ -69,7 +87,7 @@ export class AdminController {
         return res.status(500).json({ error: '사용자 업데이트에 실패했습니다' });
       }
       
-      logger.info('사용자 업데이트 성공', { userId, field, value });
+      logger.info('사용자 업데이트 성공', { userId, field, value, preservedCreatedAt: existingUser.created_at });
       res.json({ user: data });
     } catch (error) {
       logger.error('사용자 업데이트 예외', error);

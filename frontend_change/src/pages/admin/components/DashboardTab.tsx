@@ -58,7 +58,7 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, stats, systemHealth 
   const [schoolSortBy, setSchoolSortBy] = useState<'users' | 'fortunes'>('users');
   const [schoolSortOrder, setSchoolSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  const SCHOOLS_PER_PAGE = 4;
+  const SCHOOLS_PER_PAGE = 5;
   const USER_GROWTH_PER_PAGE = 4;
 
   // 학교별 통계 검색 필터
@@ -67,6 +67,46 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, stats, systemHealth 
     : stats.schoolStats.filter(s =>
         s.school.toLowerCase().includes(schoolSearch.toLowerCase())
       );
+
+  // CSV 다운로드 함수
+  const handleSchoolCSVDownload = () => {
+    // 정렬된 전체 데이터 (페이징 없이)
+    const sortedData = filteredSchoolStats
+      .sort((a, b) => {
+        const aValue = schoolSortBy === 'users' ? a.users : a.fortunes;
+        const bValue = schoolSortBy === 'users' ? b.users : b.fortunes;
+        return schoolSortOrder === 'desc' ? bValue - aValue : aValue - bValue;
+      });
+
+    // CSV 헤더
+    const headers = ['순위', '학교명', '사용자 수', '운세 수'];
+    
+    // CSV 데이터 변환
+    const csvData = sortedData.map((school, idx) => [
+      idx + 1,
+      school.school,
+      school.users,
+      school.fortunes
+    ]);
+    
+    // CSV 문자열 생성
+    const csvContent = [
+      headers.join(','),
+      ...csvData.map(row => row.join(','))
+    ].join('\n');
+    
+    // BOM 추가 (한글 인코딩을 위한 UTF-8 BOM)
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvContent], { type: 'text/csv;charset=utf-8;' });
+    
+    // 다운로드 링크 생성
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `학교별_통계_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   // 정렬 및 페이지네이션
   const totalSchoolPages = Math.ceil(filteredSchoolStats.length / SCHOOLS_PER_PAGE);
@@ -207,19 +247,8 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, stats, systemHealth 
         </Card>
       </div>
 
-      {/* 시스템 상태 */}
-      {systemHealth && (
-        <Card className="p-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 flex items-center">
-            <i className="ri-pulse-line mr-2 text-green-500"></i>
-            시스템 상태
-          </h2>
-          {/* ...system health content... */}
-        </Card>
-      )}
-
-      {/* 학교별 사용자 수 & 사용자 증가 추이 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+      {/* 학교별 사용자 수 */}
+      <div className="mt-8">
         {/* 학교별 사용자 수 */}
         <Card className="p-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
@@ -265,6 +294,14 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, stats, systemHealth 
                   title={schoolSortOrder === 'desc' ? '내림차순' : '오름차순'}
                 >
                   {schoolSortOrder === 'desc' ? '↓' : '↑'}
+                </button>
+
+                <button
+                  onClick={handleSchoolCSVDownload}
+                  className="px-3 py-2 border border-blue-700 rounded-lg text-sm bg-white hover:bg-blue-50 transition-colors text-blue-700"
+                  title="CSV 다운로드"
+                >
+                  <i className="ri-download-line"></i>
                 </button>
               </div>
             </div>
@@ -320,154 +357,6 @@ const DashboardTab: React.FC<DashboardTabProps> = ({ users, stats, systemHealth 
               </div>
             )}
           </div>
-        </Card>
-
-        {/* 사용자 증가 추이 */}
-        <Card className="p-6 bg-white/70 backdrop-blur-sm border-0 shadow-lg">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-6">
-            <h3 className="text-xl font-bold text-gray-800 flex items-center mb-4 md:mb-0">
-              <i className="ri-line-chart-line mr-2 text-blue-500"></i>
-              사용자 증가 추이
-            </h3>
-            
-            {/* 년도 선택 필터 */}
-            {availableYears.length > 0 && (
-              <div className="flex items-center space-x-2">
-                <label className="text-sm font-medium text-gray-700">년도:</label>
-                <select
-                  value={selectedYear}
-                  onChange={(e) => {
-                    setSelectedYear(e.target.value);
-                    setUserGrowthPage(1); // 년도 변경 시 첫 페이지로
-                  }}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white text-sm"
-                >
-                  <option value="all">전체</option>
-                  {availableYears.map(year => (
-                    <option key={year} value={year}>{year}년</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-          {filteredUserGrowthData.length > 0 ? (
-            <div className="w-full">
-              <div className="space-y-4">
-                {(() => {
-                  // 년도별로 그룹핑 (선택된 년도가 'all'이 아닌 경우에는 그룹핑하지 않음)
-                  if (selectedYear !== 'all') {
-                    return (
-                      <ul className="space-y-2">
-                        {pagedUserGrowthData.map(w => (
-                          <li key={w.label} className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors">
-                            <div className="font-semibold text-gray-800">{w.label}</div>
-                            <div className="flex items-center space-x-4">
-                              <span className="text-lg font-bold text-blue-600">
-                                {w.users.toLocaleString()}명
-                              </span>
-                              {w.diff !== null && (
-                                <span
-                                  className={`text-sm font-semibold px-2 py-1 rounded-full ${
-                                    w.diff >= 0 
-                                      ? 'text-green-700 bg-green-100' 
-                                      : 'text-red-700 bg-red-100'
-                                  }`}
-                                >
-                                  {w.diff >= 0 ? '↗' : '↘'} {w.diff >= 0 ? '+' : ''}
-                                  {w.diff.toFixed(1)}%
-                                </span>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    );
-                  }
-
-                  // 전체 년도 표시 시 그룹핑
-                  const groupedByYear = pagedUserGrowthData.reduce((acc, item) => {
-                    if (!acc[item.year]) {
-                      acc[item.year] = [];
-                    }
-                    acc[item.year].push(item);
-                    return acc;
-                  }, {} as { [year: string]: typeof pagedUserGrowthData });
-
-                  return Object.keys(groupedByYear).map(year => (
-                    <div key={year} className="space-y-2">
-                      {/* 년도 헤더 */}
-                      <div className="flex items-center space-x-2 mb-3">
-                        <div className="h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent flex-1"></div>
-                        <h4 className="text-lg font-bold text-amber-700 bg-amber-50 px-4 py-2 rounded-full border border-amber-200">
-                          {year}년
-                        </h4>
-                        <div className="h-px bg-gradient-to-r from-transparent via-amber-300 to-transparent flex-1"></div>
-                      </div>
-                      
-                      {/* 해당 년도의 데이터 */}
-                      <ul className="space-y-2">
-                        {groupedByYear[year].map(w => (
-                          <li key={w.label} className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200 hover:bg-green-100 transition-colors">
-                            <div className="font-semibold text-gray-800">{w.label}</div>
-                            <div className="flex items-center space-x-4">
-                              <span className="text-lg font-bold text-blue-600">
-                                {w.users.toLocaleString()}명
-                              </span>
-                              {w.diff !== null && (
-                                <span
-                                  className={`text-sm font-semibold px-2 py-1 rounded-full ${
-                                    w.diff >= 0 
-                                      ? 'text-green-700 bg-green-100' 
-                                      : 'text-red-700 bg-red-100'
-                                  }`}
-                                >
-                                  {w.diff >= 0 ? '↗' : '↘'} {w.diff >= 0 ? '+' : ''}
-                                  {w.diff.toFixed(1)}%
-                                </span>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  ));
-                })()}
-              </div>
-
-              {/* 사용자 증가 추이 페이지네이션 */}
-              {totalUserGrowthPages > 1 && (
-                <div className="flex justify-center items-center mt-4 space-x-2">
-                  {Array.from({ length: totalUserGrowthPages }, (_, i) => i + 1).map(page => (
-                    <button
-                      key={page}
-                      className={`px-3 py-1 rounded border text-sm font-semibold ${
-                        userGrowthPage === page
-                          ? 'bg-blue-500 text-white border-blue-500'
-                          : 'bg-white text-blue-700 border-blue-200 hover:bg-blue-50'
-                      }`}
-                      onClick={() => setUserGrowthPage(page)}
-                    >
-                      {page}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="text-center py-8">
-              <div className="text-gray-500 mb-2">
-                {selectedYear === 'all' ? '사용자 증가 추이 데이터가 없습니다.' : `${selectedYear}년 데이터가 없습니다.`}
-              </div>
-              {selectedYear !== 'all' && (
-                <button
-                  onClick={() => setSelectedYear('all')}
-                  className="text-blue-500 hover:text-blue-700 text-sm font-medium"
-                >
-                  전체 보기
-                </button>
-              )}
-            </div>
-          )}
         </Card>
       </div>
     </div>

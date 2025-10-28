@@ -1,4 +1,5 @@
 import Card from '../../../components/base/Card';
+import { Edit2 } from 'lucide-react';
 
 interface User {
   id: string;
@@ -21,6 +22,7 @@ interface UsersTableProps {
   handleUserAction: (action: string, userId?: string) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
+  setShowSchoolEditModal: (user: User | null) => void;
 }
 
 const getRoleColor = (is_admin: boolean) =>
@@ -52,6 +54,7 @@ const UsersTable = ({
   setShowUserModal,
   handleUserAction,
   searchTerm,
+  setShowSchoolEditModal,
 }: UsersTableProps) => {
 
   const lower = searchTerm.toLowerCase();
@@ -184,6 +187,13 @@ const UsersTable = ({
                       title={user.status === 'banned' ? '차단 해제' : '사용자 차단'}
                     >
                       {user.status === 'banned' ? '🚫' : '✅'}
+                    </button>
+                    <button
+                      onClick={() => setShowSchoolEditModal(user)}
+                      className="w-7 h-7 flex items-center justify-center rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
+                      title="학교 수정"
+                    >
+                      <Edit2 className="w-4 h-4 text-gray-600" />
                     </button>
                     <button
                       onClick={() => handleUserAction('delete', user.id)}

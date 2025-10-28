@@ -1,6 +1,5 @@
 
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
 
 interface HeaderProps {
   disableBackButton?: boolean;
@@ -10,7 +9,6 @@ interface HeaderProps {
 export default function Header({ disableBackButton = false, disableHomeButton = false }: HeaderProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isLoggedIn } = useAuth();
   
   const showBackButton = location.pathname !== '/';
   
@@ -30,10 +28,22 @@ export default function Header({ disableBackButton = false, disableHomeButton = 
       return;
     }
     
-    // past-concerns 페이지에서는 홈으로 이동
+    // past-concerns 페이지에서 settings에서 왔는지 확인
     if (location.pathname === '/past-concerns') {
+      const fromSettings = sessionStorage.getItem('pastConcernsFrom') === 'settings';
+      if (fromSettings) {
+        sessionStorage.removeItem('pastConcernsFrom');
+        navigate('/settings');
+      } else {
+        // 설정에서 오지 않았으면 홈으로 이동
+        navigate('/');
+      }
+    } 
+    // settings 페이지에서는 홈으로 이동
+    else if (location.pathname === '/settings') {
       navigate('/');
-    } else {
+    } 
+    else {
       navigate(-1);
     }
   };
@@ -65,17 +75,6 @@ export default function Header({ disableBackButton = false, disableHomeButton = 
               포춘쿠키
             </h1>
           </div>
-
-          {/* 설정 버튼 (로그인된 경우에만 표시) */}
-          {isLoggedIn && location.pathname !== '/settings' && (
-            <button
-              onClick={() => navigate('/settings')}
-              className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full bg-white shadow-md hover:shadow-lg transition-all duration-300 hover:scale-105"
-              title="설정"
-            >
-              <i className="ri-settings-3-line text-amber-600 text-lg md:text-xl"></i>
-            </button>
-          )}
         </div>
       </div>
     </header>

@@ -39,6 +39,7 @@ export default function FortuneCookiePage() {
   const [isOpened, setIsOpened] = useState(false);
   const [showFortune, setShowFortune] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
   
   // AI 응답 받기 (실제 백엔드 연결)
   const [fortuneMessage, setFortuneMessage] = useState("");
@@ -113,13 +114,20 @@ export default function FortuneCookiePage() {
   const handleShare = async (platform: string) => {
     setIsSharing(true);
     
-    const shareText = `🥠 오늘의 운세쿠키 결과\n\n"${fortuneMessage}"\n\n운세쿠키에서 받은 조언이에요!`;
+    const shareText = `🥠 오늘의 포춘쿠키!
+
+"${fortuneMessage}"
+
+✨ 내 오늘 운세 한 줄 요약이에요.
+#오늘의운세 #포춘쿠키 #AI운세 #하루한줄 #자기계발
+
+👇 지금 너의 쿠키도 열어봐`;
     const shareUrl = window.location.href;
     
     try {
       if (platform === 'copy') {
         await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
-        alert('클립보드에 복사되었습니다!');
+        setShowCopyModal(true);
       } else if (platform === 'kakao') {
         // 카카오톡 공유
         if (window.Kakao && window.Kakao.Share) {
@@ -143,7 +151,7 @@ export default function FortuneCookiePage() {
         } else {
           // SDK가 로드되지 않았을 때 대안
           await navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
-          alert('카카오톡 공유 기능을 사용할 수 없어 클립보드에 복사되었습니다!');
+          setShowCopyModal(true);
         }
       } else if (platform === 'instagram') {
         // 인스타그램 공유 (모바일에서는 앱으로, 데스크톱에서는 웹으로)
@@ -154,9 +162,6 @@ export default function FortuneCookiePage() {
         } else {
           const instagramWebUrl = `https://www.instagram.com/`;
           window.open(instagramWebUrl, '_blank');
-          // 클립보드에 텍스트 복사
-          await navigator.clipboard.writeText(shareText);
-          alert('인스타그램이 열렸습니다! 텍스트가 클립보드에 복사되었어요.');
         }
       } else if (platform === 'twitter') {
         const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`;
@@ -298,6 +303,38 @@ export default function FortuneCookiePage() {
           )}
         </div>
       </div>
+
+      {/* Copy Modal */}
+      {showCopyModal && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 z-[998]"
+            onClick={() => setShowCopyModal(false)}
+          />
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 pointer-events-auto">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">복사 완료!</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  클립보드에 복사되었습니다.<br />
+                  다른 곳에 붙여넣기하여 운세를 공유해보세요.
+                </p>
+                <button
+                  onClick={() => setShowCopyModal(false)}
+                  className="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium text-sm"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

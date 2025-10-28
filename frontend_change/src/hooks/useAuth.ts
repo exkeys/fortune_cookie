@@ -404,8 +404,40 @@ export const useAuth = (): AuthReturn => {
   };
 
   const logout = async () => {
-    const { error } = await supabase.auth.signOut();
-    if (error) throw error;
+    try {
+      // 1. 현재 사용자 ID 가져오기
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      
+      // 2. 백엔드 로그아웃 API 호출 (last_logout_at 업데이트)
+      if (user?.id) {
+        try {
+          const response = await fetch('/api/auth/logout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId: user.id }),
+          });
+          
+          if (!response.ok) {
+            console.warn('백엔드 로그아웃 API 호출 실패:', response.status);
+          } else {
+            console.log('백엔드 로그아웃 기록 저장 완료');
+          }
+        } catch (apiError) {
+          console.warn('백엔드 로그아웃 API 호출 중 오류:', apiError);
+          // 백엔드 오류가 있어도 로그아웃은 진행
+        }
+      }
+      
+      // 3. Supabase 로그아웃
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      console.error('로그아웃 실패:', error);
+      throw error;
+    }
   };
 
   const deleteAccount = async () => {

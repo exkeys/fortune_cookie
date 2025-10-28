@@ -127,6 +127,7 @@ export default function PastConcernsPage() {
   const [filterRole, setFilterRole] = useState<string>('all');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showCopyModal, setShowCopyModal] = useState(false);
   const [accessModal, setAccessModal] = useState<{
     isOpen: boolean;
     title: string;
@@ -546,9 +547,17 @@ export default function PastConcernsPage() {
                 onItemClick={setSelectedItem}
                 onShareClick={(item, e) => {
                   e.stopPropagation();
-                  const shareText = `🥠 운세쿠키 결과\n\n"${item.fortune}"\n\n받은 조언이에요!`;
+                  const shareText =  
+                  `🥠 오늘의 포춘쿠키!
+
+                  "${item.fortune}"
+
+                  ✨ 내 오늘 운세 한 줄 요약이에요.
+                  #오늘의운세 #포춘쿠키 #AI운세 #하루한줄 #자기계발
+
+                  👇 지금 너의 쿠키도 열어봐`;
                   navigator.clipboard.writeText(shareText);
-                  alert('클립보드에 복사되었습니다!');
+                  setShowCopyModal(true);
                 }}
                 onDeleteClick={(id, e) => {
                   e.stopPropagation();
@@ -573,11 +582,6 @@ export default function PastConcernsPage() {
           item={selectedItem}
           formatDate={formatDate}
           onClose={() => setSelectedItem(null)}
-          onShare={() => {
-            const shareText = `🥠 운세쿠키 결과\n\n"${selectedItem.fortune}"\n\n받은 조언이에요!`;
-            navigator.clipboard.writeText(shareText);
-            showAccessModal('공유 완료', '클립보드에 복사되었습니다!\n\n다른 곳에 붙여넣기하여 운세를 공유해보세요.', '📋');
-          }}
           onNewFortune={async () => {
             // 접근 권한 체크 (학교 기간 포함)
             try {
@@ -700,6 +704,38 @@ export default function PastConcernsPage() {
         icon={accessModal.icon}
         actionButton={accessModal.actionButton}
       />
+
+      {/* 복사 완료 모달 */}
+      {showCopyModal && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 z-[998]"
+            onClick={() => setShowCopyModal(false)}
+          />
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 pointer-events-auto">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">복사 완료!</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  클립보드에 복사되었습니다.<br />
+                  다른 곳에 붙여넣기하여 운세를 공유해보세요.
+                </p>
+                <button
+                  onClick={() => setShowCopyModal(false)}
+                  className="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium text-sm"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }

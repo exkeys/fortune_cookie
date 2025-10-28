@@ -1,9 +1,6 @@
 import DashboardTab from './components/DashboardTab';
 import UsersTab from './components/UsersTab';
-import MarketingTab from './components/MarketingTab';
-import AnalyticsTab from './components/AnalyticsTab';
 import SettingsTab from './components/SettingsTab';
-import SystemTab from './components/SystemTab';
 // page
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
@@ -44,7 +41,7 @@ interface SystemHealth {
 
 export default function AdminPage() {
   const { user, isLoading: authLoading, isLoggedIn } = useAuth();
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'analytics' | 'marketing' | 'settings' | 'system'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings'>('dashboard');
   const [isAdminChecked, setIsAdminChecked] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [stats, setStats] = useState<FortuneStats | null>(null);
@@ -206,6 +203,22 @@ export default function AdminPage() {
     checkAdminAndLoadData();
   }, [authLoading, isLoggedIn, user?.id]); // user 전체 대신 user.id만 의존성으로 설정
 
+  const fetchUsers = async () => {
+    try {
+      const response = await fetch('/api/admin/users');
+      if (response.ok) {
+        const { users } = await response.json();
+        setUsers(users || []);
+        console.log('사용자 데이터 새로고침 완료:', users?.length, '명');
+      } else {
+        const errorText = await response.text();
+        console.error('사용자 데이터 새로고침 실패:', response.status, errorText);
+      }
+    } catch (error) {
+      console.error('사용자 목록 새로고침 실패:', error);
+    }
+  };
+
   const handleUserAction = async (action: string, userId?: string) => {
     if (!userId) return;
 
@@ -262,19 +275,9 @@ export default function AdminPage() {
         }
       }
       
-      // 데이터 새로고침 - 백엔드 API 사용
+      // 데이터 새로고침
       console.log('사용자 작업 후 데이터 새로고침 시작');
-      const refreshResponse = await fetch('/api/admin/users');
-      
-      if (refreshResponse.ok) {
-        const { users } = await refreshResponse.json();
-        setUsers(users || []);
-        console.log('사용자 데이터 새로고침 완료:', users?.length, '명');
-      } else {
-        const errorText = await refreshResponse.text();
-        console.error('데이터 새로고침 실패:', refreshResponse.status, errorText);
-        throw new Error(`새로고침 실패: ${refreshResponse.status}`);
-      }
+      await fetchUsers();
     } catch (error: any) {
       // 에러 메시지 및 status 코드 alert로 출력
       let msg = '사용자 작업 실패';
@@ -324,10 +327,7 @@ export default function AdminPage() {
             {[
               { id: 'dashboard', label: '대시보드', icon: 'ri-dashboard-line' },
               { id: 'users', label: '사용자 관리', icon: 'ri-user-line' },
-              { id: 'analytics', label: '분석', icon: 'ri-bar-chart-line' },
-              { id: 'marketing', label: '마케팅', icon: 'ri-megaphone-line' },
-              { id: 'settings', label: '설정', icon: 'ri-settings-line' },
-              { id: 'system', label: '시스템', icon: 'ri-computer-line' }
+              { id: 'settings', label: '설정', icon: 'ri-settings-line' }
             ].map((tab) => (
               <button
                 key={tab.id}
@@ -360,23 +360,13 @@ export default function AdminPage() {
             handleUserAction={handleUserAction}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
+            fetchUsers={fetchUsers}
           />
         )}
 
-        {/* 마케팅 탭 */}
-        {activeTab === 'marketing' && stats && (
-          <MarketingTab users={users} stats={stats} />
-        )}
-
-        {/* 기타 탭들 */}
-        {activeTab === 'analytics' && (
-          <AnalyticsTab />
-        )}
+        {/* 설정 탭 */}
         {activeTab === 'settings' && (
           <SettingsTab />
-        )}
-        {activeTab === 'system' && (
-          <SystemTab />
         )}
 
         {/* 사용자 상세 모달 */}

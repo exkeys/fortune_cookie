@@ -53,7 +53,7 @@ export default function UserDetailModal({
   onBan,
   onUnban,
 }: UserDetailModalProps) {
-  const [showFullId, setShowFullId] = useState(false);
+  const [showCopyModal, setShowCopyModal] = useState(false);
   
   // 디버깅을 위한 콘솔 로그
   console.log('UserDetailModal - user data:', {
@@ -79,9 +79,10 @@ export default function UserDetailModal({
     }
   };
 
-  const truncateId = (id: string, maxLength: number = 10) => {
-    if (id.length <= maxLength) return id;
-    return showFullId ? id : `${id.substring(0, maxLength)}...`;
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(user.id);
+    setShowCopyModal(true);
+    setTimeout(() => setShowCopyModal(false), 2000);
   };
   return (
     <div 
@@ -138,19 +139,13 @@ export default function UserDetailModal({
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-gray-600 text-xs">사용자 ID</span>
-                  <div className="flex items-center space-x-2">
-                    <span className="font-bold text-gray-800 font-mono text-xs break-all">
-                      {truncateId(user.id || '')}
-                    </span>
-                    {(user.id?.length || 0) > 10 && (
-                      <button
-                        onClick={() => setShowFullId(!showFullId)}
-                        className="text-blue-500 hover:text-blue-700 text-xs font-medium px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 transition-colors"
-                      >
-                        {showFullId ? '접기' : '더보기'}
-                      </button>
-                    )}
-                  </div>
+                  <button
+                    onClick={handleCopyId}
+                    className="font-bold text-gray-800 font-mono text-xs hover:text-blue-600 hover:underline cursor-pointer transition-colors text-right max-w-[200px] truncate"
+                    title={user.id}
+                  >
+                    {user.id.length > 25 ? user.id.substring(0, 20) + '...' : user.id}
+                  </button>
                 </div>
               </div>
             </div>
@@ -215,6 +210,37 @@ export default function UserDetailModal({
           </div>
         </div>
       </Card>
+
+      {/* 복사 완료 모달 */}
+      {showCopyModal && (
+        <>
+          <div 
+            className="fixed inset-0 bg-black/50 z-[998]"
+            onClick={() => setShowCopyModal(false)}
+          />
+          <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 pointer-events-none">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-6 pointer-events-auto">
+              <div className="text-center">
+                <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">복사 완료!</h3>
+                <p className="text-sm text-gray-600 mb-6">
+                  사용자 ID가 클립보드에 복사되었습니다.
+                </p>
+                <button
+                  onClick={() => setShowCopyModal(false)}
+                  className="w-full px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors font-medium text-sm"
+                >
+                  확인
+                </button>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
