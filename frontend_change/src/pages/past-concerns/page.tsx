@@ -347,6 +347,40 @@ export default function PastConcernsPage() {
     loadHistory();
   }, [location]); // location이 변경될 때마다 데이터 새로고침
 
+  // 마우스 뒤로가기(XButton1) / 앞으로가기(XButton2) 차단
+  useEffect(() => {
+    const isBrowserSideButton = (ev: any) => {
+      // 일부 브라우저는 button 3/4, 일부는 buttons 비트마스크 8/16 사용
+      const button: number = typeof ev.button === 'number' ? ev.button : -1;
+      const buttons: number = typeof ev.buttons === 'number' ? ev.buttons : 0;
+      const sideButtonByButton = button === 3 || button === 4;
+      const sideButtonByMask = (buttons & 8) === 8 || (buttons & 16) === 16; // X1/X2
+      return sideButtonByButton || sideButtonByMask;
+    };
+
+    const handlePointerEvent = (e: PointerEvent | MouseEvent) => {
+      if (isBrowserSideButton(e)) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+
+    // 마우스 사이드 버튼 이벤트 캡처 (최대한 이른 단계에서 차단)
+    window.addEventListener('auxclick', handlePointerEvent as any, { capture: true } as any);
+    window.addEventListener('pointerdown', handlePointerEvent as any, { capture: true } as any);
+    window.addEventListener('pointerup', handlePointerEvent as any, { capture: true } as any);
+    window.addEventListener('mousedown', handlePointerEvent as any, { capture: true } as any);
+    window.addEventListener('mouseup', handlePointerEvent as any, { capture: true } as any);
+
+    return () => {
+      window.removeEventListener('auxclick', handlePointerEvent as any, { capture: true } as any);
+      window.removeEventListener('pointerdown', handlePointerEvent as any, { capture: true } as any);
+      window.removeEventListener('pointerup', handlePointerEvent as any, { capture: true } as any);
+      window.removeEventListener('mousedown', handlePointerEvent as any, { capture: true } as any);
+      window.removeEventListener('mouseup', handlePointerEvent as any, { capture: true } as any);
+    };
+  }, []);
+
   // 필터링 및 검색된 데이터
   const filteredHistory = history
     .filter(item => {
@@ -535,87 +569,41 @@ export default function PastConcernsPage() {
                   return;
                 }
                 
-                // 접근 권한 체크 (학교 기간 포함)
-                try {
-                  const { data: auth } = await supabase.auth.getUser();
-                  const userId = auth?.user?.id;
-                  
-                  if (!userId) {
-                    showAccessModal('사용자 정보 오류', '사용자 정보를 확인할 수 없습니다.\n\n다시 로그인해 주세요.', '👤');
-                    return;
-                  }
-                  
-                  console.log('새 운세 - 접근 권한 체크 시작:', { userId });
-                  
-                  const response = await fetch(`/api/access-control/check-full-access?userId=${userId}`);
-                  
-                  if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('접근 권한 체크 API 에러:', { status: response.status, text: errorText });
-                    showAccessModal('서버 연결 오류', '서버와의 연결에 문제가 있습니다.\n\n잠시 후 다시 시도해주세요.', '🔌');
-                    return;
-                  }
-                  
-                  const data = await response.json();
-                  console.log('새 운세 - 접근 권한 결과:', data);
-                  
-                  if (!data.canAccess) {
-                    // 접근 불가능한 경우 - IntroMainContent와 동일한 처리
-                    if (data.reason?.includes('차단된')) {
-                      navigate('/account-banned');
-                      return;
-                    } else if (data.reason?.includes('학교 정보가 설정되지')) {
-                      showAccessModal(
-                        '학교 선택 필요',
-                        '포춘쿠키 서비스를 이용하려면 먼저 학교를 선택해야 합니다.\n\n"학교 선택하기" 버튼을 눌러 소속 학교를 등록해 주세요.',
-                        '🏫',
-                        {
-                          text: '학교 선택하기',
-                          onClick: () => {
-                            closeAccessModal();
-                            navigate('/school-select');
-                          }
-                        }
-                      );
-                      return;
-                    } else if (data.reason?.includes('이용 기간')) {
-                      showAccessModal(
-                        '이용 기간 종료',
-                        `학교의 포춘쿠키 서비스 이용 기간이 아닙니다.\n\n${data.reason}\n\n관리자에게 문의해 주세요.`,
-                        '📅'
-                      );
-                      return;
-                    } else {
-                      showAccessModal(
-                        '서비스 이용 제한',
-                        `서비스 이용이 일시적으로 제한되었습니다.\n\n상세 내용: ${data.reason}\n\n문제가 지속되면 관리자에게 문의해 주세요.`,
-                        '⚠️'
-                      );
-                      return;
-                    }
-                  }
-                  
-                  if (!data.canUse) {
-                    // 일일 사용 제한에 걸린 경우
-                    showAccessModal(
-                      '오늘의 포춘쿠키 완료',
-                      '오늘은 이미 포춘쿠키를 받으셨습니다! 🍪\n\n하루에 한 번만 포춘쿠키를 받을 수 있습니다.\n\n⏰ 내일 다시 방문하거나, 지난 고민들을 계속 살펴보세요.',
-                      '🍪'
-                    );
-                    return;
-                  }
-                  
-                  // 모든 체크 통과 - 새 운세로 이동
-                  navigate('/role-select');
-                  
-                } catch (error) {
-                  console.error('새 운세 - 접근 권한 체크 실패:', error);
-                  showAccessModal(
-                    '연결 오류',
-                    '접근 권한 확인 중 오류가 발생했습니다.\n\n잠시 후 다시 시도해주세요.',
-                    '⚠️'
-                  );
+                if (!user?.id) {
+                  showAccessModal('사용자 정보 오류', '사용자 정보를 확인할 수 없습니다.\n\n다시 로그인해 주세요.', '👤');
+                  return;
                 }
+                
+                console.log('새 운세 - 접근 권한 체크 시작:', { userId: user.id, isAdmin: user.is_admin });
+                
+                // 접근 권한 체크 (학교 밴 > 일일 사용 제한 순서)
+                const canAccess = await checkAccessPermission(user.id);
+                
+                if (!canAccess) {
+                  return; // 이미 모달이 표시됨
+                }
+                
+                // 관리자는 바로 이동 (일일 제한 없음)
+                if (user.is_admin) {
+                  console.log('관리자 - 바로 포춘쿠키 페이지로 이동');
+                  navigate('/role-select');
+                  return;
+                }
+                
+                // 일반 사용자는 사전 안내 모달 표시
+                showAccessModal(
+                  '포춘쿠키 이용 안내',
+                  '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
+                  '💡',
+                  {
+                    text: '확인',
+                    onClick: () => {
+                      closeAccessModal();
+                      navigate('/role-select');
+                    }
+                  },
+                  '취소'
+                );
               }}
               onClearSearch={() => {
                 setSearchTerm('');
@@ -760,77 +748,23 @@ export default function PastConcernsPage() {
           formatDate={formatDate}
           onClose={() => setSelectedItem(null)}
           onNewFortune={async () => {
-            // 접근 권한 체크 (학교 기간 포함)
-            try {
-              const { data: auth } = await supabase.auth.getUser();
-              const userId = auth?.user?.id;
-              
-              if (!userId) {
-                showAccessModal('사용자 정보 오류', '사용자 정보를 확인할 수 없습니다.\n\n다시 로그인해 주세요.', '👤');
-                return;
-              }
-              
-              console.log('비슷한 고민으로 새 운세 - 접근 권한 체크 시작:', { userId });
-              
-              const response = await fetch(`/api/access-control/check-full-access?userId=${userId}`);
-              
-              if (!response.ok) {
-                const errorText = await response.text();
-                console.error('접근 권한 체크 API 에러:', { status: response.status, text: errorText });
-                showAccessModal('서버 연결 오류', '서버와의 연결에 문제가 있습니다.\n\n잠시 후 다시 시도해주세요.', '🔌');
-                return;
-              }
-              
-              const data = await response.json();
-              console.log('비슷한 고민으로 새 운세 - 접근 권한 결과:', data);
-              
-              if (!data.canAccess) {
-                // 접근 불가능한 경우 - IntroMainContent와 동일한 처리
-                if (data.reason?.includes('차단된')) {
-                  navigate('/account-banned');
-                  return;
-                } else if (data.reason?.includes('학교 정보가 설정되지')) {
-                  showAccessModal(
-                    '학교 선택 필요',
-                    '포춘쿠키 서비스를 이용하려면 먼저 학교를 선택해야 합니다.\n\n"학교 선택하기" 버튼을 눌러 소속 학교를 등록해 주세요.',
-                    '🏫',
-                    {
-                      text: '학교 선택하기',
-                      onClick: () => {
-                        closeAccessModal();
-                        navigate('/school-select');
-                      }
-                    }
-                  );
-                  return;
-                } else if (data.reason?.includes('이용 기간')) {
-                  showAccessModal(
-                    '이용 기간 종료',
-                    `학교의 포춘쿠키 서비스 이용 기간이 아닙니다.\n\n${data.reason}\n\n관리자에게 문의해 주세요.`,
-                    '📅'
-                  );
-                  return;
-                } else {
-                  showAccessModal(
-                    '서비스 이용 제한',
-                    `서비스 이용이 일시적으로 제한되었습니다.\n\n상세 내용: ${data.reason}\n\n문제가 지속되면 관리자에게 문의해 주세요.`,
-                    '⚠️'
-                  );
-                  return;
-                }
-              }
-              
-              if (!data.canUse) {
-                // 일일 사용 제한에 걸린 경우
-                showAccessModal(
-                  '오늘의 포춘쿠키 완료',
-                  '오늘은 이미 포춘쿠키를 받으셨습니다! 🍪\n\n하루에 한 번만 포춘쿠키를 받을 수 있습니다.\n\n⏰ 내일 다시 방문해주세요.',
-                  '🍪'
-                );
-                return;
-              }
-              
-              // 모든 체크 통과 - 새 운세로 이동
+            if (!user?.id) {
+              showAccessModal('사용자 정보 오류', '사용자 정보를 확인할 수 없습니다.\n\n다시 로그인해 주세요.', '👤');
+              return;
+            }
+            
+            console.log('비슷한 고민으로 새 운세 - 접근 권한 체크 시작:', { userId: user.id, isAdmin: user.is_admin });
+            
+            // 접근 권한 체크 (학교 밴 > 일일 사용 제한 순서)
+            const canAccess = await checkAccessPermission(user.id);
+            
+            if (!canAccess) {
+              return; // 이미 모달이 표시됨
+            }
+            
+            // 관리자는 바로 이동 (일일 제한 없음)
+            if (user.is_admin) {
+              console.log('관리자 - 바로 포춘쿠키 페이지로 이동');
               if (selectedItem?.role && selectedItem?.concern) {
                 // 기존 역할과 고민 정보를 그대로 가져가서 포춘 쿠키 페이지로 이동
                 navigate('/fortune-cookie', {
@@ -843,15 +777,34 @@ export default function PastConcernsPage() {
                 // 역할이나 고민 정보가 없으면 역할 선택 페이지로
                 navigate('/role-select');
               }
-              
-            } catch (error) {
-              console.error('비슷한 고민으로 새 운세 - 접근 권한 체크 실패:', error);
-              showAccessModal(
-                '연결 오류',
-                '접근 권한 확인 중 오류가 발생했습니다.\n\n잠시 후 다시 시도해주세요.',
-                '⚠️'
-              );
+              return;
             }
+            
+            // 일반 사용자는 사전 안내 모달 표시
+            showAccessModal(
+              '포춘쿠키 이용 안내',
+              '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
+              '💡',
+              {
+                text: '확인',
+                onClick: () => {
+                  closeAccessModal();
+                  if (selectedItem?.role && selectedItem?.concern) {
+                    // 기존 역할과 고민 정보를 그대로 가져가서 포춘 쿠키 페이지로 이동
+                    navigate('/fortune-cookie', {
+                      state: {
+                        selectedRole: selectedItem.role,
+                        concern: selectedItem.concern
+                      }
+                    });
+                  } else {
+                    // 역할이나 고민 정보가 없으면 역할 선택 페이지로
+                    navigate('/role-select');
+                  }
+                }
+              },
+              '취소'
+            );
           }}
           onDelete={() => setShowDeleteConfirm(selectedItem.id)}
         />

@@ -35,8 +35,11 @@ export const useApi = () => {
     return await request(API_ENDPOINTS.ai, { method: 'POST', body: JSON.stringify({ persona, concern }) });
   };
 
-  const getAiBothAdvices = async (persona: string, concern: string) => {
-    return await request(API_ENDPOINTS.aiBoth, { method: 'POST', body: JSON.stringify({ persona, concern }) });
+  const getAiBothAdvices = async (persona: string, concern: string, randomFortune?: string) => {
+    return await request(API_ENDPOINTS.aiBoth, { 
+      method: 'POST', 
+      body: JSON.stringify({ persona, concern, randomFortune }) 
+    });
   };
 
   const saveConcern = async (persona: string, concern: string, aiAnswer: string, aiFeed: string, userId?: string) => {

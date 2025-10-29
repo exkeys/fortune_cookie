@@ -9,6 +9,7 @@ import { clearFormData } from '../../utils/formPersistence';
 import RoleInfoDisplay from './components/RoleInfoDisplay';
 import CookieAnimationArea from './components/CookieAnimationArea';
 import FortuneResultDisplay from './components/FortuneResultDisplay';
+import FortuneRandomResult from './components/FortuneRandomResult';
 
 // 카카오 SDK 타입 선언
 declare global {
@@ -33,11 +34,12 @@ export default function FortuneCookiePage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { selectedRole, concern } = (location.state as LocationState) || {};
-  const { getAiBothAdvices, saveConcern } = useApi();
+  const { saveConcern } = useApi();
   
   const [isOpening, setIsOpening] = useState(false);
   const [isOpened, setIsOpened] = useState(false);
   const [showFortune, setShowFortune] = useState(false);
+  const [showRandomResult, setShowRandomResult] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [showCopyModal, setShowCopyModal] = useState(false);
   
@@ -45,6 +47,7 @@ export default function FortuneCookiePage() {
   const [fortuneMessage, setFortuneMessage] = useState("");
   const [longAdvice, setLongAdvice] = useState("");
   const [isLoadingFortune, setIsLoadingFortune] = useState(true);
+  const [randomFortune, setRandomFortune] = useState("");
   
   // 카카오 SDK 초기화
   useEffect(() => {
@@ -55,6 +58,17 @@ export default function FortuneCookiePage() {
 
   // 페이지 로드 시 랜덤 운세 즉시 가져오기
   useEffect(() => {
+    // 미리보기에서 온 데이터가 있으면 그것을 사용 (이 경우는 삭제됨)
+    // if (preLoadedFortune && preLoadedLongAdvice) {
+    //   setFortuneMessage(preLoadedFortune);
+    //   setLongAdvice(preLoadedLongAdvice);
+    //   setIsLoadingFortune(false);
+    //   // 미리보기에서 왔으면 바로 쿠키가 열린 상태로 운세 표시
+    //   setIsOpened(true);
+    //   setShowFortune(true);
+    //   return;
+    // }
+    
     (async () => {
       if (selectedRole && concern) {
         try {
@@ -68,25 +82,25 @@ export default function FortuneCookiePage() {
           // JSON 파일에서 랜덤 조언 즉시 가져오기 (빠른 로딩)
           const response = await fetch('/data/short-advices.json');
           const advicesData = await response.json();
-          const randomAdvice = advicesData.advices[Math.floor(Math.random() * advicesData.advices.length)];
           
-          // JSON 필드명이 "text"로 되어 있음
-          setFortuneMessage(randomAdvice.text);
+          if (advicesData && advicesData.advices && advicesData.advices.length > 0) {
+            const randomIndex = Math.floor(Math.random() * advicesData.advices.length);
+            const randomAdvice = advicesData.advices[randomIndex];
+            
+            if (randomAdvice && randomAdvice.text && typeof randomAdvice.text === 'string') {
+              setFortuneMessage(randomAdvice.text);
+            } else {
+              setFortuneMessage("운세를 받지 못했습니다.");
+            }
+          } else {
+            setFortuneMessage("운세를 받지 못했습니다.");
+          }
           
           // 랜덤 운세는 즉시 로딩 완료 처리
           setIsLoadingFortune(false);
           
-          // 긴 조언은 백그라운드에서 별도로 로딩 (시간이 걸려도 OK)
-          (async () => {
-            try {
-              const { data } = await getAiBothAdvices(selectedRole.name, concern);
-              const longAdviceText = data?.longAdvice || "긴 조언을 받지 못했습니다.";
-              setLongAdvice(longAdviceText);
-            } catch (error) {
-              console.error('긴 조언 로딩 실패:', error);
-              setLongAdvice("긴 조언을 받지 못했습니다.");
-            }
-          })();
+          // 긴 조언은 FortuneResultDisplay에서 별도로 로딩
+          setLongAdvice("");
         } catch (error) {
           setFortuneMessage("운세를 받지 못했습니다. 다시 시도해 주세요.");
           setLongAdvice("긴 조언을 받지 못했습니다.");
@@ -105,9 +119,9 @@ export default function FortuneCookiePage() {
         setIsOpening(false);
         setIsOpened(true);
         setTimeout(() => {
-          setShowFortune(true);
-        }, 500); // 운세 표시 시간 늘림 (300ms → 600ms)
-      }, 3000); // 쿠키 열리는 시간 늘림 (800ms → 1.5초)
+          setShowRandomResult(true);
+        }, 300); // 운세 표시 시간 단축 (500ms → 300ms)
+      }, 1000); // 쿠키 열리는 시간 단축 (3000ms → 1500ms)
     }
   };
   
@@ -216,6 +230,25 @@ export default function FortuneCookiePage() {
     // 저장하지 않고 intro 페이지로 이동
     navigate('/');
   };
+
+  const handlePrevious = () => {
+    // 이전 페이지 (고민 입력 페이지)로 이동
+    navigate('/concern-input', {
+      state: { selectedRole }
+    });
+  };
+
+  const handleNext = (randomFortuneMessage: string) => {
+    // 랜덤 운세 저장
+    setRandomFortune(randomFortuneMessage);
+    
+    // 미리보기에서 최종 운세 페이지로 이동
+    setShowRandomResult(false);
+    setShowFortune(true);
+    
+    // 긴 조언은 FortuneResultDisplay에서 별도로 로딩
+    setLongAdvice("");
+  };
   
   const saveToHistory = () => {
     const historyItem = {
@@ -237,42 +270,13 @@ export default function FortuneCookiePage() {
     }
   }, [showFortune]);
 
-  // 운세가 표시될 때 daily_usage_log에 사용 기록 추가
-  useEffect(() => {
-    if (showFortune && user?.id) {
-      const recordUsageLog = async () => {
-        try {
-          console.log('포춘 쿠키 사용 로그 기록 시작...', { userId: user.id });
-          const response = await fetch('/api/daily-usage-logs', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: user.id,
-            }),
-          });
-
-          if (response.ok) {
-            console.log('✅ 일일 사용 로그 기록 완료');
-          } else {
-            const errorData = await response.json();
-            console.error('일일 사용 로그 기록 실패:', errorData);
-          }
-        } catch (error) {
-          console.error('일일 사용 로그 API 호출 에러:', error);
-        }
-      };
-
-      recordUsageLog();
-    }
-  }, [showFortune, user?.id]);
+  // daily_usage_log 로직은 FortuneRandomResult 컴포넌트의 다음 버튼으로 이동됨
 
   // 기존 history 조작 방식 제거 - 이제 Header 컴포넌트에서 시각적으로 비활성화
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-200 to-orange-200">
-      <Header disableBackButton={true} disableHomeButton={true} />
+      <Header disableBackButton={showFortune} disableHomeButton={showFortune} />
       
       <div className="container mx-auto px-4 py-12 max-w-4xl">
         {selectedRole && (
@@ -283,15 +287,23 @@ export default function FortuneCookiePage() {
         )}
         
         <div className="text-center mb-10">
-          {!showFortune ? (
+          {!showRandomResult && !showFortune ? (
             <CookieAnimationArea
               isLoadingFortune={isLoadingFortune}
               isOpened={isOpened}
               isOpening={isOpening}
               onCookieClick={handleCookieClick}
             />
+          ) : showRandomResult ? (
+            /* 미리보기 운세 결과 */
+            <FortuneRandomResult
+              fortuneMessage={fortuneMessage}
+              user={user}
+              onPrevious={handlePrevious}
+              onNext={handleNext}
+            />
           ) : (
-            /* 운세 결과 */
+            /* 최종 운세 결과 */
             <FortuneResultDisplay
               fortuneMessage={fortuneMessage}
               longAdvice={longAdvice}
@@ -299,6 +311,9 @@ export default function FortuneCookiePage() {
               onShare={handleShare}
               onSaveAndViewHistory={handleSaveAndViewHistory}
               onFinish={handleFinish}
+              selectedRole={selectedRole}
+              concern={concern}
+              randomFortune={randomFortune}
             />
           )}
         </div>

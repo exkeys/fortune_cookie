@@ -12,8 +12,8 @@ export class ConcernController {
       if (!validation.isValid) {
         return res.status(400).json({ error: validation.error });
       }
-      const { persona, concern } = req.body;
-      const { shortAdvice, longAdvice } = await AIService.generateBothAdvices(persona, concern);
+      const { persona, concern, randomFortune } = req.body;
+      const { shortAdvice, longAdvice } = await AIService.generateBothAdvices(persona, concern, randomFortune);
       res.json({ shortAdvice, longAdvice });
     } catch (error) {
       logger.error('AI 짧은/긴 조언 생성 컨트롤러 에러', error);

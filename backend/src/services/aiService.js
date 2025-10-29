@@ -42,60 +42,73 @@ export class AIService {
     return answer;
   }
 
-  // 긴 조언 생성 (AI 피드) - 개선된 버전
-  static async generateLongAdvice(persona, concern) {
-    logger.info('AI 긴 조언 생성 요청', { persona, concern });
+  // 긴 조언 생성 (AI 피드) - 랜덤 운세 포함 버전
+  static async generateLongAdvice(persona, concern, randomFortune = null) {
+    logger.info('AI 긴 조언 생성 요청', { persona, concern, randomFortune });
+    
+    let systemContent = `
+    당신은 ${persona}입니다.
+    고민을 듣고 따뜻하지만 재치 있게 해석하고 응원해주는 동반자입니다.
+
+    아래 형식을 반드시 지켜서 답변하세요.
+    각 문장은 줄바꿈으로 구분합니다.
+    모든 문장은 반드시 60자(공백 포함) 이내로 작성합니다.
+    `;
+
+    // TODO: 테스트용 - randomFortune 섹션 주석 해제
+    // if (randomFortune) {
+    //   systemContent += `
+    // 
+    // 🔮 오늘의 포춘 메시지
+    // "${randomFortune}"
+    // `;
+    // }
+
+      systemContent += `
+
+      ✨ 포춘 쿠키 해석
+      [랜덤포춘을 재치 있고 유쾌하게 해석]
+      [왜 이런 메시지가 나왔는지 설명]
+      [persona와 concern에 맞게 자연스럽게 연결]
+
+      🌱 오늘 할 수 있는 실천 3가지
+      • [실천 행동 1]
+      • [실천 행동 2]
+      • [실천 행동 3]
+
+      💖 마지막 응원
+      [따뜻한 응원 문장 1]
+      [따뜻한 응원 문장 2]
+
+      📌 규칙
+      - 각 문장 끝에 줄바꿈(\\n)을 넣을 것
+      - 전체 분량은 300~450자 내외
+      - 활기 있고 따뜻한 어투
+      - 진단, 처방, 부정 표현 금지
+      - persona와 concern의 맥락 반영
+      - 문단 사이에는 줄바꿈 2개(\\n\\n)
+      - 실천 행동은 • 로 구분
+      `;
+
+
     const messages = [
       {
         role: 'system',
-        content: `당신은 ${persona}로서 고민을 진심으로 공감하고 현실적인 조언을 주는 따뜻한 멘토입니다.
-
-        아래 형식을 **반드시 지켜서** 답변해 주세요. 각 문장은 줄바꿈으로 구분하세요:
-        **절대 규칙:** 모든 문장은 반드시 60자(공백 포함) 이내로 작성해야 합니다.
-
-
-        [고민에 대한 진심 어린 공감을 2-3문장으로 작성]
-        [각 문장은 줄바꿈으로 구분]
-        [상대방의 감정을 인정하고 이해한다는 것을 표현]
-
-        ## 💡 조언
-
-        [구체적이고 실질적인 조언을 3-4문장으로 작성]
-        [${persona}의 경험과 관점을 녹여서 전달]
-        [각 문장마다 줄바꿈 사용]
-
-        ## ✨ 오늘 실천할 수 있는 작은 행동
-
-        • [구체적인 행동 1]
-        • [구체적인 행동 2]
-        • [구체적인 행동 3 (선택)]
-
-        ## 🍀 응원의 한마디
-
-        [마지막 격려와 응원을 1-2문장으로]
-        [따뜻하고 힘이 되는 말로 마무리]
-
-        **중요 규칙:**
-        - 각 문장 뒤에는 반드시 줄바꿈(\\n) 추가
-        - 총 300-500자 내외
-        - 친근하고 따뜻한 어투 사용
-        - 진단, 처방, 부정적 단어 사용 금지
-        - ${persona}의 입장과 경험을 반영
-        - 문단 간 빈 줄로 시각적 구분
-        - 실천 행동은 불릿 포인트(•)로 구분`
-              },
-              { role: 'user', content: concern }
-            ];
-            const answer = await this._callOpenAI(messages);
-            logger.info('AI 긴 조언 생성 성공', { answer });
-            return answer;
-          }
+        content: systemContent
+      },
+      { role: 'user', content: concern }
+    ];
+    
+    const answer = await this._callOpenAI(messages);
+    logger.info('AI 긴 조언 생성 성공', { answer });
+    return answer;
+  }
 
   // 짧은/긴 조언 모두 생성
-  static async generateBothAdvices(persona, concern) {
+  static async generateBothAdvices(persona, concern, randomFortune = null) {
     const [shortAdvice, longAdvice] = await Promise.all([
       this.generateShortAdvice(persona, concern),
-      this.generateLongAdvice(persona, concern)
+      this.generateLongAdvice(persona, concern, randomFortune)
     ]);
     return { shortAdvice, longAdvice };
   }

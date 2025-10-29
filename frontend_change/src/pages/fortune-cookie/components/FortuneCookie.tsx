@@ -16,9 +16,9 @@ export default function FortuneCookie({ isOpening = false, onCookieClick, isOpen
       // 깨지는 효과 타이밍
       setTimeout(() => {
         setShowCracked(true);
-      }, 1500);
+      }, 800);
       
-      const timer = setTimeout(() => setShowSparkles(false), 3000);
+      const timer = setTimeout(() => setShowSparkles(false), 2000);
       return () => clearTimeout(timer);
     }
   }, [isOpening]);
