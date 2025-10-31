@@ -1,6 +1,5 @@
+import { Mail } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
-import Button from '../../components/base/Button';
-import Card from '../../components/base/Card';
 
 export default function AccountBannedPage() {
   const { logout } = useAuth();
@@ -17,65 +16,69 @@ export default function AccountBannedPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-red-50 via-orange-50 to-pink-50 flex items-center justify-center px-4">
-      {/* 배경 데코레이션 */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-40 -right-40 w-80 h-80 bg-red-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse"></div>
-        <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-orange-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute top-40 left-40 w-80 h-80 bg-pink-200 rounded-full mix-blend-multiply filter blur-xl opacity-50 animate-pulse" style={{ animationDelay: '4s' }}></div>
-      </div>
-
-      <div className="relative z-10 w-full max-w-md">
-        <Card className="text-center p-8 shadow-2xl" glow>
-          {/* 아이콘 */}
-          <div className="mb-6">
-            <div className="text-8xl mb-4 animate-bounce">🚫</div>
-            <div className="w-16 h-1 bg-red-500 mx-auto rounded-full"></div>
-          </div>
-
-          {/* 제목 */}
-          <h1 className="text-3xl font-bold text-red-600 mb-4">
-            계정 차단됨
-          </h1>
-
-          {/* 메시지 */}
-          <div className="mb-8 space-y-4">
-            <p className="text-lg text-gray-800 font-medium">
-              죄송합니다. 현재 계정이 차단된 상태입니다.
-            </p>
-            <div className="bg-red-50 border-l-4 border-red-400 p-4 rounded-r-lg">
-              <p className="text-sm text-red-700">
-                서비스 이용 정책 위반으로 인해<br />
-                관리자에 의해 계정이 차단되었습니다.
-              </p>
+    <div className="min-h-screen bg-gradient-to-br from-red-50 to-orange-50 flex items-center justify-center px-4">
+      <div className="max-w-lg w-full">
+        <div className="bg-white rounded-2xl p-6 shadow-xl">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-4">⛔</div>
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">계정 이용 제한</h1>
+            <div className="inline-block bg-red-100 text-red-700 px-4 py-1 rounded-full text-sm font-semibold">
+              차단됨
             </div>
-            <p className="text-gray-600">
-              자세한 내용은 관리자에게 문의해 주세요.
-            </p>
+          </div>
+          
+          <div className="bg-red-50 border-2 border-red-200 rounded-xl p-5 mb-4">
+            <div className="flex items-start gap-3">
+              <span className="text-2xl">🚨</span>
+              <div>
+                <p className="font-bold text-gray-900 text-sm mb-2">계정이 차단되었어요</p>
+                <p className="text-gray-700 text-xs leading-relaxed">
+                  서비스 이용 정책을 위반하여 관리자가 계정을 차단했습니다.
+                </p>
+              </div>
+            </div>
           </div>
 
-          {/* 연락처 정보 */}
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-sm text-gray-600 mb-2">📧 문의처</p>
-            <p className="text-sm font-mono text-gray-800">
-              admin@fortunecookie.com
-            </p>
+          <div className="bg-gray-50 rounded-xl p-4 mb-4">
+            <p className="font-semibold text-gray-900 text-sm mb-3">이용할 수 없는 기능</p>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                <span className="text-gray-600 text-sm">포춘쿠키 받기</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                <span className="text-gray-600 text-sm">고민 상담 작성</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-1.5 h-1.5 bg-red-500 rounded-full"></div>
+                <span className="text-gray-600 text-sm">서비스 이용</span>
+              </div>
+            </div>
           </div>
 
-          {/* 로그아웃 버튼 */}
-          <Button 
+          <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <Mail size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-gray-900 text-sm mb-1">도움이 필요하신가요?</p>
+                <p className="text-gray-600 text-xs mb-2">관리자에게 문의해 주세요</p>
+                <p className="text-blue-600 text-xs font-mono">admin@fortunecookie.com</p>
+              </div>
+            </div>
+          </div>
+
+          <button 
             onClick={handleLogout}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-6 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200"
+            className="w-full bg-blue-500 text-white py-4 rounded-xl font-bold hover:bg-blue-600 transition mb-3"
           >
             로그아웃
-          </Button>
-
-          {/* 하단 메시지 */}
-          <p className="text-xs text-gray-500 mt-4">
-            다른 계정으로 로그인하시거나<br />
-            관리자에게 문의하여 해결하시기 바랍니다.
+          </button>
+          
+          <p className="text-gray-500 text-xs text-center">
+            다른 계정으로 로그인하거나 관리자에게 문의하세요
           </p>
-        </Card>
+        </div>
       </div>
     </div>
   );

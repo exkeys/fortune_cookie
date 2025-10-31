@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { API_ENDPOINTS } from '../constants';
 import { supabase } from '../supabaseClient';
 
@@ -7,7 +7,7 @@ export const useApi = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const request = async (endpoint: string, options: RequestInit = {}) => {
+  const request = useCallback(async (endpoint: string, options: RequestInit = {}) => {
     setLoading(true);
     setError('');
     try {
@@ -28,35 +28,52 @@ export const useApi = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
 
   const getAiAnswer = async (persona: string, concern: string) => {
     return await request(API_ENDPOINTS.ai, { method: 'POST', body: JSON.stringify({ persona, concern }) });
   };
 
-  const getAiBothAdvices = async (persona: string, concern: string, randomFortune?: string) => {
-    return await request(API_ENDPOINTS.aiBoth, { 
-      method: 'POST', 
-      body: JSON.stringify({ persona, concern, randomFortune }) 
+  const getAiBothAdvices = useCallback(async (persona: string, concern: string, randomFortune?: string) => {
+    return await request(API_ENDPOINTS.aiBoth, {
+      method: 'POST',
+      body: JSON.stringify({ persona, concern, randomFortune })
     });
-  };
+  }, [request]);
 
-  const saveConcern = async (persona: string, concern: string, aiAnswer: string, aiFeed: string, userId?: string) => {
+  const saveConcern = async (persona: string, concern: string, aiAnswer: string, aiFeed: string, userId?: string, updateId?: string) => {
     try {
       if (!userId) return { data: null, error: '로그인이 필요합니다' } as const;
-      // upsert 사용: 동일한 user_id + persona + concern이 있으면 업데이트, 없으면 삽입
-      const { error } = await supabase.from('ai_answers').upsert({ 
+      
+      // updateId가 있으면 기존 레코드 업데이트 (비슷한 고민으로 새 운세 받기)
+      if (updateId) {
+        const { error } = await supabase
+          .from('ai_answers')
+          .update({
+            ai_response: aiAnswer,
+            ai_feed: aiFeed,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', updateId)
+          .eq('user_id', userId); // 보안: 본인 레코드만 업데이트
+        
+        if (error) {
+          return { data: null, error: `업데이트 실패: ${error.message}` } as const;
+        }
+        return { data: { success: true }, error: null } as const;
+      }
+      
+      // updateId가 없으면 항상 새 레코드 생성 (일반 포춘쿠키 받기)
+      const { error } = await supabase.from('ai_answers').insert({ 
         user_id: userId, 
         persona, 
         concern, 
         ai_response: aiAnswer, 
         ai_feed: aiFeed,
-        is_saved: true,
-        created_at: new Date().toISOString() // 업데이트 시에도 현재 시간으로 갱신하여 최신순 정렬
-      }, {
-        onConflict: 'user_id,persona,concern' // 충돌 시 기준 컬럼
+        is_saved: true
       });
+      
       if (error) {
         return { data: null, error: `저장 실패: ${error.message}` } as const;
       }

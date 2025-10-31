@@ -19,69 +19,139 @@
 
 ## 🔄 테스트/운영 설정 전환 가이드
 
-### 📍 **현재 상태** (2025년 10월 28일 기준)
-- **Daily Usage 체크**: 운영용 (24시간 제한) ✅
-- **로그 자동 삭제**: 운영용 (24시간 이전 로그 삭제) ✅
-- **스케줄러**: 운영용 (1시간마다 실행) ✅
+### 📍 **현재 상태** (운영용 - 최종 업데이트)
+- ✅ **일일 사용 제한**: **운영용 (24시간 제한)** - 매일 자정(00:00)까지 대기
+- ✅ **로그 자동 삭제**: **운영용 (24시간 이전 로그 삭제)**
+- ✅ **스케줄러**: **운영용 (1시간마다 실행)**
+
+### 🏭 **운영용 설정 (현재 활성화됨)**
+
+#### 📂 **변경된 파일 목록**
+1. `backend/src/services/accessControlService.js`
+2. `backend/src/services/dailyUsageLogService.js`
+3. `backend/src/utils/scheduler.js`
+
+#### ✅ **운영용 설정 내용**
+
+**1. 일일 사용 제한 체크 (24시간)**
+- 📂 `backend/src/services/accessControlService.js` (221-255줄)
+  - 운영용 코드 활성화: 오늘 날짜(00:00 ~ 23:59) 기준으로 체크
+  - 테스트용 코드 주석 처리됨
+
+- 📂 `backend/src/services/dailyUsageLogService.js` (59-75줄)
+  - 운영용 코드 활성화: 오늘 날짜 기준 체크
+  - 테스트용 코드 주석 처리됨
+
+**2. 다음 이용 가능 시간 계산 (자정까지)**
+- 📂 `backend/src/services/accessControlService.js` (301-326줄)
+  - 운영용: 자정(00:00:00)까지 남은 시간 계산
+  - 테스트용 코드 주석 처리됨
+
+**3. 로그 자동 삭제 (24시간)**
+- 📂 `backend/src/utils/scheduler.js` (68-97줄)
+  - 운영용 함수 활성화: 24시간 이전 로그 삭제
+  - 테스트용 함수 주석 처리됨
+
+**4. 스케줄러 (1시간마다 실행)**
+- 📂 `backend/src/utils/scheduler.js` (155-178줄)
+  - 운영용 함수 활성화: 1시간마다 실행
+  - 테스트용 함수 주석 처리됨
 
 ### 🚀 **테스트용으로 전환하기**
 
-#### 1️⃣ **일일 사용 제한을 1분으로 변경** 
-📂 `backend/src/services/dailyUsageLogService.js` (49-57줄)
-📂 `backend/src/services/accessControlService.js` (192-219줄)
+#### 1️⃣ **일일 사용 제한을 1분으로 변경**
 
+**📂 `backend/src/services/accessControlService.js` (192-255줄)**
 ```javascript
-// 운영용 코드를 주석 처리하고
+// 운영용 코드 주석 처리
+// === 운영용: 24시간 제한 (운영시 활성화) ===
+// let data, error, count;
+// ...
+
+// 테스트용 코드 주석 해제
+// === 테스트용: 1분 제한 (테스트시 주석 해제 필요) ===
+let data, error, count;
+const now = new Date();
+const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000);
+// ...
+```
+
+**📂 `backend/src/services/dailyUsageLogService.js` (49-75줄)**
+```javascript
+// 운영용 코드 주석 처리
 // === 운영용: 24시간 제한 (운영시 활성화) ===
 // const today = new Date();
-// today.setHours(0, 0, 0, 0);
 // ...
 
 // 테스트용 코드 주석 해제
 // === 테스트용: 1분 제한 (테스트시 주석 해제 필요) ===
 const now = new Date();
-const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
+const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000);
 // ...
 ```
 
-#### 2️⃣ **로그 삭제를 1분으로 변경**
-📂 `backend/src/utils/scheduler.js` (37-66줄)
+#### 2️⃣ **다음 이용 가능 시간 계산을 1분으로 변경**
 
+**📂 `backend/src/services/accessControlService.js` (278-326줄)**
 ```javascript
-// 운영용 함수를 주석 처리하고
-// === 운영용: 24시간 이전 로그 삭제 (기본값) ===
+// 운영용 코드 주석 처리
+// === 운영용: 24시간 후 시간 계산 (운영시 활성화) ===
+// const tomorrow = new Date(lastUsedAt);
+// ...
+
+// 테스트용 코드 주석 해제
+// === 테스트용: 1분 후 시간 계산 (테스트시 주석 해제 필요) ===
+const oneMinuteAfter = new Date(lastUsedAt.getTime() + 1 * 60 * 1000);
+// ...
+```
+
+#### 3️⃣ **로그 삭제를 1분으로 변경**
+
+**📂 `backend/src/utils/scheduler.js` (37-97줄)**
+```javascript
+// 운영용 함수 주석 처리
+// === 운영용: 24시간 이전 로그 삭제 (운영시 활성화) ===
 // export const cleanupOldUsageLogs = async () => {
 // ...
 
-// 테스트용 함수 주석 해제  
+// 테스트용 함수 주석 해제
 // === 테스트용: 1분 이전 로그 삭제 (테스트시 주석 해제 필요) ===
 export const cleanupOldUsageLogs = async () => {
-  const minutesToKeep = 1; // 1분 이전 로그 삭제
+  const minutesToKeep = 1;
   // ...
 ```
 
-### 🏭 **운영용으로 전환하기**
+#### 4️⃣ **스케줄러 빈도를 30초로 변경**
 
-#### 1️⃣ **일일 사용 제한을 24시간으로 변경**
-📂 `backend/src/services/dailyUsageLogService.js` + `accessControlService.js`
-- 테스트용 1분 코드 → 주석 처리
-- 운영용 24시간 코드 → 주석 해제
+**📂 `backend/src/utils/scheduler.js` (130-178줄)**
+```javascript
+// 운영용 함수 주석 처리
+// === 운영용: 1시간마다 실행 (운영시 활성화) ===
+// export const startScheduler = () => {
+// ...
 
-#### 2️⃣ **로그 삭제를 24시간으로 변경**  
-📂 `backend/src/utils/scheduler.js`
-- 테스트용 1분 삭제 함수 → 주석 처리
-- 운영용 24시간 삭제 함수 → 주석 해제
-
-#### 3️⃣ **스케줄러 빈도를 30초로 변경**
-📂 `backend/src/utils/scheduler.js` (130-153줄)
-- 운영용 1시간 스케줄러 → 주석 처리
-- 테스트용 30초 스케줄러 → 주석 해제
+// 테스트용 함수 주석 해제
+// === 테스트용: 30초마다 실행 (테스트시 주석 해제 필요) ===
+export const startScheduler = () => {
+  setInterval(async () => {
+    await cleanupExpiredData();
+  }, 30000); // 30초마다 실행
+  // ...
+```
 
 ### ⚡ **빠른 체크리스트**
-- [ ] `dailyUsageLogService.js` - 테스트(1분)/운영(24시간) 설정 확인
-- [ ] `accessControlService.js` - 테스트(1분)/운영(24시간) 설정 확인  
-- [ ] `scheduler.js` - 로그 삭제 테스트(1분)/운영(24시간) 설정 확인
-- [ ] `scheduler.js` - 스케줄러 빈도 테스트(30초)/운영(1시간) 설정 확인
+
+**운영용 확인:**
+- [x] `accessControlService.js` - 운영용 24시간 제한 활성화 ✅
+- [x] `dailyUsageLogService.js` - 운영용 24시간 제한 활성화 ✅
+- [x] `scheduler.js` - 운영용 24시간 로그 삭제 활성화 ✅
+- [x] `scheduler.js` - 운영용 1시간 스케줄러 활성화 ✅
+
+**테스트용으로 전환 시:**
+- [ ] `accessControlService.js` - 테스트용 1분 제한 주석 해제
+- [ ] `dailyUsageLogService.js` - 테스트용 1분 제한 주석 해제
+- [ ] `scheduler.js` - 테스트용 1분 삭제 주석 해제
+- [ ] `scheduler.js` - 테스트용 30초 스케줄러 주석 해제
 - [ ] 서버 재시작 후 로그 확인
 
 ---
@@ -114,7 +184,8 @@ backend/
    ├─ ⚙️ 설정
    │  ├─ config/
    │  │  ├─ index.js        # 전체 설정 통합
-   │  │  └─ database.js     # Supabase 연결 설정
+   │  │  ├─ database.js     # Supabase 연결 설정
+   │  │  └─ create_deletion_restrictions_table.sql  # DB 새로 만들 때 이 SQL 실행
    │
    ├─ 🛣️ 라우팅
    │  ├─ routes/
@@ -214,6 +285,33 @@ POST /api/concerns/save         # 상담 기록 저장
 GET  /api/concerns/:userId      # 사용자 상담 기록 조회
 DELETE /api/concerns/:id        # 특정 상담 기록 삭제
 ```
+
+### 📝 변경 사항: 짧은 조언(shortAdvice) 비활성화 (2025-10-30)
+
+- 사유: 프런트엔드에서 짧은 조언을 사용하지 않아 OpenAI 토큰 소모를 방지
+- 적용 파일/위치:
+  - `backend/src/services/aiService.js`
+    - `generateShortAdvice` 메서드 전체 주석 처리 (원본 30-43줄)
+    - `generateBothAdvices`에서 짧은 조언 호출 제거, `shortAdvice`는 빈 문자열 반환
+
+```30:43:backend/src/services/aiService.js
+/*
+static async generateShortAdvice(persona, concern) {
+  ... // 전체 메서드 주석 처리됨
+}
+*/
+```
+
+```107:114:backend/src/services/aiService.js
+static async generateBothAdvices(persona, concern, randomFortune = null) {
+  const longAdvice = await this.generateLongAdvice(persona, concern, randomFortune);
+  const shortAdvice = '';
+  return { shortAdvice, longAdvice };
+}
+```
+
+- API 응답 영향:
+  - `POST /api/concerns/ai/both`의 `shortAdvice`는 빈 문자열로 반환됩니다.
 
 ---
 
@@ -376,6 +474,10 @@ public.ai_answers {
 ### 🔒 **Row Level Security (RLS)**
 - **정책**: 사용자는 본인 데이터만 접근 가능
 - **인증**: JWT 토큰 기반 사용자 식별
+
+### 📄 **데이터베이스 스키마 SQL 파일**
+- **위치**: `backend/src/config/create_deletion_restrictions_table.sql`
+- **사용법**: DB를 새로 만들 때 이 SQL 파일을 실행하면 전체 스키마가 생성됩니다.
 
 ---
 
@@ -542,6 +644,57 @@ export const startScheduler = () => {
 3. **자동 정리**: 스케줄러 → 오래된 로그 삭제 → 스토리지 절약
 4. **회원탈퇴 보존**: 회원탈퇴해도 24시간 동안 로그 보존 (운영용) → 재가입 시 제한 유지
 
+### ⏰ **다음 이용 시간 계산과 로그 삭제 동작 원리**
+
+#### 📋 **핵심 개념**
+일일 제한은 **날짜 기준**으로 동작하며, 로그 삭제는 **별도의 스토리지 정리 작업**입니다.
+
+#### 🔍 **세 가지 다른 기준**
+
+**1. 일일 제한 체크 (날짜 기준)**
+- 📂 `backend/src/services/accessControlService.js` (227-241줄)
+- **기준**: 오늘 날짜 (00:00:00 ~ 23:59:59)
+- **동작**: 오늘 날짜인 로그가 있으면 제한 적용
+- **해제 시점**: 다음날 00:00:00 이후 (날짜가 바뀌면 어제 로그는 조회 안 됨)
+
+**2. 다음 이용 시간 계산 (날짜 기준)**
+- 📂 `backend/src/services/accessControlService.js` (298-323줄)
+- **계산**: 사용한 날짜의 다음날 자정(00:00:00)까지
+- **UI 표시**: 프론트엔드에서 카운트다운으로 표시
+- **예시**: 오후 1시에 사용 → 다음날 00:00:00까지 약 11시간 표시
+
+**3. 로그 삭제 (시간 기준, 별도 작업)**
+- 📂 `backend/src/utils/scheduler.js` (68-97줄)
+- **기준**: 사용 시간 + 24시간
+- **실행**: 스케줄러가 1시간마다 실행하여 24시간 이전 로그 삭제
+- **목적**: 스토리지 절감 (제한 해제와 무관)
+
+#### 💡 **실제 동작 예시**
+
+**시나리오: 오후 1시(13:00)에 포춘쿠키 사용**
+
+1. **즉시**: `daily_usage_log` 테이블에 기록 생성
+2. **UI 표시**: "다음 이용까지 약 11시간" (다음날 00:00:00까지)
+3. **다음날 00:00:00 이후**:
+   - ✅ **제한 해제**: 날짜가 바뀌어서 어제 로그는 조회되지 않음 → 사용 가능
+   - 📝 **로그 상태**: 아직 DB에 남아있을 수 있음 (삭제 안 됨)
+4. **다음날 13:00 이후** (스케줄러 실행 시):
+   - 🗑️ **로그 삭제**: 사용 시간 + 24시간 경과하여 스케줄러가 삭제
+
+#### ✅ **중요 사항**
+
+- **제한 해제**: 다음날 자정(00:00:00) 이후 즉시 해제됨
+- **로그 삭제**: 제한 해제와 무관하게 나중에 삭제됨 (스토리지 정리 목적)
+- **UI 카운트다운**: 다음날 자정까지 정확하게 표시됨
+
+#### 📊 **요약 표**
+
+| 항목 | 기준 | 해제/삭제 시점 | 목적 |
+|------|------|---------------|------|
+| 일일 제한 체크 | 날짜 (00:00~23:59) | 다음날 00:00:00 이후 | 사용자 제한 관리 |
+| 다음 이용 시간 | 다음날 자정 | 다음날 00:00:00 | UI 카운트다운 표시 |
+| 로그 삭제 | 사용시간 + 24시간 | 스케줄러 실행 시 | 스토리지 절감 |
+
 ### 🛡️ **통합 접근 제어 시스템**
 
 #### 📍 **새로운 API 엔드포인트**
@@ -611,4 +764,49 @@ logger.info('daily_usage_log는 24시간 보존 정책에 따라 유지됨', { u
 2. **학교별 제한**: 각 학교별로 독립적인 일일 사용 제한
 3. **날짜 체크**: 현재 날짜가 설정된 기간 내에 있어야 함
 4. **설정 필수**: 학교 기간이 설정되지 않은 학교는 이용 불가
+
+---
+
+## 🔄 CI/CD 파이프라인 활성화
+
+### 📄 **CI/CD 파일 위치**
+- **파일**: `.github/workflows/ci-cd.yml`
+- **현재 상태**: 전체 파이프라인이 주석 처리되어 있음 (비활성화)
+
+### 🚀 **CI/CD 파이프라인 활성화 방법**
+
+CI/CD를 사용하려면 다음 단계를 따르세요:
+
+1. **파일 열기**: `.github/workflows/ci-cd.yml`
+
+2. **주석 해제**:
+   - 파일 맨 위의 전체 주석(`#`) 제거
+   - `name: CI/CD Pipeline`부터 시작하는 모든 주석 제거
+
+3. **활성화되는 기능**:
+   - ✅ **테스트**: Frontend/Backend 자동 테스트 (Node.js 18.x, 20.x)
+   - ✅ **린팅**: Frontend 코드 린팅 검사
+   - ✅ **보안**: npm audit 및 의존성 검사
+   - ✅ **빌드**: Frontend 빌드 및 Docker 이미지 생성
+   - ✅ **배포**: Production 환경 배포 (main 브랜치 푸시 시)
+
+### 📋 **파이프라인 구성**
+
+```yaml
+jobs:
+  - test:       # 테스트 및 린팅
+  - security:   # 보안 검사
+  - build:      # 빌드 및 Docker 이미지 생성
+  - deploy:     # 프로덕션 배포
+```
+
+### ⚙️ **필요한 GitHub Secrets**
+
+배포를 사용하려면 다음 Secrets를 설정해야 합니다:
+- `DOCKER_USERNAME`: Docker Hub 사용자명
+- `DOCKER_PASSWORD`: Docker Hub 비밀번호
+
+### 📝 **주의사항**
+- 현재는 모든 파이프라인이 주석 처리되어 있어 GitHub Actions가 실행되지 않습니다.
+- 주석을 해제하면 `main` 또는 `develop` 브랜치에 푸시할 때마다 자동으로 실행됩니다.
 

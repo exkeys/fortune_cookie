@@ -46,10 +46,10 @@ export class DailyUsageLogService {
         return { hasUsedToday: false, count: 0 }; // 관리자는 항상 사용 가능
       }
       
-      // === 테스트용: 1분 제한 (운영시 주석 해제 필요) ===
+      // === 테스트용: 1분 제한 (테스트시 주석 해제 필요) ===
       // const now = new Date();
       // const oneMinuteAgo = new Date(now.getTime() - 1 * 60 * 1000); // 1분 전
-      
+      // 
       // const { data, error, count } = await supabase
       //   .from('daily_usage_log')
       //   .select('*', { count: 'exact' })

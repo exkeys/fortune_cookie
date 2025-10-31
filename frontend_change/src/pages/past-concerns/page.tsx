@@ -18,7 +18,9 @@ import AccessModal from '../../components/feature/AccessModal';
 
 interface HistoryItem {
   id: string;
-  date: string;
+  date: string; // 표시용 날짜 (updated_at || created_at)
+  created_at: string;
+  updated_at?: string | null;
   role?: {
     id: string;
     name: string;
@@ -141,6 +143,8 @@ export default function PastConcernsPage() {
       onClick: () => void;
     };
     cancelButtonText?: string;
+    variant?: 'default' | 'dailyLimit'; // 모달 스타일 변형: dailyLimit은 일일 사용 제한 카운트다운 모달
+    nextAvailableAt?: string | null; // 다음 이용 가능 시간 (ISO string, used_at 기준)
   }>({
     isOpen: false,
     title: '',
@@ -150,14 +154,16 @@ export default function PastConcernsPage() {
   const itemsPerPage = 9;
   
   // 모달 헬퍼 함수들
-  const showAccessModal = (title: string, message: string, icon: string, actionButton?: { text: string; onClick: () => void }, cancelButtonText?: string) => {
+  const showAccessModal = (title: string, message: string, icon: string, actionButton?: { text: string; onClick: () => void }, cancelButtonText?: string, variant?: 'default' | 'dailyLimit', nextAvailableAt?: string | null) => {
     setAccessModal({
       isOpen: true,
       title,
       message,
       icon,
       actionButton,
-      cancelButtonText
+      cancelButtonText,
+      variant,
+      nextAvailableAt
     });
   };
 
@@ -226,7 +232,7 @@ export default function PastConcernsPage() {
           const schoolMatch = data.reason.match(/(.+)의 이용 기간이/);
           const schoolName = schoolMatch ? schoolMatch[1] : '해당 학교';
           
-          icon = '📅';
+          icon = ''; // AccessModal에서 Calendar 아이콘을 사용하므로 이모지 불필요
           title = '이용 기간 미설정';
           message = `${schoolName}의 포춘쿠키 서비스 이용 기간이 아직 설정되지 않았습니다.\n\n관리자가 이용 기간을 설정하면 서비스를 이용하실 수 있습니다. 관리자에게 문의해 주세요.`;
           
@@ -259,21 +265,29 @@ export default function PastConcernsPage() {
         return false;
       }
       
-      // 일일 사용 제한에 걸린 경우
+      // 일일 사용 제한에 걸린 경우 (일일 제한 스타일 모달)
       if (!data.canUse) {
-        const message = `하루에 하나씩만 받을 수 있어요.\n\n내일 다시 찾아와 주세요! 🌅`;
+        const nextAvailableAt = (data as any).nextAvailableAt || null;
+        console.log('일일 사용 제한 모달 설정:', { 
+          nextAvailableAt,
+          canUse: data.canUse,
+          fullData: data
+        });
         
         showAccessModal(
           '오늘의 포춘쿠키를 이미 받으셨어요!',
-          message,
-          '🍪',
+          '', // 일일 제한 스타일에서는 메시지 미사용
+          '✨',
           {
-            text: '지난 고민 보기 📝',
+            text: '나의 기록 보기',
             onClick: () => {
               closeAccessModal();
               // 이미 지난 고민 페이지에 있으므로 모달만 닫기
             }
-          }
+          },
+          undefined, // cancelButtonText
+          'dailyLimit', // 일일 제한 스타일 적용 (카운트다운 표시)
+          nextAvailableAt // 다음 이용 가능 시간 전달
         );
         return false;
       }
@@ -320,15 +334,23 @@ export default function PastConcernsPage() {
       setIsLoggedIn(true);
       const { data, error } = await supabase
         .from('ai_answers')
-        .select('id, created_at, persona, concern, ai_response, ai_feed')
-        .eq('user_id', uid)
-        .order('created_at', { ascending: false });
+        .select('id, created_at, updated_at, persona, concern, ai_response, ai_feed')
+        .eq('user_id', uid);
         
       if (error) throw error;
       
-      const mapped: HistoryItem[] = (data || []).map((row: any) => ({
+      // updated_at 우선, 없으면 created_at 기준으로 정렬 (최신순)
+      const sortedData = (data || []).sort((a: any, b: any) => {
+        const dateA = new Date(a.updated_at || a.created_at).getTime();
+        const dateB = new Date(b.updated_at || b.created_at).getTime();
+        return dateB - dateA;
+      });
+      
+      const mapped: HistoryItem[] = sortedData.map((row: any) => ({
         id: row.id,
-        date: row.created_at,
+        date: row.updated_at || row.created_at, // 표시용 날짜 (updated_at 우선)
+        created_at: row.created_at,
+        updated_at: row.updated_at || null,
         role: row.persona ? getRoleFromPersona(row.persona) : undefined,
         concern: row.concern,
         fortune: row.ai_response,
@@ -394,8 +416,9 @@ export default function PastConcernsPage() {
       return matchesSearch && matchesRole;
     })
     .sort((a, b) => {
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
+      // updated_at 우선, 없으면 created_at 기준으로 정렬
+      const dateA = new Date(a.updated_at || a.created_at).getTime();
+      const dateB = new Date(b.updated_at || b.created_at).getTime();
       return sortBy === 'newest' ? dateB - dateA : dateA - dateB;
     });
 
@@ -594,7 +617,7 @@ export default function PastConcernsPage() {
                 showAccessModal(
                   '포춘쿠키 이용 안내',
                   '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
-                  '💡',
+                  '🎁',
                   {
                     text: '확인',
                     onClick: () => {
@@ -648,7 +671,7 @@ export default function PastConcernsPage() {
               showAccessModal(
                 '포춘쿠키 이용 안내',
                 '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
-                '💡',
+                '🎁',
                 {
                   text: '확인',
                   onClick: () => {
@@ -658,10 +681,6 @@ export default function PastConcernsPage() {
                 },
                 '취소'
               );
-            }}
-            onLogin={async () => {
-              const { error } = await supabase.auth.signInWithOAuth({ provider: 'kakao' });
-              if (error) console.error('로그인 에러:', error);
             }}
           />
         ) : (
@@ -709,7 +728,7 @@ export default function PastConcernsPage() {
                 startIndex={startIndex}
                 viewMode={viewMode}
                 formatDate={formatDate}
-                onItemClick={setSelectedItem}
+                onItemClick={(item) => setSelectedItem(item)}
                 onShareClick={(item, e) => {
                   e.stopPropagation();
                   const shareText =  
@@ -767,10 +786,12 @@ export default function PastConcernsPage() {
               console.log('관리자 - 바로 포춘쿠키 페이지로 이동');
               if (selectedItem?.role && selectedItem?.concern) {
                 // 기존 역할과 고민 정보를 그대로 가져가서 포춘 쿠키 페이지로 이동
+                // updateId도 전달하여 업데이트 모드로 동작
                 navigate('/fortune-cookie', {
                   state: {
                     selectedRole: selectedItem.role,
-                    concern: selectedItem.concern
+                    concern: selectedItem.concern,
+                    updateId: selectedItem.id // 기존 레코드 ID 전달
                   }
                 });
               } else {
@@ -784,17 +805,19 @@ export default function PastConcernsPage() {
             showAccessModal(
               '포춘쿠키 이용 안내',
               '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
-              '💡',
+              '🎁',
               {
                 text: '확인',
                 onClick: () => {
                   closeAccessModal();
                   if (selectedItem?.role && selectedItem?.concern) {
                     // 기존 역할과 고민 정보를 그대로 가져가서 포춘 쿠키 페이지로 이동
+                    // updateId도 전달하여 업데이트 모드로 동작
                     navigate('/fortune-cookie', {
                       state: {
                         selectedRole: selectedItem.role,
-                        concern: selectedItem.concern
+                        concern: selectedItem.concern,
+                        updateId: selectedItem.id // 기존 레코드 ID 전달
                       }
                     });
                   } else {
@@ -834,6 +857,8 @@ export default function PastConcernsPage() {
         icon={accessModal.icon}
         actionButton={accessModal.actionButton}
         cancelButtonText={accessModal.cancelButtonText}
+        variant={accessModal.variant}
+        nextAvailableAt={accessModal.nextAvailableAt}
       />
 
       {/* 복사 완료 모달 */}

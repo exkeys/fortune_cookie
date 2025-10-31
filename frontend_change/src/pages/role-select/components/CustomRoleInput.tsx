@@ -5,11 +5,24 @@ interface CustomRoleInputProps {
   customRole: string;
   onCustomRoleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onSave?: () => void;
+  onClose?: () => void;
 }
 
-export default function CustomRoleInput({ customRole, onCustomRoleChange, onSave }: CustomRoleInputProps) {
+export default function CustomRoleInput({ customRole, onCustomRoleChange, onSave, onClose }: CustomRoleInputProps) {
   return (
-  <Card className="p-3 md:p-4 lg:p-5 mb-6 bg-white border-gray-100 max-w-md mx-auto relative">
+  <Card className="p-3 md:p-4 lg:p-5 pb-10 md:pb-12 lg:pb-14 mb-6 bg-white border-gray-100 max-w-md mx-auto relative">
+      {/* 닫기 버튼: 오른쪽 위 */}
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="absolute top-2 right-2 w-6 h-6 md:w-7 md:h-7 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600 hover:text-gray-800 transition-colors duration-200 z-10"
+          aria-label="닫기"
+          title="닫기"
+        >
+          <i className="ri-close-line text-base md:text-lg"></i>
+        </button>
+      )}
       <div className="flex flex-col items-center mb-3">
         {/* 이모지/아이콘 영역 */}
         <div className="w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-r from-indigo-400 to-indigo-600 flex items-center justify-center text-white text-2xl md:text-3xl lg:text-4xl mb-2 shadow-lg">
@@ -28,25 +41,22 @@ export default function CustomRoleInput({ customRole, onCustomRoleChange, onSave
           maxLength={20}
           autoFocus
         />
-        <div className="text-right mt-1 text-xs md:text-sm text-gray-400">
-          {customRole.length}/20
-        </div>
       </div>
-      {/* 저장하기 버튼: 오른쪽 하단 */}
+      {/* 저장 버튼: 오른쪽 하단 */}
       <button
         type="button"
-        className="absolute bottom-2 right-3 px-3 py-1 text-xs md:text-sm rounded-lg bg-gradient-to-r from-amber-300 to-amber-400 text-white font-bold shadow border-none hover:from-amber-400 hover:to-amber-500 transition-all duration-200 flex items-center gap-1"
+        className="absolute bottom-0 md:bottom-1 lg:bottom-2 right-3 px-3 py-1 text-xs md:text-sm rounded-lg bg-gradient-to-r from-green-500 to-green-600 text-white font-bold shadow border-none hover:from-green-600 hover:to-green-700 transition-all duration-200 flex items-center gap-1"
         style={{ minWidth: 56 }}
         onClick={() => {
           if (onSave) {
             onSave();
           }
         }}
-        aria-label="역할 저장하기"
-        title="역할 저장하기"
+        aria-label="역할 저장"
+        title="역할 저장"
       >
         <i className="ri-save-line text-base"></i>
-        저장하기
+        저장
       </button>
     </Card>
   );

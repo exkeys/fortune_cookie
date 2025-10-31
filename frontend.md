@@ -585,6 +585,8 @@ localStorage (백업)
 - **상태**: 주석처리됨 (JSON 파일로 대체)
 - **데이터 소스**: `frontend_change/public/data/short-advices.json`
 
+> 백엔드 변경 반영: `POST /api/concerns/ai/both` 응답에서 `shortAdvice`는 이제 빈 문자열로 반환됩니다. 프런트 표시 로직에는 영향이 없습니다.
+
 ### 🔄 **복원 방법**
 
 #### 1️⃣ **주석 해제**

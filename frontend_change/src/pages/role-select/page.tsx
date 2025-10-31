@@ -189,6 +189,11 @@ export default function RoleSelectPage() {
     setCustomRoleInputId(null);
   };
 
+  // 커스텀 역할 입력창 닫기
+  const handleCloseCustomRoleInput = () => {
+    setCustomRoleInputId(null);
+  };
+
   // 6. 다음 버튼 (포춘 쿠키 받기)
   const handleNext = async () => {
     if (selectedRole) {
@@ -236,6 +241,7 @@ export default function RoleSelectPage() {
             customRole={customRoles[customRoleInputId] || ''}
             onCustomRoleChange={handleCustomRoleChange}
             onSave={handleCustomRoleSave}
+            onClose={handleCloseCustomRoleInput}
           />
         )}
         <NextButton

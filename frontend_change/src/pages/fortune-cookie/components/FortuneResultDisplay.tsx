@@ -7,7 +7,7 @@ interface FortuneResultDisplayProps {
   longAdvice?: string;
   isSharing: boolean;
   onShare: (platform: string) => void;
-  onSaveAndViewHistory: () => void;
+  onSaveAndViewHistory: (aiFeed?: string) => void;
   onFinish: () => void;
   selectedRole?: {
     id: string;
@@ -44,6 +44,24 @@ export default function FortuneResultDisplay({
   const [showAdvice, setShowAdvice] = useState<boolean>(!!longAdvice);
   const isAdviceLockedRef = useRef<boolean>(!!longAdvice);
   const revealDelayMs = 1200; // 충분한 시간 대기 후 노출 (더 느린 등장)
+  const requestStartedRef = useRef<boolean>(false);
+
+  // 텍스트 너비 측정을 위한 ref와 state
+  const textMeasureRef = useRef<HTMLDivElement>(null);
+  const [paperWidth, setPaperWidth] = useState(432); // 기본 너비
+
+  // 텍스트 길이에 따라 종이 너비 계산
+  useEffect(() => {
+    if (textMeasureRef.current && fortuneMessage) {
+      // 숨겨진 요소로 실제 텍스트 너비 측정
+      const textWidth = textMeasureRef.current.offsetWidth;
+      // 패딩(좌우 각 32px) + 여유 공간(40px) 추가
+      const minWidth = 280;
+      const maxWidth = 800;
+      const calculatedWidth = Math.max(minWidth, Math.min(maxWidth, textWidth + 80));
+      setPaperWidth(calculatedWidth);
+    }
+  }, [fortuneMessage]);
 
   // prop으로 긴 조언이 나중에 도착하는 경우를 처리하되, 한번 확정되면 더 이상 교체하지 않음
   useEffect(() => {
@@ -60,7 +78,8 @@ export default function FortuneResultDisplay({
 
   // 컴포넌트 마운트 시 AI 응답 생성 (한 번만)
   useEffect(() => {
-    if (!hasGenerated && !longAdvice && selectedRole && concern && randomFortune) {
+    if (!requestStartedRef.current && !hasGenerated && !longAdvice && selectedRole && concern && randomFortune) {
+      requestStartedRef.current = true; // 렌더 직후 중복 실행 차단 (state 업데이트 레이스 방지)
       setHasGenerated(true);
       const generateAiAdvice = async () => {
         try {
@@ -241,8 +260,22 @@ ${window.location.origin}`;
         {/* 헤더 */}
         <div className="flex items-center justify-between px-3 py-2 border-b border-gray-300">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-full flex items-center justify-center text-xl">
-              🥠
+            {/* 인스타그램 스타일 스토리 배지 */}
+            <div className="relative">
+              {/* 외부 원형 그라데이션 테두리 (인스타그램 스토리 스타일) */}
+              <div 
+                className="w-10 h-10 rounded-full p-[2px]"
+                style={{
+                  background: 'linear-gradient(45deg, #F58529, #FEDA77, #DD2A7B, #8134AF, #515BD4)'
+                }}
+              >
+                {/* 내부 원형 (포춘 쿠키 이미지) */}
+                <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center text-xl">
+                    🥠
+                  </div>
+                </div>
+              </div>
             </div>
             <div>
               <p className="font-semibold text-xs">fortune_cookie</p>
@@ -293,18 +326,36 @@ ${window.location.origin}`;
         </div>
 
         {/* 이미지 영역 (메시지 카드) */}
-        <div className="bg-gradient-to-br from-amber-50 to-yellow-100 px-8 md:px-12 py-14">
+        <div className="bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 px-8 md:px-12 py-14">
           <div className="bg-white p-8 md:p-12 rounded-lg shadow-md min-h-[432px]">
             {/* 포춘 쿠키 종이 조각 - 양쪽이 안으로 들어간 형태 */}
             <div className="relative flex justify-center mb-7">
+              {/* 텍스트 너비 측정용 숨겨진 요소 */}
+              <div 
+                ref={textMeasureRef}
+                className="absolute invisible whitespace-nowrap text-lg md:text-xl font-medium font-sans"
+                aria-hidden="true"
+              >
+                "{fortuneMessage}"
+              </div>
+              
               {/* 종이 그림자 */}
-              <div className="absolute top-1 left-1/2 transform -translate-x-1/2 w-90 h-16 bg-gray-300 opacity-30 blur-sm"></div>
+              <div 
+                className="absolute top-1 left-1/2 transform -translate-x-1/2 h-16 bg-gray-300 opacity-30 blur-sm"
+                style={{ width: `${paperWidth}px`, transform: 'translateX(calc(-50% - 6px))' }}
+              ></div>
 
-              <div className="relative rotate-1 ml-7">
-                <svg width="432" height="64" viewBox="0 0 432 64" className="drop-shadow-lg">
+              <div className="relative rotate-1 ml-7" style={{ left: '-6px' }}>
+                <svg 
+                  width={paperWidth} 
+                  height="64" 
+                  viewBox={`0 0 ${paperWidth} 64`} 
+                  className="drop-shadow-lg"
+                  style={{ minWidth: '280px', maxWidth: '800px' }}
+                >
                   {/* 테두리 포함된 종이 경로 (양쪽 안으로 파인 모양) */}
                   <path
-                    d="M 0 0 L 416 0 L 400 32 L 416 64 L 0 64 L 16 32 Z"
+                    d={`M 0 0 L ${paperWidth - 16} 0 L ${paperWidth - 32} 32 L ${paperWidth - 16} 64 L 0 64 L 16 32 Z`}
                     fill={`url(#${gradientId})`}
                     stroke="#fed7aa"
                     strokeWidth="2"
@@ -320,13 +371,13 @@ ${window.location.origin}`;
                     </linearGradient>
                   </defs>
                 </svg>
-
-                {/* 운세 메시지 텍스트 */}
-                <div className="absolute inset-0 flex items-center justify-center px-8">
-                  <p className="text-lg md:text-xl font-medium text-gray-900 text-center leading-tight font-sans">
-                    "{fortuneMessage}"
-                  </p>
-                </div>
+              </div>
+              
+              {/* 운세 메시지 텍스트 (종이와 별도로 위치 조정) */}
+              <div className="absolute left-1/2 transform -translate-x-1/2 flex items-center justify-center px-8" style={{ width: `${paperWidth}px`, height: '64px' }}>
+                <p className="text-lg md:text-xl font-medium text-gray-900 text-center leading-tight font-sans">
+                  "{fortuneMessage}"
+                </p>
               </div>
             </div>
             
@@ -334,7 +385,7 @@ ${window.location.origin}`;
             <div className="border-t border-gray-200 pt-7 relative min-h-[64px]">
               {/* 실제 텍스트: 항상 렌더링하되, 준비 전에는 투명 */}
               <p
-                className={`text-base md:text-lg text-gray-700 leading-relaxed font-sans whitespace-pre-wrap break-words transition-opacity duration-500 ${showAdvice ? 'opacity-100' : 'opacity-0'}`}
+                className={`text-left text-base md:text-lg text-gray-700 leading-relaxed font-sans whitespace-pre-wrap break-words transition-opacity duration-500 ${showAdvice ? 'opacity-100' : 'opacity-0'}`}
               >
                 {finalAdvice ?? ''}
               </p>
@@ -443,7 +494,7 @@ ${window.location.origin}`;
             {/* 액션 버튼들 */}
             <div className="flex gap-2">
               <button 
-                onClick={onSaveAndViewHistory}
+                onClick={() => onSaveAndViewHistory(finalAdvice ?? undefined)}
                 disabled={!showAdvice}
                 title={!showAdvice ? 'AI 생성 중에는 저장할 수 없습니다' : undefined}
                 className={`px-3 py-2 rounded-lg transition-colors font-medium text-xs flex items-center gap-1.5 

@@ -11,9 +11,12 @@ interface Role {
 interface HistoryItem {
   id: string;
   date: string;
+  created_at: string;
+  updated_at?: string | null;
   role?: Role;
   concern?: string;
   fortune: string;
+  aiFeed?: string;
 }
 
 interface PastConcernCardProps {

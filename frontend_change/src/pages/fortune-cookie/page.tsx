@@ -33,7 +33,7 @@ export default function FortuneCookiePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { selectedRole, concern } = (location.state as LocationState) || {};
+  const { selectedRole, concern, updateId } = (location.state as LocationState & { updateId?: string }) || {};
   const { saveConcern } = useApi();
   
   const [isOpening, setIsOpening] = useState(false);
@@ -191,14 +191,18 @@ export default function FortuneCookiePage() {
     setTimeout(() => setIsSharing(false), 1000);
   };
   
-  const handleSaveAndViewHistory = async () => {
+  const handleSaveAndViewHistory = async (aiFeed?: string) => {
     try {
       // Supabase에 저장
       const { data: auth } = await supabase.auth.getUser();
       const uid = auth?.user?.id;
       
+      // FortuneResultDisplay에서 전달된 aiFeed를 우선 사용, 없으면 longAdvice 사용
+      const finalAiFeed = aiFeed || longAdvice || "";
+      
       if (uid && selectedRole && concern && fortuneMessage) {
-        const result = await saveConcern(selectedRole.name, concern, fortuneMessage, longAdvice, uid);
+        // updateId가 있으면 업데이트 모드, 없으면 새 레코드 생성 모드
+        const result = await saveConcern(selectedRole.name, concern, fortuneMessage, finalAiFeed, uid, updateId);
         if (result.error) {
           console.error('저장 실패:', result.error);
           alert(`저장에 실패했습니다: ${result.error}`);
@@ -210,7 +214,7 @@ export default function FortuneCookiePage() {
       }
       
       // localStorage에도 저장 (백업용)
-      saveToHistory();
+      saveToHistory(finalAiFeed);
       
       // 폼 데이터 삭제 (완료 시)
       clearFormData();
@@ -250,14 +254,14 @@ export default function FortuneCookiePage() {
     setLongAdvice("");
   };
   
-  const saveToHistory = () => {
+  const saveToHistory = (aiFeedOverride?: string) => {
     const historyItem = {
       id: Date.now().toString(),
       date: new Date().toISOString(),
       role: selectedRole,
       concern,
       fortune: fortuneMessage,
-      aiFeed: longAdvice
+      aiFeed: aiFeedOverride || longAdvice || ""
     };
     const existingHistory = JSON.parse(localStorage.getItem('fortuneHistory') || '[]');
     const updatedHistory = [historyItem, ...existingHistory].slice(0, 50); // 최대 50개 저장

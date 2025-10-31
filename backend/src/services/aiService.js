@@ -11,7 +11,8 @@ export class AIService {
         'https://api.openai.com/v1/chat/completions',
         {
           model: 'gpt-4o-mini',
-          messages
+          messages,
+          temperature: 0.5
         },
         {
           headers: {
@@ -27,7 +28,9 @@ export class AIService {
     }
   }
 
-  // 짧은 조언 생성 (포춘쿠키)
+  /*
+  // [비활성화됨] 짧은 조언 생성 (포춘쿠키)
+  // 프런트엔드에서 짧은 조언을 사용하지 않아 주석 처리되었습니다.
   static async generateShortAdvice(persona, concern) {
     logger.info('AI 짧은 조언 생성 요청', { persona, concern });
     const messages = [
@@ -41,6 +44,7 @@ export class AIService {
     logger.info('AI 짧은 조언 생성 성공', { answer });
     return answer;
   }
+  */
 
   // 긴 조언 생성 (AI 피드) - 랜덤 운세 포함 버전
   static async generateLongAdvice(persona, concern, randomFortune = null) {
@@ -88,6 +92,7 @@ export class AIService {
       - persona와 concern의 맥락 반영
       - 문단 사이에는 줄바꿈 2개(\\n\\n)
       - 실천 행동은 • 로 구분
+      - 의미 없는 문자 조각(예: 'wn', 'rn' 등)이나 무작위 영문 단독 토큰을 출력하지 말 것
       `;
 
 
@@ -106,10 +111,9 @@ export class AIService {
 
   // 짧은/긴 조언 모두 생성
   static async generateBothAdvices(persona, concern, randomFortune = null) {
-    const [shortAdvice, longAdvice] = await Promise.all([
-      this.generateShortAdvice(persona, concern),
-      this.generateLongAdvice(persona, concern, randomFortune)
-    ]);
+    // 짧은 조언은 비활성화되었습니다. 긴 조언만 생성합니다.
+    const longAdvice = await this.generateLongAdvice(persona, concern, randomFortune);
+    const shortAdvice = '';
     return { shortAdvice, longAdvice };
   }
 }

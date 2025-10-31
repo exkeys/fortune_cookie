@@ -47,7 +47,7 @@ export const cleanupExpiredDeletionRestrictions = async () => {
 //     const { data, error } = await supabase
 //       .from('daily_usage_log')
 //       .delete()
-//       .lt('created_at', cutoffTime.toISOString())
+//       .lt('used_at', cutoffTime.toISOString()) // used_at 기준으로 변경
 //       .select();
 //     
 //     const deletedCount = data?.length || 0;
@@ -65,7 +65,7 @@ export const cleanupExpiredDeletionRestrictions = async () => {
 //   }
 // };
 
-// === 운영용: 24시간 이전 로그 삭제 (기본값) ===
+// === 운영용: 24시간 이전 로그 삭제 (운영시 활성화) ===
 export const cleanupOldUsageLogs = async () => {
   try {
     logger.info('오래된 일일 사용 로그 정리 시작 (운영용)');
@@ -78,7 +78,7 @@ export const cleanupOldUsageLogs = async () => {
     const { data, error } = await supabase
       .from('daily_usage_log')
       .delete()
-      .lt('created_at', cutoffTime.toISOString())
+      .lt('used_at', cutoffTime.toISOString()) // used_at 기준으로 변경
       .select();
     
     const deletedCount = data?.length || 0;
@@ -104,7 +104,7 @@ export const cleanupExpiredData = async () => {
     // 1. 만료된 재가입 제한 정리
     const restrictionResult = await cleanupExpiredDeletionRestrictions();
     
-    // 2. 테스트용: 1분 이전 로그 삭제
+    // 2. 오래된 로그 삭제 (운영용: 24시간)
     const logResult = await cleanupOldUsageLogs();
     
     logger.info('만료된 데이터 통합 정리 완료', {
@@ -127,7 +127,7 @@ export const cleanupExpiredData = async () => {
   }
 };
 
-// === 스케줄러 시작 함수 (테스트용) ===
+// === 테스트용: 30초마다 실행 (테스트시 주석 해제 필요) ===
 // export const startScheduler = () => {
 //   logger.info('스케줄러 시작 (테스트용)');
 //   
@@ -152,8 +152,7 @@ export const cleanupExpiredData = async () => {
 //   logger.info('스케줄러 등록 완료 (테스트용) - 30초마다 1분 이전 로그 정리');
 // };
 
-
-// === 운영용: 1시간마다 실행 (기본값) ===
+// === 운영용: 1시간마다 실행 (운영시 활성화) ===
 export const startScheduler = () => {
   logger.info('스케줄러 시작 (운영용)');
   

@@ -55,3 +55,34 @@ sed -i 's/^}/\/\/ }/' backend/src/services/aiService.js
 ### 주의사항
 - 테스트 후 반드시 주석을 다시 처리하여 원래 상태로 복원
 - 서버 재시작 필요
+
+## 짧은 조언(shortAdvice) 비활성화 내역
+
+- 목적: 프런트엔드에서 짧은 조언을 사용하지 않아 API 토큰 소모와 불필요 로그 발생을 막기 위함
+- 적용 파일/위치:
+  - 파일: `backend/src/services/aiService.js`
+  - 주석 처리 범위: `generateShortAdvice` 메서드 전체
+  - 참고 라인: 30-43줄 원본 위치(메서드 전체가 주석 블록으로 감싸짐)
+
+```30:43:backend/src/services/aiService.js
+  /*
+  static async generateShortAdvice(persona, concern) {
+    ... // 전체 메서드 주석 처리됨
+  }
+  */
+```
+
+- 연관 로직 조정:
+  - 동일 파일 `generateBothAdvices`에서 짧은 조언 호출 제거, `shortAdvice`는 빈 문자열로 반환
+
+```107:114:backend/src/services/aiService.js
+  static async generateBothAdvices(persona, concern, randomFortune = null) {
+    const longAdvice = await this.generateLongAdvice(persona, concern, randomFortune);
+    const shortAdvice = '';
+    return { shortAdvice, longAdvice };
+  }
+```
+
+- 호출 경로 영향:
+  - 라우트: `POST /api/concerns/ai/both` → 컨트롤러: `ConcernController.generateBothAdvices` → 서비스: `AIService.generateBothAdvices`
+  - 응답의 `shortAdvice`는 빈 문자열로 유지됩니다.

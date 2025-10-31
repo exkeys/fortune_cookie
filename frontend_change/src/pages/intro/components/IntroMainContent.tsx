@@ -19,11 +19,13 @@ interface ModalState {
     onClick: () => void;
   };
   cancelButtonText?: string;
+  variant?: 'default' | 'dailyLimit'; // 모달 스타일 변형: dailyLimit은 일일 사용 제한 카운트다운 모달
+  nextAvailableAt?: string | null; // 다음 이용 가능 시간 (ISO string, used_at 기준)
 }
 
 export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, login } = useAuth();
   const [showContent, setShowContent] = useState(false);
   const [modal, setModal] = useState<ModalState>({
     isOpen: false,
@@ -32,6 +34,20 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
     icon: ''
   });
   const [isCheckingAccess, setIsCheckingAccess] = useState(false); // 중복 요청 방지
+  
+  const handleLogin = async () => {
+    try {
+      await login('kakao');
+    } catch (e) {
+      console.error('로그인 실패:', e);
+      setModal({
+        isOpen: true,
+        title: '로그인 실패',
+        message: '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
+        icon: '⚠️'
+      });
+    }
+  };
   
   useEffect(() => {
     const timer = setTimeout(() => setShowContent(true), 500);
@@ -107,7 +123,7 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
           const schoolMatch = data.reason.match(/(.+)의 이용 기간이/);
           const schoolName = schoolMatch ? schoolMatch[1] : '해당 학교';
           
-          icon = '📅';
+          icon = ''; // AccessModal에서 Calendar 아이콘을 사용하므로 이모지 불필요
           title = '이용 기간 미설정';
           message = `${schoolName}의 포춘쿠키 서비스 이용 기간이 아직 설정되지 않았습니다.\n\n관리자가 이용 기간을 설정하면 서비스를 이용하실 수 있습니다. 관리자에게 문의해 주세요.`;
           
@@ -151,22 +167,29 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
         return false;
       }
       
-      // 일일 사용 제한에 걸린 경우
+      // 일일 사용 제한에 걸린 경우 (일일 제한 스타일 모달)
       if (!data.canUse) {
-        const message = `하루에 하나씩만 받을 수 있어요.\n\n내일 다시 찾아와 주세요! 🌅`;
+        const nextAvailableAt = (data as any).nextAvailableAt || null;
+        console.log('일일 사용 제한 모달 설정:', { 
+          nextAvailableAt,
+          canUse: data.canUse,
+          fullData: data
+        });
         
         setModal({
           isOpen: true,
           title: '오늘의 포춘쿠키를 이미 받으셨어요!',
-          message,
-          icon: '🍪',
+          message: '', // 일일 제한 스타일에서는 메시지 미사용
+          icon: '✨',
           actionButton: {
-            text: '지난 고민 보기 📝',
+            text: '나의 기록 보기',
             onClick: () => {
               setModal(prev => ({ ...prev, isOpen: false }));
               navigate('/past-concerns');
             }
-          }
+          },
+          variant: 'dailyLimit', // 일일 제한 스타일 적용 (카운트다운 표시)
+          nextAvailableAt // 다음 이용 가능 시간 전달
         });
         return false;
       }
@@ -219,7 +242,11 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
         isOpen: true,
         title: '로그인 필요',
         message: '포춘쿠키 서비스를 이용하려면 로그인이 필요합니다.',
-        icon: '🔑'
+        icon: '🔐',
+        actionButton: {
+          text: '카카오 로그인',
+          onClick: handleLogin
+        }
       });
       return;
     }
@@ -352,6 +379,8 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
         icon={modal.icon}
         actionButton={modal.actionButton}
         cancelButtonText={modal.cancelButtonText}
+        variant={modal.variant}
+        nextAvailableAt={modal.nextAvailableAt}
       />
     </div>
   );
