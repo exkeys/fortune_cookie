@@ -1,0 +1,15 @@
+# .cursorignore 파일
+# .env 파일을 명시적으로 허용
+
+# node_modules는 무시
+node_modules/
+out/
+dist/
+build/
+
+# .env 파일 명시적으로 허용 (느낌표로 무시 규칙 무효화)
+!.env
+!.env.example
+!.env.local
+!.env.*.local
+
