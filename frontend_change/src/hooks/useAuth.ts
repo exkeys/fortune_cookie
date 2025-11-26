@@ -106,35 +106,29 @@ export const useAuth = (): AuthReturn => {
         
         // refresh 실패로 인한 SIGNED_OUT인지 확인 (재시도)
         try {
-          const stored = localStorage.getItem('sb-rudiauwvjsczsfbtjfoz-auth-token');
-          if (stored) {
-            try {
-              const parsed = JSON.parse(stored);
-              if (parsed.refresh_token) {
-                // refresh token이 있으면 재시도 (최대 3번)
-                for (let i = 0; i < 3; i++) {
-                  const { data: { session: retried }, error } = await supabase.auth.refreshSession();
-                  
-                  if (!error && retried?.access_token) {
-                    // refresh 성공 - SIGNED_OUT 무시하고 세션 복구
-                    logger.log('세션 복구 성공 (재시도)', i + 1);
-                    return; // SIGNED_OUT 처리 안 함
-                  }
-                  
-                  // refresh token 만료 등 영구적 실패는 재시도하지 않음
-                  if (error?.message?.includes('refresh_token_not_found') || 
-                      error?.message?.includes('invalid_grant')) {
-                    break;
-                  }
-                  
-                  // 네트워크 오류 등은 재시도
-                  if (i < 2) {
-                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-                  }
-                }
+          // Supabase SDK가 자동으로 관리하는 세션 확인
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session?.refresh_token) {
+            // refresh token이 있으면 재시도 (최대 3번)
+            for (let i = 0; i < 3; i++) {
+              const { data: { session: retried }, error } = await supabase.auth.refreshSession();
+              
+              if (!error && retried?.access_token) {
+                // refresh 성공 - SIGNED_OUT 무시하고 세션 복구
+                logger.log('세션 복구 성공 (재시도)', i + 1);
+                return; // SIGNED_OUT 처리 안 함
               }
-            } catch {
-              // JSON 파싱 실패 등
+              
+              // refresh token 만료 등 영구적 실패는 재시도하지 않음
+              if (error?.message?.includes('refresh_token_not_found') || 
+                  error?.message?.includes('invalid_grant')) {
+                break;
+              }
+              
+              // 네트워크 오류 등은 재시도
+              if (i < 2) {
+                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+              }
             }
           }
         } catch {
@@ -226,6 +220,21 @@ export const useAuth = (): AuthReturn => {
           try {
             const cachedProfile = JSON.parse(cachedProfileData);
             
+            // 캐시된 프로필에서 밴 상태 체크
+            if (cachedProfile.status === 'banned') {
+              logger.log('[useAuth] 🚫 밴 상태 감지 (캐시된 프로필) - account-banned으로 리다이렉트');
+              await supabase.auth.signOut();
+              if (isMounted) {
+                setUser(null);
+                setIsLoggedIn(false);
+                setIsLoading(false);
+              }
+              if (window.location.pathname !== '/account-banned') {
+                window.location.href = '/account-banned';
+              }
+              return;
+            }
+            
             if (isMounted) {
               setUser({
                 id: cachedProfile.id,
@@ -300,6 +309,21 @@ export const useAuth = (): AuthReturn => {
                   const result = await response.json();
                   if (result.user) {
                     const dbUser = result.user;
+                    
+                    // 밴 상태 체크 (프로필 업데이트 후)
+                    if (dbUser.status === 'banned') {
+                      logger.log('[useAuth] 🚫 밴 상태 감지 (프로필 업데이트) - account-banned으로 리다이렉트');
+                      await supabase.auth.signOut();
+                      if (isMounted) {
+                        setUser(null);
+                        setIsLoggedIn(false);
+                        setIsLoading(false);
+                      }
+                      if (window.location.pathname !== '/account-banned') {
+                        window.location.href = '/account-banned';
+                      }
+                      return;
+                    }
                     
                     const updatedProfile = {
                       id: dbUser.id,
@@ -489,8 +513,15 @@ export const useAuth = (): AuthReturn => {
         // Ban 상태 체크
         if (banCheckData && banCheckData.status === 'banned') {
           logger.log('[useAuth] 🚫 밴 상태 감지 - account-banned으로 리다이렉트');
+          isCooldownRedirectRef.current = true;
+          sessionStorage.setItem('cooldown-redirect', 'true');
           await supabase.auth.signOut();
-          window.location.href = '/account-banned';
+          setUser(null);
+          setIsLoggedIn(false);
+          if (window.location.pathname !== '/account-banned') {
+            logger.log('[useAuth] 🔀 /account-banned으로 리다이렉트');
+            window.location.replace('/account-banned');
+          }
           return;
         }
         
@@ -500,6 +531,7 @@ export const useAuth = (): AuthReturn => {
         // 실제로 deletion restriction이 확인된 경우에만 보내야 함
         logger.warn('[useAuth] ⚠️ 재가입 제한 체크 중 에러 발생 (타임아웃 또는 네트워크 오류):', e.message);
         // 에러 발생 시 그냥 통과 (deletion이 없을 수 있으므로)
+        // 하지만 프로필 업데이트 후에 다시 밴 체크를 수행함
       }
     } else {
       logger.log('[useAuth] ⏭️ 이미 체크 완료됨 - Step 1 스킵');
@@ -587,6 +619,19 @@ export const useAuth = (): AuthReturn => {
           const result = await response.json();
           if (result.user) {
             const dbUser = result.user;
+            
+            // 밴 상태 체크 (프로필 업데이트 후 재확인)
+            if (dbUser.status === 'banned') {
+              logger.log('[useAuth] 🚫 밴 상태 감지 (프로필 업데이트 후) - account-banned으로 리다이렉트');
+              await supabase.auth.signOut();
+              setUser(null);
+              setIsLoggedIn(false);
+              if (window.location.pathname !== '/account-banned') {
+                window.location.href = '/account-banned';
+              }
+              return;
+            }
+            
             const updatedUserData = {
               ...(session.user as BaseUser),
               is_admin: dbUser.is_admin ?? false,
@@ -626,6 +671,18 @@ export const useAuth = (): AuthReturn => {
         ]) as any;
         
         if (userRow) {
+          // 밴 상태 체크 (Fallback 조회 후 재확인)
+          if (userRow.status === 'banned') {
+            logger.log('[useAuth] 🚫 밴 상태 감지 (Fallback 조회 후) - account-banned으로 리다이렉트');
+            await supabase.auth.signOut();
+            setUser(null);
+            setIsLoggedIn(false);
+            if (window.location.pathname !== '/account-banned') {
+              window.location.href = '/account-banned';
+            }
+            return;
+          }
+          
           const updatedUserData = {
             ...(session.user as BaseUser),
             is_admin: userRow.is_admin ?? false,

@@ -1,4 +1,4 @@
-import { supabase, supabaseAdmin } from '../../config/database.js';
+import { supabaseAdmin } from '../../config/database.js';
 import { logger } from '../../utils/logger.js';
 import { DatabaseError } from '../../utils/errors.js';
 import { HashUtils } from '../../utils/hashUtils.js';

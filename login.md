@@ -479,7 +479,7 @@ const restrictionData = {
 
 ## 참고사항
 
-- 현재 시스템은 **B 구조**를 사용하며, Supabase SDK만으로 인증을 처리합니다
+- 현재 시스템은 Supabase SDK만으로 인증을 처리합니다
 - CSRF 토큰은 사용하지 않습니다 (JWT만 사용)
 - 모든 토큰 관리는 Supabase SDK가 자동으로 처리합니다
 - 재가입 제한은 24시간이며, SHA-256 해시 기반으로 개인정보를 보호합니다

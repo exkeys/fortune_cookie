@@ -64,10 +64,18 @@ export default function FeedbackPage() {
     setIsSubmitting(true);
 
     try {
-      // EmailJS로 피드백 전송 (임시로 직접 값 사용)
+      // EmailJS로 피드백 전송
+      const emailjsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID;
+      const emailjsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID;
+      const emailjsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY;
+
+      if (!emailjsServiceId || !emailjsTemplateId || !emailjsPublicKey) {
+        throw new Error('EmailJS 환경 변수가 설정되어 있지 않습니다.');
+      }
+
       await emailjs.send(
-        'service_sr0er1a',
-        'template_ymik2rf',
+        emailjsServiceId,
+        emailjsTemplateId,
         {
           feedback_type: feedback.type,
           rating: feedback.rating,
@@ -75,7 +83,7 @@ export default function FeedbackPage() {
           user_email: feedback.email || '미제공',
           timestamp: new Date().toLocaleString('ko-KR')
         },
-        'lnlCJFmsv00sk7C0l'
+        emailjsPublicKey
       );
 
       setIsSubmitting(false);
