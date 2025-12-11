@@ -1,9 +1,15 @@
 import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { useResponsive } from '../../hooks/useResponsive';
 
 export default function AccountDeletedPage() {
   const navigate = useNavigate();
   const { isMobile } = useResponsive();
+  
+  // 회원 탈퇴 플래그 정리
+  useEffect(() => {
+    sessionStorage.removeItem('account-deletion');
+  }, []);
 
   return (
     <div style={{

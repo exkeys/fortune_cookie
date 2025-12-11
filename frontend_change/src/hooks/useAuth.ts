@@ -61,6 +61,7 @@ export const useAuth = (): AuthReturn => {
   const isInitializedRef = useRef(false);
   const processingRef = useRef(false);
   const isCooldownRedirectRef = useRef<boolean>(false);
+  const isAccountDeletionRef = useRef<boolean>(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -101,6 +102,11 @@ export const useAuth = (): AuthReturn => {
         logToServer('[useAuth] onAuthStateChange: SIGNED_OUT', { event, session });
         
         if (isCooldownRedirectRef.current || sessionStorage.getItem('cooldown-redirect') === 'true') {
+          return;
+        }
+        
+        // 회원 탈퇴 중이면 SIGNED_OUT 처리 스킵 (settings 페이지에서 리다이렉트 처리)
+        if (isAccountDeletionRef.current || sessionStorage.getItem('account-deletion') === 'true') {
           return;
         }
         
@@ -871,6 +877,10 @@ export const useAuth = (): AuthReturn => {
 
   const deleteAccount = async () => {
     try {
+      // 회원 탈퇴 플래그 설정
+      isAccountDeletionRef.current = true;
+      sessionStorage.setItem('account-deletion', 'true');
+      
       let userId: string | null = null;
       
       const backendAuthData = localStorage.getItem('auth_backend_user');
@@ -929,6 +939,9 @@ export const useAuth = (): AuthReturn => {
       
     } catch (error) {
       logToServer('[useAuth] deleteAccount: 회원탈퇴 실패', { error });
+      // 실패 시 플래그 제거
+      isAccountDeletionRef.current = false;
+      sessionStorage.removeItem('account-deletion');
       localStorage.removeItem('auth_backend_user');
       lastUserIdRef.current = null;
       isInitializedRef.current = false;
