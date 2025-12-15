@@ -109,69 +109,78 @@ const refreshSupabaseSession = async (refreshToken) => {
 };
 
 export class AuthController {
-  // 카카오 인가 코드로 accessToken 받기
-  static kakaoCallback = asyncHandler(async (req, res) => {
+  // 카카오 로그인 통합 API (토큰 교환 + 로그인 한 번에)
+  static kakaoLoginDirect = asyncHandler(async (req, res) => {
     const validation = validateRequest(req, ['code', 'redirectUri']);
     if (!validation.isValid) {
       return validationErrorResponse(res, validation.error);
     }
     
     const { code, redirectUri } = req.body;
-    logger.info('카카오 콜백 요청', { 
-      hasCode: !!code, 
-      redirectUri,
-      codeLength: code?.length 
-    });
+    let currentStep = 'token_exchange';
     
+    try {
     const accessToken = await KakaoAuthService.getKakaoAccessToken(code, redirectUri);
     
-    logger.info('카카오 액세스 토큰 받기 성공', { 
-      hasAccessToken: !!accessToken,
-      tokenLength: accessToken?.length,
-      tokenPrefix: accessToken ? accessToken.substring(0, 20) + '...' : '없음'
-    });
-    
-    if (!accessToken) {
-      logger.error('액세스 토큰이 null이거나 undefined');
-      return errorResponse(res, '액세스 토큰을 받을 수 없습니다', 500);
+      if (!accessToken) {
+        return res.status(400).json({
+          success: false,
+          error: '토큰 교환에 실패했습니다',
+          errorCode: 'TOKEN_EXCHANGE_FAILED',
+          step: '1/2',
+          stepName: currentStep,
+          retryable: true
+        });
+      }
+      
+      currentStep = 'login';
+      const result = await KakaoAuthService.kakaoLogin(accessToken);
+      
+      return successResponse(res, result);
+      
+    } catch (error) {
+      logger.error('통합 로그인 실패', { step: currentStep, error: error.message });
+      
+      if (error.message?.includes('24시간') || error.message?.includes('재가입')) {
+        return res.status(403).json({
+          success: false,
+          error: error.message || '탈퇴 후 24시간 내에는 재가입할 수 없습니다',
+          errorCode: 'RESTRICTION_COOLDOWN',
+          isRestricted: true,
+          step: '2/2',
+          stepName: currentStep
+        });
+      }
+      
+      if (error.message?.includes('차단')) {
+        return res.status(403).json({
+          success: false,
+          error: error.message || '계정이 차단되었습니다',
+          errorCode: 'ACCOUNT_BANNED',
+          step: '2/2',
+          stepName: currentStep
+        });
+      }
+      
+      if (currentStep === 'token_exchange') {
+        return res.status(400).json({
+          success: false,
+          error: error.message || '토큰 교환에 실패했습니다',
+          errorCode: 'TOKEN_EXCHANGE_FAILED',
+          step: '1/2',
+          stepName: currentStep,
+          retryable: true
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        error: error.message || '로그인에 실패했습니다',
+        errorCode: 'LOGIN_FAILED',
+        step: currentStep === 'login' ? '2/2' : '1/2',
+        stepName: currentStep
+      });
     }
-    
-    return successResponse(res, { accessToken });
-  });
-
-  // 카카오 로그인
-  static kakaoLogin = asyncHandler(async (req, res) => {
-    const validation = validateRequest(req, ['accessToken']);
-    if (!validation.isValid) {
-      return validationErrorResponse(res, validation.error);
-    }
-    
-    const { accessToken } = req.body;
-    
-    logger.info('카카오 로그인 요청 수신', { 
-      hasAccessToken: !!accessToken,
-      tokenLength: accessToken?.length,
-      tokenPrefix: accessToken ? accessToken.substring(0, 20) + '...' : '없음',
-      tokenType: typeof accessToken
-    });
-    
-    if (!accessToken || accessToken.trim() === '') {
-      logger.error('액세스 토큰이 비어있음');
-      return validationErrorResponse(res, '액세스 토큰이 필요합니다');
-    }
-    
-    const result = await KakaoAuthService.kakaoLogin(accessToken);
-    
-    logger.info('카카오 로그인 성공', { 
-      userId: result?.userId,
-      email: result?.email 
-    });
-    
-    // 사용자 정보 반환
-    // 프론트엔드에서 프로필 캐시를 저장하고, useAuth에서 처리하도록 함
-    // (백엔드에서 이미 auth.users에 사용자를 생성했지만,
-    //  프론트엔드에서 세션을 직접 생성할 수 없으므로 캐시만 사용)
-    return successResponse(res, result);
   });
 
   // CSRF 토큰 발급

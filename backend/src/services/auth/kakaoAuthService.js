@@ -173,38 +173,21 @@ export class KakaoAuthService {
   // 카카오 로그인
   static async kakaoLogin(accessToken) {
     try {
-      logger.info('카카오 로그인 요청', { 
-        hasAccessToken: !!accessToken,
-        accessTokenPrefix: accessToken ? accessToken.substring(0, 20) + '...' : '없음',
-        accessTokenLength: accessToken?.length
-      });
-      
       if (!accessToken) {
         throw new ExternalServiceError('카카오 액세스 토큰이 제공되지 않았습니다');
       }
-      
-      // 카카오 API로 사용자 정보 가져오기
-      logger.info('카카오 사용자 정보 조회 시작', {
-        url: 'https://kapi.kakao.com/v2/user/me',
-        hasAuthorizationHeader: true
-      });
 
       const kakaoRes = await axios.get('https://kapi.kakao.com/v2/user/me', {
         headers: { 
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json'
         },
-      });
-      
-      logger.info('카카오 API 응답 받음', {
-        status: kakaoRes.status,
-        hasData: !!kakaoRes.data
+        timeout: 10000
       });
       
       const kakaoUser = kakaoRes.data;
       
       if (!kakaoUser || !kakaoUser.kakao_account) {
-        logger.error('카카오 사용자 정보 구조가 올바르지 않음', kakaoUser);
         throw new ExternalServiceError('카카오 사용자 정보를 가져올 수 없습니다');
       }
 
@@ -212,196 +195,83 @@ export class KakaoAuthService {
       const nickname = kakaoUser.kakao_account?.profile?.nickname;
       
       if (!email) {
-        logger.error('카카오 이메일 정보 없음', kakaoUser);
         throw new ExternalServiceError('카카오 이메일 정보를 가져올 수 없습니다');
       }
       
-      logger.info('카카오 사용자 정보 조회 성공', { 
-        email, 
-        nickname: nickname || '없음',
-        userId: kakaoUser.id
-      });
-      
-      // 먼저 해당 이메일로 밴된 사용자가 있는지 확실히 체크
-      const { data: bannedCheck, error: bannedCheckError } = await supabase
+      // 보안 체크 병렬 실행
+      const [bannedCheckResult, restrictionResult, existingUserResult] = await Promise.all([
+        supabase
         .from('users')
         .select('id, email, status')
         .eq('email', email)
         .eq('status', 'banned')
-        .maybeSingle();
+          .maybeSingle(),
+        
+        AccountService.checkDeletionRestriction(email),
+        
+        supabase
+          .from('users')
+          .select('id, created_at, status, email, school, nickname, is_admin')
+          .eq('email', email)
+          .maybeSingle()
+      ]);
 
-      logger.info('밴된 사용자 체크 결과', { 
-        email,
-        bannedCheck,
-        bannedCheckError,
-        isBanned: !!bannedCheck 
-      });
+      const bannedCheck = bannedCheckResult.data;
+      const restriction = restrictionResult;
+      const { data: existingUser, error: existingUserError } = existingUserResult;
 
-      // 밴된 사용자면 즉시 차단
+      if (existingUserError) {
+        logger.error('사용자 조회 실패', { email, error: existingUserError });
+        throw new DatabaseError('사용자 정보 조회에 실패했습니다');
+      }
+
       if (bannedCheck) {
-        logger.error('🚫 밴된 사용자 로그인 시도 차단 🚫', { 
-          email, 
-          userId: bannedCheck.id,
-          status: bannedCheck.status,
-          timestamp: new Date().toISOString(),
-          message: '밴된 계정이 로그인을 시도했습니다!'
-        });
+        logger.error('밴된 사용자 차단', { email, userId: bannedCheck.id });
         throw new DatabaseError('계정이 차단되었습니다. 관리자에게 문의하세요.');
       }
 
-      // 1. 재가입 제한 체크 (밴/deleted처럼 DB 상태 직접 확인)
-      const restriction = await AccountService.checkDeletionRestriction(email);
       if (restriction && restriction.isRestricted) {
-        logger.warn('재가입 제한으로 로그인 차단', { email });
+        logger.warn('재가입 제한 차단', { email });
         throw new DatabaseError(restriction.message || '탈퇴 후 24시간 내에는 재가입할 수 없습니다.');
       }
 
-      // 2. 기존 사용자 정보 조회
-      const { data: existingUser, error: existingUserError } = await supabase
-        .from('users')
-        .select('id, created_at, status, email')
-        .eq('email', email)
-        .maybeSingle();
-
-      // 사용자 조회 결과 상세 로깅
-      logger.info('기존 사용자 조회 상세 결과', { 
-        email, 
-        existingUser,
-        existingUserError,
-        hasExistingUser: !!existingUser,
-        existingUserStatus: existingUser?.status,
-        existingUserId: existingUser?.id
-      });
-      
-      // 3. 기존 사용자 상태 체크
       if (existingUser && existingUser.status === 'banned') {
-        logger.warn('밴된 사용자 로그인 차단', { email, status: existingUser.status });
         throw new DatabaseError('계정이 차단되었습니다. 관리자에게 문의하세요.');
       }
 
       if (existingUser && existingUser.status === 'deleted') {
-        logger.warn('삭제된 사용자 로그인 차단', { email, status: existingUser.status });
         throw new DatabaseError('탈퇴한 계정입니다.');
       }
 
-      // 기존 사용자인 경우 업데이트
       if (existingUser) {
-        logger.info('🔄 기존 사용자 - 업데이트', { 
-          email, 
-          userId: existingUser.id,
-          currentStatus: existingUser.status
-        });
-
-        // auth.users에 사용자가 있는지 확인
-        let authUser = null;
-        try {
-          const { data: existingAuthUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(existingUser.id);
-          
-          if (getUserError || !existingAuthUser?.user) {
-            // auth.users에 사용자가 없으면 생성
-            logger.warn('기존 사용자가 auth.users에 없음 - auth.users에 생성 시도', { 
-              userId: existingUser.id, 
-              email,
-              error: getUserError?.message 
-            });
-            
-            const { data: newAuthUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
-              id: existingUser.id, // 기존 ID 사용
-              email: email,
-              email_confirm: true,
-              user_metadata: {
-                nickname: nickname,
-                provider: 'kakao'
-              }
-            });
-
-            if (authError) {
-              // 이미 존재하는 경우 다시 조회
-              if (authError.message?.includes('already registered') || 
-                  authError.message?.includes('already exists') ||
-                  authError.message?.includes('User already registered')) {
-                logger.info('auth.users에 이미 존재함 - 재조회', { userId: existingUser.id });
-                const { data: retryAuthUser } = await supabaseAdmin.auth.admin.getUserById(existingUser.id);
-                if (retryAuthUser?.user) {
-                  authUser = retryAuthUser;
-                }
-              } else {
-                logger.error('auth.users 생성 실패', { 
-                  error: authError, 
-                  userId: existingUser.id,
-                  email 
-                });
-                throw new DatabaseError(`인증 사용자 생성에 실패했습니다: ${authError.message || '알 수 없는 오류'}`);
-              }
-            } else {
-              authUser = newAuthUser;
-              logger.info('auth.users에 기존 사용자 생성 성공', { 
-                userId: existingUser.id, 
-                email 
-              });
-            }
-          } else {
-            authUser = existingAuthUser;
-            logger.info('auth.users에서 기존 사용자 확인', { 
-              userId: existingUser.id, 
-              email 
-            });
-          }
-        } catch (authCheckError) {
-          logger.error('auth.users 확인 중 오류', { 
-            error: authCheckError, 
-            userId: existingUser.id,
-            email 
-          });
-          // auth.users 확인 실패해도 계속 진행 (기존 동작 유지)
-        }
-
-        const updateData = {
+        const { data, error } = await supabase
+          .from('users')
+          .update({
           nickname,
           last_login_at: new Date().toISOString()
-        };
-
-      const { data, error } = await supabase
-        .from('users')
-          .update(updateData)
+          })
           .eq('id', existingUser.id)
         .select()
         .single();
       
       if (error) {
-          logger.error('기존 사용자 업데이트 실패', { 
-            error,
-            errorMessage: error?.message,
-            errorCode: error?.code,
-            errorDetails: error?.details,
-            errorHint: error?.hint,
-            userId: existingUser.id 
-          });
+          logger.error('사용자 업데이트 실패', { error, userId: existingUser.id });
         throw new DatabaseError('사용자 정보 저장에 실패했습니다');
       }
-      
-        logger.info('기존 사용자 업데이트 성공', { 
-        userId: data.id, 
-        email: data.email,
-        status: data.status 
-      });
       
       return { 
         userId: data.id, 
         email: data.email, 
         nickname: data.nickname,
         status: data.status,
-        school: data.school || null
+          school: data.school || null,
+          is_admin: data.is_admin || false,
+          created_at: data.created_at
         };
       }
 
-      // 신규 사용자인 경우 auth.users에 먼저 생성
-      logger.info('✅ 신규 사용자 - auth.users에 생성 시작', { email });
-      
+      // 신규 사용자 생성
       let authUser = null;
-      
-      // auth.users에 사용자 생성 시도 (이미 존재할 수 있으므로 에러 처리)
-      logger.info('auth.users에 새 사용자 생성 시도', { email });
       
       const { data: newAuthUser, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: email,
@@ -413,82 +283,32 @@ export class KakaoAuthService {
       });
 
       if (authError) {
-        // 이미 존재하는 사용자 에러인 경우
         if (authError.message?.includes('already registered') || 
-            authError.message?.includes('already exists') ||
-            authError.message?.includes('User already registered') ||
-            authError.message?.includes('A user with this email address has already been registered')) {
-          logger.warn('사용자가 이미 auth.users에 존재함', { email, error: authError.message });
-          
-          // auth.users에서 이메일로 사용자 찾기
-          try {
-            const { data: usersList, error: listError } = await supabaseAdmin.auth.admin.listUsers();
-            
-            if (!listError && usersList?.users) {
-              const existingAuthUserByEmail = usersList.users.find(u => u.email === email);
+            authError.message?.includes('already exists')) {
+          const { data: usersList } = await supabaseAdmin.auth.admin.listUsers();
+          const existingAuthUser = usersList?.users.find(u => u.email === email);
               
-              if (existingAuthUserByEmail) {
-                authUser = { user: existingAuthUserByEmail };
-                logger.info('auth.users에서 이메일로 기존 사용자 찾음', { 
-                  userId: existingAuthUserByEmail.id, 
-                  email 
-                });
-              } else {
-                // auth.users에 이메일이 없는데 에러가 발생한 경우는 이상하지만 계속 진행
-                logger.warn('auth.users 목록에서 이메일을 찾을 수 없음 (에러는 발생했지만)', { email });
-                
-                // public.users에서 확인
-                const { data: existingPublicUser } = await supabase
-                  .from('users')
-                  .select('id')
-                  .eq('email', email)
-                  .maybeSingle();
-                
-                if (existingPublicUser?.id) {
-                  const { data: existingAuthUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(existingPublicUser.id);
-                  if (!getUserError && existingAuthUser?.user) {
-                    authUser = existingAuthUser;
-                    logger.info('public.users ID로 auth.users 사용자 찾음', { userId: existingAuthUser.user.id, email });
-                  } else {
-                    throw new DatabaseError('사용자 인증 정보를 찾을 수 없습니다');
-                  }
+          if (existingAuthUser) {
+            authUser = { user: existingAuthUser };
                 } else {
                   throw new DatabaseError('사용자 계정을 찾을 수 없습니다');
-                }
-              }
-            } else {
-              logger.error('auth.users 목록 조회 실패', { error: listError });
-              throw new DatabaseError('사용자 인증 정보를 조회할 수 없습니다');
-            }
-          } catch (findError) {
-            logger.error('기존 사용자 찾기 실패', { error: findError, email });
-            throw new DatabaseError(`사용자 계정을 찾을 수 없습니다: ${findError.message || '알 수 없는 오류'}`);
           }
         } else {
-          // 다른 에러인 경우
-          logger.error('auth.users 생성 실패', { 
-            error: authError, 
-            errorMessage: authError?.message,
-            errorCode: authError?.code,
-            errorStatus: authError?.status,
-            email 
-          });
-          throw new DatabaseError(`사용자 계정 생성에 실패했습니다: ${authError.message || '알 수 없는 오류'}`);
+          logger.error('auth.users 생성 실패', { error: authError, email });
+          throw new DatabaseError(`사용자 계정 생성 실패: ${authError.message}`);
         }
       } else {
         authUser = newAuthUser;
       }
 
       if (!authUser?.user) {
-        logger.error('auth.users 사용자 정보 없음', { email });
         throw new DatabaseError('사용자 계정을 찾을 수 없습니다');
       }
 
-      logger.info('auth.users 생성 성공', { userId: authUser.user.id, email });
-
-      // public.users에 사용자 정보 저장
       const currentTime = new Date().toISOString();
-      const insertData = {
+      const { data: newUser, error: insertError } = await supabase
+        .from('users')
+        .insert([{
         id: authUser.user.id,
         email,
         nickname,
@@ -496,42 +316,24 @@ export class KakaoAuthService {
         created_at: currentTime,
         updated_at: currentTime,
         last_login_at: currentTime
-      };
-
-      const { data: newUser, error: insertError } = await supabase
-        .from('users')
-        .insert([insertData])
+        }])
         .select()
         .single();
 
       if (insertError) {
-        logger.error('public.users 생성 실패', { 
-          error: insertError, 
-          errorMessage: insertError?.message,
-          errorCode: insertError?.code,
-          errorDetails: insertError?.details,
-          errorHint: insertError?.hint,
-          userId: authUser.user.id 
-        });
-        // auth.users는 이미 생성되었으므로 롤백 시도
+        logger.error('사용자 생성 실패', { error: insertError, userId: authUser.user.id });
         await supabaseAdmin.auth.admin.deleteUser(authUser.user.id);
         throw new DatabaseError('사용자 정보 저장에 실패했습니다');
       }
 
-      logger.info('신규 사용자 생성 성공', { 
-        userId: newUser.id, 
-        email: newUser.email,
-        status: newUser.status 
-      });
-
-      // 신규 사용자 정보 반환
-      // 프론트엔드에서 Supabase 세션을 생성하기 위해 사용자 정보 반환
       return { 
         userId: newUser.id, 
         email: newUser.email, 
         nickname: newUser.nickname,
         status: newUser.status,
-        school: newUser.school || null
+        school: newUser.school || null,
+        is_admin: newUser.is_admin || false,
+        created_at: newUser.created_at
       };
     } catch (error) {
       // 카카오 API 에러 처리

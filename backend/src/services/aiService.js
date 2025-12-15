@@ -2,6 +2,7 @@ import axios from 'axios';
 import { config } from '../config/index.js';
 import { logger } from '../utils/logger.js';
 import { ExternalServiceError } from '../utils/errors.js';
+import { generateLongAdvicePrompt } from '../config/prompts.js';
 
 export class AIService {
   // 내부: OpenAI 호출
@@ -18,11 +19,17 @@ export class AIService {
           headers: {
             'Authorization': `Bearer ${config.openai.apiKey}`,
             'Content-Type': 'application/json'
-          }
+          },
+          timeout: 20000  //추가: 20초 타임아웃
         }
       );
       return response.data.choices[0].message.content;
     } catch (error) {
+      // ⚡ 타임아웃 에러 별도 처리
+      if (error.code === 'ECONNABORTED') {
+        logger.error('OpenAI 타임아웃 (20초 초과)');
+        throw new ExternalServiceError('응답 시간이 초과되었습니다. 다시 시도해주세요.');
+      }
       logger.error('OpenAI 호출 실패', error?.response?.data || error.message);
       throw new ExternalServiceError('AI 답변 생성에 실패했습니다');
     }
@@ -50,70 +57,8 @@ export class AIService {
   static async generateLongAdvice(persona, concern, randomFortune = null) {
     logger.info('AI 긴 조언 생성 요청', { persona, concern, randomFortune });
     
-    let systemContent = `당신은 ${persona}입니다.
-    고민을 듣고 따뜻하지만 재치 있게 해석하고 응원해주는 동반자입니다.
-
-    아래 형식을 반드시 지켜서 답변하세요.
-    각 문장은 줄바꿈으로 구분합니다.
-    모든 문장은 반드시 60자(공백 포함) 이내로 작성합니다.
-    `;
-
-    // 랜덤 포춘이 있을 경우 프롬프트에 명확히 포함
-    if (randomFortune) {
-      systemContent += `
-
-    🔮 오늘 당신에게 온 포춘 쿠키 메시지
-    "${randomFortune}"
-
-    이 메시지를 반드시 활용해서 답변하세요!
-    `;
-        }
-
-        systemContent += `
-
-    ✨ 포춘 쿠키 해석
-    ${randomFortune ? `[위의 "${randomFortune}" 메시지를 재치있게 해석]` : '[포춘 쿠키 메시지를 재치있게 해석]'}
-    [이 메시지가 왜 지금 필요한지, 고민과 어떻게 연결되는지 설명]
-    [${persona}의 관점에서 고민(${concern})과 자연스럽게 연결]
-    [2-3문장으로 구성, 각 문장은 60자 이내]
-
-    🌱 오늘 할 수 있는 실천 3가지
-    • [구체적이고 실행 가능한 행동 1 - 60자 이내]
-    • [구체적이고 실행 가능한 행동 2 - 60자 이내]
-    • [구체적이고 실행 가능한 행동 3 - 60자 이내]
-
-    💖 마지막 응원
-    [따뜻하고 힘이 되는 응원 문장 1 - 60자 이내]
-    [긍정적인 마무리 문장 2 - 60자 이내]
-
-    📌 중요 규칙
-    - 각 문장 끝에 줄바꿈(\\n)을 넣을 것
-    - 전체 분량은 300~450자 내외
-    - 활기 있고 따뜻한 어투 사용
-    - 진단, 처방, 부정 표현 금지
-    - persona와 concern의 맥락을 반드시 반영
-    - 문단 사이에는 줄바꿈 2개(\\n\\n)
-    - 실천 행동은 • 로 구분
-    - 의미 없는 문자 조각이나 무작위 영문 단독 토큰 출력 금지
-    - 반드시 모든 답변을 한국어로만 작성할 것
-    ${randomFortune ? `- "${randomFortune}" 이 메시지를 꼭 언급하고 해석에 활용할 것` : ''}
-
-    예시 (persona: 유튜버, concern: 영상 올릴까 말까 고민, fortune: "오래된 방식을 버리세요"):
-
-    ✨ 포춘 쿠키 해석
-    "오래된 방식을 버리세요"라는 메시지가 딱 지금 필요했나봐요.
-    완벽한 영상 만들려고 고민만 하는 게 바로 '오래된 방식'이에요.
-    일단 올리고 피드백 받으면서 성장하는 게 진짜 유튜버의 방식이죠!
-
-    🌱 오늘 할 수 있는 실천 3가지
-    • 영상 한 번 더 확인하고 업로드 버튼 눌러보기
-    • 완벽하지 않아도 괜찮다고 스스로에게 말해주기
-    • 첫 댓글에 "피드백 환영해요!" 남기기
-
-    💖 마지막 응원
-    망설임을 버리고 실행으로 배우는 시간이 왔어요.
-    당신의 콘텐츠를 기다리는 사람들이 분명 있을 거예요!
-    `;
+    // 프롬프트는 별도 파일에서 관리
+    const systemContent = generateLongAdvicePrompt(persona, concern, randomFortune);
 
     const messages = [
       {

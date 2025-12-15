@@ -1,7 +1,11 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/adminController.js';
+import { adminRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
+
+// 모든 관리자 라우트에 rate limiting 적용
+// router.use(adminRateLimit); // 일시적으로 비활성화
 
 // 모든 사용자 목록 조회
 router.get('/users', AdminController.getAllUsers);

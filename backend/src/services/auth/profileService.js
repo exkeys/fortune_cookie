@@ -46,6 +46,23 @@ export class ProfileService {
         throw new DatabaseError('사용자를 찾을 수 없습니다');
       }
 
+      // 밴/삭제 상태 체크
+      if (user.status === 'banned') {
+        logger.warn('밴된 사용자 접근 차단', { userId, email: user.email, status: user.status });
+        const bannedError = new DatabaseError('계정이 차단되었습니다. 관리자에게 문의하세요.');
+        bannedError.statusCode = 403;
+        bannedError.code = 'ACCOUNT_BANNED';
+        throw bannedError;
+      }
+
+      if (user.status === 'deleted') {
+        logger.warn('삭제된 사용자 접근 차단', { userId, email: user.email, status: user.status });
+        const deletedError = new DatabaseError('탈퇴한 계정입니다.');
+        deletedError.statusCode = 403;
+        deletedError.code = 'ACCOUNT_DELETED';
+        throw deletedError;
+      }
+
       logger.info('사용자 프로필 조회 성공', { userId });
       return { user };
     } catch (error) {

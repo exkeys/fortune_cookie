@@ -1,14 +1,15 @@
 import { Router } from 'express';
 import { ConcernController } from '../controllers/concernController.js';
 import { authenticateToken } from '../middleware/auth.js';
+import { aiRateLimit } from '../middleware/rateLimit.js';
 
 const router = Router();
 
 // AI 답변 생성 (짧은) - 현재 미사용
 // router.post('/ai', ConcernController.generateAIAnswer);
 
-// AI 답변 생성 (짧은+긴) - 공개 API (인증 불필요)
-router.post('/ai/both', ConcernController.generateBothAdvices);
+// AI 답변 생성 (짧은+긴) - 공개 API (인증 불필요, AI rate limiting 적용)
+router.post('/ai/both', ConcernController.generateBothAdvices); // aiRateLimit 일시적으로 비활성화
 
 // 고민 저장 - 인증 필요
 router.post('/save', authenticateToken, ConcernController.saveConcern);

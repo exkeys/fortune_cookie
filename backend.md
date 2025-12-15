@@ -484,6 +484,98 @@ ExternalServiceError // 502 Bad Gateway
 DatabaseError        // 500 Internal Server Error
 ```
 
+### 🚦 **Rate Limiting** (`rateLimit.js`)
+API 남용 방지 및 보안 강화를 위한 요청 제한 시스템
+
+#### 📋 **Rate Limiter 종류**
+
+**1. 일반 API Rate Limiting** (`generalRateLimit`)
+- **기본 설정**: 100 requests / 15분
+- **적용 범위**: 모든 `/api/*` 엔드포인트
+- **목적**: 서버 보호 및 일반적인 API 남용 방지
+- **환경 변수**:
+  - `RATE_LIMIT_WINDOW_MS`: 시간 창 (기본값: 900000ms = 15분)
+  - `RATE_LIMIT_MAX`: 최대 요청 수 (기본값: 100)
+
+**2. 로그인 API Rate Limiting** (`authRateLimit`)
+- **기본 설정**: 5 requests / 15분
+- **적용 범위**: `/api/auth/kakao/login-direct`, `/api/auth/validate-login`
+- **목적**: 무차별 대입 공격 방지
+- **환경 변수**:
+  - `AUTH_RATE_LIMIT_WINDOW_MS`: 시간 창 (기본값: 900000ms = 15분)
+  - `AUTH_RATE_LIMIT_MAX`: 최대 요청 수 (기본값: 5)
+
+**3. AI API Rate Limiting** (`aiRateLimit`)
+- **기본 설정**: 20 requests / 1시간
+- **적용 범위**: `/api/concerns/ai/both`
+- **목적**: OpenAI API 비용 절감 및 남용 방지
+- **특징**: 인증된 사용자는 `userId` 기반, 비인증은 IP 기반 추적
+- **환경 변수**:
+  - `AI_RATE_LIMIT_WINDOW_MS`: 시간 창 (기본값: 3600000ms = 1시간)
+  - `AI_RATE_LIMIT_MAX`: 최대 요청 수 (기본값: 20)
+
+**4. 관리자 API Rate Limiting** (`adminRateLimit`)
+- **기본 설정**: 50 requests / 15분
+- **적용 범위**: 모든 `/api/admin/*` 엔드포인트
+- **목적**: 관리자 기능 보호
+- **환경 변수**:
+  - `ADMIN_RATE_LIMIT_WINDOW_MS`: 시간 창 (기본값: 900000ms = 15분)
+  - `ADMIN_RATE_LIMIT_MAX`: 최대 요청 수 (기본값: 50)
+
+#### 🔧 **구현 위치**
+- **파일**: `backend/src/middleware/rateLimit.js`
+- **적용**: `backend/src/app.js` (전역), 각 라우트 파일 (세밀한 제어)
+
+#### 📊 **Rate Limiting 설정 표**
+
+| API 유형 | 제한 | 시간 창 | 환경 변수 | 적용 위치 |
+|---------|------|---------|----------|----------|
+| 일반 API | 100 requests | 15분 | `RATE_LIMIT_*` | `app.js` (전역) |
+| 로그인 API | 5 requests | 15분 | `AUTH_RATE_LIMIT_*` | `authRoutes.js` |
+| AI API | 20 requests | 1시간 | `AI_RATE_LIMIT_*` | `concernRoutes.js` |
+| 관리자 API | 50 requests | 15분 | `ADMIN_RATE_LIMIT_*` | `adminRoutes.js` |
+
+#### 🛡️ **동작 방식**
+
+1. **IP 기반 추적**: 각 IP별로 요청 수 추적
+2. **사용자 기반 추적**: AI/관리자 API는 인증된 사용자의 경우 `userId` 기반 추적
+3. **표준 헤더**: `RateLimit-*` 헤더 반환 (남은 요청 수, 리셋 시간 등)
+4. **에러 응답**: 429 상태 코드와 재시도 안내 메시지 반환
+
+#### 📝 **에러 응답 예시**
+```json
+{
+  "success": false,
+  "error": "너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.",
+  "retryAfter": 15
+}
+```
+
+#### ⚙️ **환경 변수 설정 예시** (선택사항)
+```env
+# 일반 API Rate Limiting
+RATE_LIMIT_WINDOW_MS=900000  # 15분 (밀리초)
+RATE_LIMIT_MAX=100           # 최대 100 요청
+
+# 로그인 API Rate Limiting
+AUTH_RATE_LIMIT_WINDOW_MS=900000  # 15분
+AUTH_RATE_LIMIT_MAX=5             # 최대 5 요청
+
+# AI API Rate Limiting
+AI_RATE_LIMIT_WINDOW_MS=3600000   # 1시간
+AI_RATE_LIMIT_MAX=20              # 최대 20 요청
+
+# 관리자 API Rate Limiting
+ADMIN_RATE_LIMIT_WINDOW_MS=900000 # 15분
+ADMIN_RATE_LIMIT_MAX=50           # 최대 50 요청
+```
+
+#### 🔒 **보안 효과**
+- ✅ **무차별 대입 공격 방지**: 로그인 API 5회 제한
+- ✅ **비용 절감**: AI API 1시간당 20회 제한으로 OpenAI API 비용 절감
+- ✅ **서버 보호**: 일반 API 15분당 100회 제한으로 서버 과부하 방지
+- ✅ **관리자 기능 보호**: 관리자 API 별도 제한으로 보안 강화
+
 ---
 
 ## 🗄️ 데이터베이스
