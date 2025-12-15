@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../utils/apiClient';
-import { supabase } from '../supabaseClient';
 
 interface User {
   id: string;
@@ -45,10 +44,10 @@ export const useDashboardStats = (enabled: boolean = true) => {
   return useQuery({
     queryKey: ['admin', 'dashboard', 'stats'],
     queryFn: async (): Promise<FortuneStats> => {
-      const { data, error } = await supabase.rpc('get_dashboard_stats');
+      const response = await apiFetch('/api/admin/dashboard');
 
-      if (error || !data) {
-        console.warn('대시보드 통계 조회 실패:', error);
+      if (!response.ok) {
+        console.warn('대시보드 통계 조회 실패:', response.status);
         return {
           totalUsers: 0,
           totalFortunes: 0,
@@ -57,6 +56,8 @@ export const useDashboardStats = (enabled: boolean = true) => {
           schoolStats: []
         };
       }
+
+      const data = await response.json();
 
       return {
         totalUsers: data.totalUsers ?? 0,
