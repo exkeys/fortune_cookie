@@ -185,5 +185,68 @@ export class AccountService {
       throw error;
     }
   }
+
+  /**
+   * 로그인 상태 통합 체크 (재가입 제한 + 밴 상태)
+   * @param {string} userId - 사용자 ID
+   * @param {string} email - 사용자 이메일
+   * @returns {Promise<{canLogin: boolean, status: string, isRestricted: boolean, restrictedUntil?: string}>}
+   */
+  static async checkLoginStatus(userId, email) {
+    try {
+      // 사용자 상태 조회
+      const { data: user, error: userError } = await supabaseAdmin
+        .from('users')
+        .select('status')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (userError) {
+        logger.error('사용자 상태 조회 실패', { userId, userError });
+        // 에러 시 안전하게 통과
+        return {
+          canLogin: true,
+          status: 'active',
+          isRestricted: false
+        };
+      }
+
+      const userStatus = user?.status || 'active';
+
+      // 재가입 제한 체크
+      const restriction = await this.checkDeletionRestriction(email);
+      const isRestricted = restriction?.isRestricted || false;
+
+      // 제한 만료 시간 조회
+      let restrictedUntil = null;
+      if (isRestricted) {
+        const emailHash = HashUtils.hashEmail(email);
+        const { data: restrictionData } = await supabaseAdmin
+          .from('deletion_restrictions')
+          .select('expires_at')
+          .eq('email_hash', emailHash)
+          .maybeSingle();
+        
+        restrictedUntil = restrictionData?.expires_at || null;
+      }
+
+      const canLogin = userStatus !== 'banned' && !isRestricted;
+
+      return {
+        canLogin,
+        status: userStatus,
+        isRestricted,
+        restrictedUntil
+      };
+    } catch (error) {
+      logger.error('로그인 상태 체크 중 예외', error);
+      // 에러 시 안전하게 통과
+      return {
+        canLogin: true,
+        status: 'active',
+        isRestricted: false
+      };
+    }
+  }
 }
 

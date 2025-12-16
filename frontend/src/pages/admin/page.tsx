@@ -5,9 +5,11 @@ import SettingsTab from './components/SettingsTab';
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../hooks/useAuth';
 import { useAdminUsers, useDashboardStats } from '../../hooks/useAdminData';
-import Header from '../../components/feature/Header';
+// Admin 페이지는 상단 헤더를 숨깁니다.
 import UserDetailModal from './components/UserDetailModal';
 import { apiFetch } from '../../utils/apiClient';
+import FCLogoImg from '../../../관리자 페이지 이미지.png';
+import { useNavigate } from 'react-router-dom';
 
 interface User {
   id: string;
@@ -21,6 +23,7 @@ interface User {
 }
 
 export default function AdminPage() {
+  const navigate = useNavigate();
   const { user, isLoading: authLoading, isLoggedIn } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'users' | 'settings'>('dashboard');
   const [isAdminChecked, setIsAdminChecked] = useState(false);
@@ -28,10 +31,57 @@ export default function AdminPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
   const [showUserModal, setShowUserModal] = useState<User | null>(null);
+  
+  // 다크모드 상태 관리 (기본값: 다크 모드)
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const saved = localStorage.getItem('adminDarkMode');
+    // localStorage에 값이 없으면 기본값으로 다크 모드(true) 사용
+    if (saved === null) {
+      return true;
+    }
+    return saved === 'true';
+  });
 
   // React Query로 데이터 관리 (관리자 권한이 확인된 후에만 활성화)
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useAdminUsers(isAdmin);
   const { data: stats = null, isLoading: statsLoading } = useDashboardStats(isAdmin);
+
+  // 다크모드 토글 및 HTML 클래스 관리
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    if (isDarkMode) {
+      htmlElement.classList.add('dark');
+      console.log('다크모드 활성화');
+    } else {
+      htmlElement.classList.remove('dark');
+      console.log('다크모드 비활성화');
+    }
+    localStorage.setItem('adminDarkMode', String(isDarkMode));
+  }, [isDarkMode]);
+
+  // 초기 마운트 시 다크모드 적용 (기본값: 다크 모드)
+  useEffect(() => {
+    const htmlElement = document.documentElement;
+    const saved = localStorage.getItem('adminDarkMode');
+    // localStorage에 값이 없으면 기본값으로 다크 모드 적용
+    const shouldBeDark = saved === null ? true : saved === 'true';
+    if (shouldBeDark) {
+      htmlElement.classList.add('dark');
+      console.log('초기 마운트: 다크모드 적용');
+    } else {
+      htmlElement.classList.remove('dark');
+      console.log('초기 마운트: 라이트모드 적용');
+    }
+  }, []);
+
+  const toggleDarkMode = () => {
+    console.log('다크모드 토글 버튼 클릭됨, 현재 상태:', isDarkMode);
+    setIsDarkMode(prev => {
+      const newValue = !prev;
+      console.log('새로운 다크모드 상태:', newValue);
+      return newValue;
+    });
+  };
 
   // 관리자 권한 확인 및 데이터 로드
   useEffect(() => {
@@ -211,12 +261,9 @@ export default function AdminPage() {
   // 로딩 중이거나 관리자 권한 확인 중인 경우
   if (authLoading || !isAdminChecked || (isAdmin && (usersLoading || statsLoading))) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
-        <Header />
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="text-lg text-gray-600">로딩 중...</div>
-          </div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="flex items-center justify-center h-screen">
+          <div className="text-lg text-gray-600 dark:text-gray-400">로딩 중...</div>
         </div>
       </div>
     );
@@ -225,25 +272,41 @@ export default function AdminPage() {
   // 관리자가 아닌 경우
   if (!isAdmin || !user || !user.is_admin) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50 flex flex-col items-center justify-center">
-        <Header />
-        <div className="text-2xl text-gray-700 font-bold mt-20">관리자만 접근할 수 있습니다.</div>
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center">
+        <div className="text-2xl text-gray-700 dark:text-gray-300 font-semibold">관리자만 접근할 수 있습니다.</div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-red-50">
-      <Header />
-      <div className="container mx-auto px-3 sm:px-4 md:px-6 lg:px-8 py-6 sm:py-8 md:py-10 lg:py-12">
-        <div className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-gray-800 mb-1 sm:mb-2">관리자 대시보드</h1>
-          <p className="text-sm sm:text-base md:text-lg text-gray-600">시스템 관리 및 사용자 관리</p>
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      <div className="flex">
+        {/* 왼쪽 사이드바 네비게이션 (고정 펼침) */}
+        <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 sticky top-0 self-start h-[calc(100vh)] flex flex-col">
+          <div className="px-4 pt-2 pb-5 space-y-2">
+            <button
+              type="button"
+              onClick={() => navigate(-1)}
+              className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors focus:outline-none"
+              aria-label="뒤로 가기"
+            >
+              <i className="ri-arrow-left-line text-base"></i>
+              <span>뒤로가기</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => navigate('/')}
+              className="focus:outline-none rounded-md"
+              aria-label="홈으로 이동"
+            >
+              <img
+                src={FCLogoImg}
+                alt="Fortune Cookie Admin Logo"
+                className="w-[17rem] h-24 object-contain -mt-2"
+              />
+            </button>
         </div>
-
-        {/* 탭 네비게이션 */}
-        <div className="mb-6 sm:mb-8">
-          <div className="flex flex-wrap sm:flex-nowrap gap-1 sm:gap-2 bg-white/50 backdrop-blur-sm p-1.5 sm:p-2 rounded-lg sm:rounded-xl">
+          <nav className="px-2 pb-4 space-y-1 -mt-4 flex-1">
             {[
               { id: 'dashboard', label: '대시보드', icon: 'ri-dashboard-line' },
               { id: 'users', label: '사용자 관리', icon: 'ri-user-line' },
@@ -252,19 +315,34 @@ export default function AdminPage() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as 'dashboard' | 'users' | 'settings')}
-                className={`flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 md:px-4 py-2 sm:py-2.5 md:py-3 rounded-md sm:rounded-lg transition-all duration-300 text-xs sm:text-sm md:text-base ${
+                className={`w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm ${
                   activeTab === tab.id
-                    ? 'bg-amber-500 text-white shadow-lg'
-                    : 'text-gray-600 hover:bg-white/70 hover:text-gray-800'
+                    ? 'bg-slate-100 dark:bg-gray-700 text-slate-900 dark:text-gray-100 font-medium border-l-4 border-slate-600 dark:border-gray-500'
+                    : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700'
                 }`}
               >
-                <i className={`${tab.icon} text-sm sm:text-base md:text-lg`}></i>
-                <span className="font-medium">{tab.label}</span>
+                <i className={`${tab.icon} text-xl mr-3`}></i>
+                <span className="whitespace-nowrap">{tab.label}</span>
               </button>
             ))}
+          </nav>
+          {/* 다크모드 전환 버튼 */}
+          <div className="px-2 pb-4 border-t border-gray-200 dark:border-gray-700 pt-4">
+            <button
+              type="button"
+              onClick={toggleDarkMode}
+              className="w-full flex items-center px-4 py-3 rounded-lg transition-all duration-200 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+              aria-label="다크모드 전환"
+            >
+              <i className={`${isDarkMode ? 'ri-sun-line' : 'ri-moon-line'} text-xl mr-3`}></i>
+              <span className="whitespace-nowrap">{isDarkMode ? '라이트모드' : '다크모드'}</span>
+            </button>
           </div>
-        </div>
+        </aside>
 
+        {/* 메인 컨텐츠 영역 */}
+        <main className="flex-1 bg-gray-50 dark:bg-gray-900">
+          <div className="p-6 lg:p-8">
         {/* 대시보드 탭 */}
         {activeTab === 'dashboard' && stats && (
           <DashboardTab users={users} stats={stats} />
@@ -288,6 +366,9 @@ export default function AdminPage() {
         {activeTab === 'settings' && (
           <SettingsTab />
         )}
+          </div>
+        </main>
+      </div>
 
         {/* 사용자 상세 모달 */}
         {showUserModal && (
@@ -300,7 +381,6 @@ export default function AdminPage() {
             onUnban={handleUnban}
           />
         )}
-      </div>
     </div>
   );
 }

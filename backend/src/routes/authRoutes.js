@@ -23,6 +23,9 @@ router.post('/sync-user', authenticateToken, AuthController.syncUser);
 // 로그인 검증 (재가입 제한 체크) - 공개 API (엄격한 rate limiting) - 일시적으로 비활성화
 router.post('/validate-login', AuthController.validateLogin);
 
+// 로그인 상태 통합 체크 (재가입 제한 + 밴 상태) - 공개 API
+router.post('/check-login-status', AuthController.checkLoginStatus);
+
 // 로그아웃 - 인증 필요
 router.post('/logout', authenticateToken, AuthController.logout);
 

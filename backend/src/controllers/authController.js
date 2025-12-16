@@ -488,6 +488,23 @@ export class AuthController {
     });
   });
 
+  /**
+   * 로그인 상태 통합 체크 (재가입 제한 + 밴 상태)
+   */
+  static checkLoginStatus = asyncHandler(async (req, res) => {
+    const { userId, email } = req.body;
+    
+    if (!userId || !email) {
+      return validationErrorResponse(res, 'userId와 email이 필요합니다');
+    }
+    
+    logger.info('로그인 상태 통합 체크 요청', { userId, email });
+    
+    const result = await AccountService.checkLoginStatus(userId, email);
+    
+    return successResponse(res, result);
+  });
+
   // 회원탈퇴
   static deleteAccount = asyncHandler(async (req, res) => {
     // 요청한 사용자 ID (인증 미들웨어에서 설정됨)

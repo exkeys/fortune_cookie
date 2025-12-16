@@ -461,27 +461,26 @@ export const useAuth = (): AuthReturn => {
     
     // ⚡ Step 1: 재가입 제한 + Ban 체크 통합 (이미 체크되지 않은 경우에만)
     if (!authCheckCompleted) {
-      logger.log('[useAuth] 🔍 Step 1: 로그인 상태 통합 체크 시작 (Supabase RPC)');
-      logger.log('[useAuth] 📝 RPC 파라미터:', { userId, userEmail });
+      logger.log('[useAuth] 🔍 Step 1: 로그인 상태 통합 체크 시작 (백엔드 API)');
+      logger.log('[useAuth] 📝 API 파라미터:', { userId, userEmail });
       try {
-        // Supabase RPC 함수로 재가입 제한 + 밴 상태 한 번에 체크
-        const { data: loginStatus, error: rpcError } = await supabase.rpc('check_login_status', {
-          p_user_id: userId,
-          p_email: userEmail
+        // 백엔드 API로 재가입 제한 + 밴 상태 한 번에 체크
+        const response = await apiFetch('/api/auth/check-login-status', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            email: userEmail
+          }),
+          skipAuth: true // 인증 전이므로 skipAuth
         });
         
+        if (response.ok) {
+          const loginStatus = await response.json();
         logger.log('[useAuth] 📊 로그인 상태 체크 결과:', loginStatus);
-        logger.log('[useAuth] 🔍 RPC 에러 여부:', rpcError);
-        
-        if (rpcError) {
-          logger.warn('[useAuth] ⚠️ RPC 함수 호출 실패:', {
-            message: rpcError.message,
-            details: rpcError.details,
-            hint: rpcError.hint,
-            code: rpcError.code
-          });
-          // RPC 에러 시 그냥 통과 (프로필 업데이트 후에 다시 체크)
-        } else if (loginStatus) {
+          
           // 재가입 제한 체크
           if (loginStatus.isRestricted === true) {
             logger.log('[useAuth] ⏰ 재가입 제한 감지 - account-cooldown으로 리다이렉트');
@@ -514,6 +513,9 @@ export const useAuth = (): AuthReturn => {
           }
           
           logger.log('[useAuth] ✅ 로그인 상태 체크 통과 (정상)');
+        } else {
+          logger.warn('[useAuth] ⚠️ 로그인 상태 체크 API 호출 실패:', response.status);
+          // API 에러 시 그냥 통과 (프로필 업데이트 후에 다시 체크)
         }
       } catch (e: unknown) {
         logger.warn('[useAuth] ⚠️ 로그인 상태 체크 중 에러 발생:', e instanceof Error ? e.message : String(e));

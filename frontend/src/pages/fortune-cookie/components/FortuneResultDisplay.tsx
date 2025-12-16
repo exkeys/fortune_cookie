@@ -1,4 +1,4 @@
-import { Send, Bookmark, X, Facebook, Instagram, Copy } from 'lucide-react';
+import { Send, Bookmark, X, Facebook, Copy, Heart } from 'lucide-react';
 import { useState, useEffect, useRef, useId, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApi } from '../../../hooks/useApi';
@@ -38,6 +38,9 @@ export default function FortuneResultDisplay({
   const [showCopySuccess, setShowCopySuccess] = useState(false);
   const [aiAdvice, setAiAdvice] = useState(longAdvice || "");
   const [hasGenerated, setHasGenerated] = useState(false);
+  const [isLiked, setIsLiked] = useState(false);
+  const [likeCount, setLikeCount] = useState(1);
+  const [isFollowing, setIsFollowing] = useState(false);
   const { getAiBothAdvices } = useApi();
   const navigate = useNavigate();
 
@@ -359,7 +362,7 @@ ${window.location.origin}`;
               >
                 {/* 내부 원형 (포춘 쿠키 이미지) */}
                 <div className="w-full h-full rounded-full bg-white flex items-center justify-center">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center text-xl">
+                  <div className="w-[31px] h-[31px] rounded-full bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 flex items-center justify-center text-lg">
                     🥠
                   </div>
                 </div>
@@ -379,21 +382,29 @@ ${window.location.origin}`;
             </div>
           </div>
           
-          {/* 점 3개 버튼 - 제일 위쪽 */}
-          <div className="absolute top-1 right-0 p-2 sm:p-3">
+          {/* 점 3개 버튼과 팔로우 버튼 - 제일 위쪽 */}
+          <div className="absolute top-1 right-0 p-2 sm:p-3 flex items-center gap-3 sm:gap-4">
+            {/* 팔로우 버튼 */}
+            <button
+              onClick={() => setIsFollowing(!isFollowing)}
+              className="px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors bg-gray-100 text-gray-900 hover:bg-gray-200 border border-gray-100"
+            >
+              {isFollowing ? '팔로잉' : '팔로우'}
+            </button>
+            {/* 점 3개 버튼 */}
             <button 
               onClick={handleCopyText}
               title="복사하기"
               className="flex flex-col gap-0.5 p-1.5 hover:bg-gray-100 rounded text-gray-600 hover:text-gray-800 transition-colors"
             >
-              <div className="w-1.5 h-1.5 bg-current rounded-full"></div>
-              <div className="w-1.5 h-1.5 bg-current rounded-full"></div>
-              <div className="w-1.5 h-1.5 bg-current rounded-full"></div>
+              <div className="w-1 h-1 bg-current rounded-full"></div>
+              <div className="w-1 h-1 bg-current rounded-full"></div>
+              <div className="w-1 h-1 bg-current rounded-full"></div>
             </button>
           </div>
           
           {/* 포춘 쿠키 종이 조각 - 양쪽이 안으로 들어간 형태 */}
-          <div className="relative flex justify-center mb-7 mt-12 sm:mt-0">
+          <div className="relative flex justify-center mb-7 mt-14 sm:mt-2">
             {/* 텍스트 너비 측정용 숨겨진 요소 */}
             <div 
               ref={textMeasureRef}
@@ -489,12 +500,44 @@ ${window.location.origin}`;
         <div className="px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-t border-gray-200">
           <div className="flex items-center justify-between gap-2 sm:gap-4">
             {/* 공유하기 버튼 */}
-            <div className="flex items-center gap-2 relative">
+            <div className="flex items-center gap-1.5 sm:gap-2 relative">
+              {/* 하트 아이콘 - 인스타그램 스타일 */}
+              <div className="flex items-center -ml-0.5">
+                <button
+                  onClick={() => {
+                    if (isLiked) {
+                      setIsLiked(false);
+                      setLikeCount(prev => Math.max(1, prev - 1));
+                    } else {
+                      setIsLiked(true);
+                      setLikeCount(prev => prev + 1);
+                    }
+                  }}
+                  className={`flex items-center justify-center transition-colors duration-300 p-1 ${
+                    isLiked 
+                      ? 'text-red-600' 
+                      : 'text-gray-600 hover:text-red-600'
+                  }`}
+                  aria-label={isLiked ? '좋아요 취소' : '좋아요'}
+                >
+                  <Heart 
+                    size={24} 
+                    className={`sm:w-7 sm:h-7 transition-all duration-300 ${
+                      isLiked ? 'fill-current' : ''
+                    }`}
+                    strokeWidth={2}
+                  />
+                </button>
+                <span className="text-sm font-semibold" style={{ color: '#262626' }}>
+                  {likeCount.toLocaleString()}
+                </span>
+              </div>
+              {/* 비행기 아이콘 - 인스타그램 스타일 */}
               <button 
                 onClick={() => setShowShareMenu(!showShareMenu)}
-                className="flex items-center gap-1 text-gray-600 hover:text-gray-800"
+                className="flex items-center justify-center text-gray-600 hover:text-gray-800 transition-colors duration-200 p-1"
               >
-                <Send size={20} className="sm:w-[23px] sm:h-[23px]" />
+                <Send size={24} className="sm:w-7 sm:h-7" strokeWidth={2} />
               </button>
               
               {/* 공유 메뉴 */}
@@ -506,7 +549,7 @@ ${window.location.origin}`;
                     onClick={() => setShowShareMenu(false)}
                   />
                   {/* 메뉴 */}
-                  <div className="absolute left-6 sm:left-8 top-1/2 -translate-y-1/2 bg-white rounded-full shadow-xl p-1 sm:p-1.5 flex gap-0.5 sm:gap-1 z-20 border border-gray-200">
+                  <div className="absolute left-12 sm:left-20 top-1/2 -translate-y-1/2 bg-white rounded-full shadow-xl p-1 sm:p-1.5 flex gap-0.5 sm:gap-1 z-20 border border-gray-200">
                     <button 
                       onClick={() => {
                         onShare('kakao');
@@ -524,10 +567,25 @@ ${window.location.origin}`;
                         setShowShareMenu(false);
                       }}
                       disabled={isSharing}
-                      className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 text-white rounded-full hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center hover:scale-110"
+                      className="w-8 h-8 sm:w-10 sm:h-10 rounded-full hover:opacity-90 transition-all disabled:opacity-50 flex items-center justify-center hover:scale-110 p-1.5"
+                      style={{
+                        background: 'radial-gradient(circle at 33% 100%, #fed373 4%, #f15245 30%, #d92e7f 62%, #9b36b7 85%, #515ecf 100%)'
+                      }}
                       title="Instagram"
                     >
-                      <Instagram size={14} className="sm:w-[18px] sm:h-[18px]" />
+                      <svg 
+                        width="16" 
+                        height="16" 
+                        className="sm:w-5 sm:h-5" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        xmlns="http://www.w3.org/2000/svg"
+                      >
+                        <path 
+                          d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" 
+                          fill="white"
+                        />
+                      </svg>
                     </button>
                     <button 
                       onClick={() => {
@@ -583,19 +641,19 @@ ${window.location.origin}`;
                 onClick={() => onSaveAndViewHistory(finalAdvice ?? undefined)}
                 disabled={!showAdvice}
                 title={!showAdvice ? 'AI 생성 중에는 저장할 수 없습니다' : '저장'}
-                className={`p-2 rounded-lg transition-colors flex items-center justify-center
+                className={`p-1 rounded-lg transition-colors flex items-center justify-center
                   ${!showAdvice 
                     ? 'text-gray-400 opacity-60 cursor-not-allowed' 
                     : 'text-gray-600 hover:text-gray-800'}`}
               >
-                <Bookmark size={20} className="sm:w-6 sm:h-6" />
+                <Bookmark size={24} className="sm:w-7 sm:h-7" strokeWidth={2} />
               </button>
               <button 
                 onClick={onFinish}
                 title="마침"
-                className="p-2 text-gray-600 rounded-lg hover:text-gray-800 transition-colors flex items-center justify-center"
+                className="p-1 text-gray-600 rounded-lg hover:text-gray-800 transition-colors flex items-center justify-center"
               >
-                <X size={20} className="sm:w-6 sm:h-6" />
+                <X size={24} className="sm:w-7 sm:h-7" strokeWidth={2} />
               </button>
             </div>
           </div>

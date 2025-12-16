@@ -100,15 +100,15 @@ const AppleCalendar: React.FC<{
 
   return (
     <div className="relative">
-      <label className="text-sm font-medium text-gray-700 mb-2 block">{label}</label>
+      <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">{label}</label>
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 bg-gray-50 border-0 rounded-xl text-gray-900 cursor-pointer hover:bg-gray-100 transition-all flex items-center justify-between"
+        className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border-0 rounded-xl text-gray-900 dark:text-gray-100 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-all flex items-center justify-between"
       >
-        <span className="text-gray-900">
+        <span className="text-gray-900 dark:text-gray-100">
           {value ? formatDate(value) : '날짜를 선택하세요'}
         </span>
-        <Calendar className="w-5 h-5 text-gray-900" />
+        <Calendar className="w-5 h-5 text-gray-900 dark:text-gray-100" />
       </div>
 
       {isOpen && (
@@ -117,24 +117,24 @@ const AppleCalendar: React.FC<{
             className="fixed inset-0 z-40"
             onClick={() => setIsOpen(false)}
           />
-          <div className="absolute z-50 mt-2 bg-white rounded-2xl shadow-2xl border border-gray-200 p-6 w-80">
+          <div className="absolute z-50 mt-2 bg-white dark:bg-gray-800 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-700 p-6 w-80">
             <div className="flex items-center justify-between mb-6">
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <ChevronLeft className="w-5 h-5 text-gray-600" />
+                <ChevronLeft className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
-              <h3 className="text-lg font-semibold text-gray-900">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">
                 {currentMonth.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })}
               </h3>
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
               >
-                <ChevronRight className="w-5 h-5 text-gray-600" />
+                <ChevronRight className="w-5 h-5 text-gray-600 dark:text-gray-400" />
               </button>
             </div>
 
@@ -143,7 +143,7 @@ const AppleCalendar: React.FC<{
                 <div
                   key={day}
                   className={`text-center text-xs font-semibold py-2 ${
-                    idx === 0 ? 'text-red-500' : idx === 6 ? 'text-blue-500' : 'text-gray-600'
+                    idx === 0 ? 'text-red-500 dark:text-red-400' : idx === 6 ? 'text-blue-500 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400'
                   }`}
                 >
                   {day}
@@ -162,13 +162,13 @@ const AppleCalendar: React.FC<{
                     aspect-square rounded-lg text-sm font-medium transition-all
                     ${!date ? 'invisible' : ''}
                     ${isSelected(date) 
-                      ? 'bg-blue-500 text-white shadow-lg scale-105' 
+                      ? 'bg-blue-500 dark:bg-blue-600 text-white shadow-lg scale-105' 
                       : isToday(date)
-                      ? 'bg-blue-50 text-blue-600 font-bold'
-                      : 'text-gray-700 hover:bg-gray-100'
+                      ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-bold'
+                      : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700'
                     }
-                    ${idx % 7 === 0 && date ? 'text-red-500' : ''}
-                    ${idx % 7 === 6 && date ? 'text-blue-500' : ''}
+                    ${idx % 7 === 0 && date ? 'text-red-500 dark:text-red-400' : ''}
+                    ${idx % 7 === 6 && date ? 'text-blue-500 dark:text-blue-400' : ''}
                   `}
                 >
                   {date ? date.getDate() : ''}
@@ -176,7 +176,7 @@ const AppleCalendar: React.FC<{
               ))}
             </div>
 
-            <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between items-center">
+            <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-center">
               <button
                 type="button"
                 onClick={() => {
@@ -187,14 +187,14 @@ const AppleCalendar: React.FC<{
                   onChange(`${year}-${month}-${day}`);
                   setIsOpen(false);
                 }}
-                className="text-sm text-blue-500 hover:text-blue-600 font-medium"
+                className="text-sm text-blue-500 dark:text-blue-400 hover:text-blue-600 dark:hover:text-blue-300 font-medium"
               >
                 오늘
               </button>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="text-sm text-gray-500 hover:text-gray-600 font-medium"
+                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 font-medium"
               >
                 닫기
               </button>
@@ -210,7 +210,9 @@ const schoolsArray = Array.isArray(schoolsData) ? (schoolsData as School[]) : (s
 
 const SettingsTab: React.FC = () => {
   const [schoolPeriods, setSchoolPeriods] = useState<SchoolPeriod[]>([]);
-  const [loading, setLoading] = useState(false);
+  // 리스트 로딩과 폼 제출 로딩을 분리하여 버튼이 불필요하게 "처리중..."으로 바뀌지 않도록 함
+  const [listLoading, setListLoading] = useState(false);
+  const [formLoading, setFormLoading] = useState(false);
   const [formData, setFormData] = useState<SchoolPeriod>({
     school_name: '',
     start_date: '',
@@ -256,7 +258,7 @@ const SettingsTab: React.FC = () => {
 
   const fetchSchoolPeriods = async () => {
     try {
-      setLoading(true);
+      setListLoading(true);
       const response = await fetch('/api/school-periods');
       
       if (response.ok) {
@@ -270,7 +272,7 @@ const SettingsTab: React.FC = () => {
     } catch (error) {
       console.error('학교 기간 조회 실패:', error);
     } finally {
-      setLoading(false);
+      setListLoading(false);
     }
   };
 
@@ -287,7 +289,7 @@ const SettingsTab: React.FC = () => {
     }
 
     try {
-      setLoading(true);
+      setFormLoading(true);
       const url = editingId ? `/api/school-periods/${editingId}` : '/api/school-periods';
       const method = editingId ? 'PUT' : 'POST';
       
@@ -317,7 +319,7 @@ const SettingsTab: React.FC = () => {
       console.error('처리 실패:', error);
       alert('처리 중 오류가 발생했습니다.');
     } finally {
-      setLoading(false);
+      setFormLoading(false);
     }
   };
 
@@ -325,7 +327,7 @@ const SettingsTab: React.FC = () => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
 
     try {
-      setLoading(true);
+      setListLoading(true);
       const response = await fetch(`/api/school-periods/${id}`, {
         method: 'DELETE'
       });
@@ -340,7 +342,7 @@ const SettingsTab: React.FC = () => {
       console.error('삭제 실패:', error);
       alert('삭제 중 오류가 발생했습니다.');
     } finally {
-      setLoading(false);
+      setListLoading(false);
     }
   };
 
@@ -381,15 +383,16 @@ const SettingsTab: React.FC = () => {
 
   return (
     <div className="w-full">
-      <div className="mb-8">
-        <h1 className="text-4xl font-semibold text-gray-900 tracking-tight">학교 이용 기간</h1>
-        <p className="text-gray-500 mt-2">서비스 이용 가능 기간을 설정합니다</p>
+      <div className="pb-4">
+        <h1 className="text-4xl font-semibold text-gray-900 dark:text-gray-100 tracking-tight mt-2">Access Period</h1>
+        <p className="mt-2 text-gray-500 dark:text-gray-400">서비스 이용 가능 기간을 설정하세요.</p>
+        <div className="mt-5 h-px bg-gray-200 dark:bg-gray-700" />
       </div>
 
         {/* Add New Card */}
-        <div ref={formRef} className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 mb-4">
+        <div ref={formRef} className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6 mb-4">
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">
               {editingId ? '기간 수정' : '새로운 기간 추가'}
             </h2>
           </div>
@@ -397,9 +400,9 @@ const SettingsTab: React.FC = () => {
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* School Search */}
             <div>
-              <label className="text-sm font-medium text-gray-700 mb-2 block">학교 *</label>
-              <div className="bg-gray-100 rounded-xl mb-2 flex items-center px-3 py-2">
-                <Search className="w-4 h-4 text-gray-400 mr-2" />
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">학교 *</label>
+              <div className="bg-gray-100 dark:bg-gray-700 rounded-xl mb-2 flex items-center px-3 py-2">
+                <Search className="w-4 h-4 text-gray-400 dark:text-gray-500 mr-2" />
                 <input
                   type="text"
                   value={searchTerm}
@@ -410,11 +413,11 @@ const SettingsTab: React.FC = () => {
                     }
                   }}
                   placeholder="학교명을 검색하세요"
-                  className="bg-transparent flex-1 text-sm text-gray-900 placeholder-gray-400 focus:outline-none"
+                  className="bg-transparent flex-1 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none"
                 />
               </div>
               
-              <div className="bg-white border border-gray-200 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
+              <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden max-h-60 overflow-y-auto">
                 {filteredSchools.length > 0 ? (
                   filteredSchools.map((school: School, idx: number) => (
                     <button
@@ -422,32 +425,32 @@ const SettingsTab: React.FC = () => {
                       type="button"
                       onClick={() => handleSchoolSelect(school.name)}
                       className={`w-full text-left px-4 py-3 flex items-center justify-between transition-colors ${
-                        idx !== filteredSchools.length - 1 ? 'border-b border-gray-100' : ''
+                        idx !== filteredSchools.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''
                       } ${
                         formData.school_name === school.name
-                          ? 'bg-blue-50'
-                          : 'hover:bg-gray-50 active:bg-gray-100'
+                          ? 'bg-blue-50 dark:bg-blue-900/30'
+                          : 'hover:bg-gray-50 dark:hover:bg-gray-700 active:bg-gray-100 dark:active:bg-gray-600'
                       }`}
                     >
                       <div className="flex-1">
                         <div className={`text-sm font-medium ${
-                          formData.school_name === school.name ? 'text-blue-600' : 'text-gray-900'
+                          formData.school_name === school.name ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-gray-100'
                         }`}>
                           {school.name}
                         </div>
                         {school.category && (
-                          <div className="text-xs text-gray-500 mt-0.5">{school.category}</div>
+                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">{school.category}</div>
                         )}
                       </div>
                       {formData.school_name === school.name ? (
-                        <div className="w-5 h-5 text-blue-600 text-lg">✓</div>
+                        <div className="w-5 h-5 text-blue-600 dark:text-blue-400 text-lg">✓</div>
                       ) : (
-                        <div className="w-5 h-5 text-gray-300 text-lg">›</div>
+                        <div className="w-5 h-5 text-gray-300 dark:text-gray-600 text-lg">›</div>
                       )}
                     </button>
                   ))
                 ) : (
-                  <div className="px-4 py-3 text-gray-500 text-center">
+                  <div className="px-4 py-3 text-gray-500 dark:text-gray-400 text-center">
                     검색 결과가 없습니다
                   </div>
                 )}
@@ -479,10 +482,10 @@ const SettingsTab: React.FC = () => {
             <div className="flex space-x-3">
               <button
                 type="submit"
-                disabled={loading || !formData.school_name}
-                className="bg-blue-500 hover:bg-blue-600 disabled:bg-blue-500 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-xl transition-colors shadow-sm hover:shadow-md"
+                disabled={formLoading || !formData.school_name}
+                className="bg-blue-500 dark:bg-blue-600 hover:bg-blue-600 dark:hover:bg-blue-700 disabled:bg-blue-500 dark:disabled:bg-blue-600 disabled:cursor-not-allowed text-white font-medium py-3 px-6 rounded-xl transition-colors shadow-sm hover:shadow-md"
               >
-                {loading ? '처리중...' : editingId ? '수정하기' : '추가하기'}
+                {formLoading ? '처리중...' : editingId ? '수정하기' : '추가하기'}
               </button>
               
               {editingId && (
@@ -493,7 +496,7 @@ const SettingsTab: React.FC = () => {
                     setFormData({ school_name: '', start_date: '', end_date: '' });
                     setSearchTerm('');
                   }}
-                  className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-xl transition-colors"
+                  className="bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium py-3 px-6 rounded-xl transition-colors"
                 >
                   취소
                 </button>
@@ -503,36 +506,36 @@ const SettingsTab: React.FC = () => {
         </div>
 
         {/* List */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden">
-          <div className="p-6 border-b border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-900">설정된 기간</h2>
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 dark:border-gray-700">
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100">설정된 기간</h2>
           </div>
           
-          {loading ? (
+          {listLoading ? (
             <div className="p-6 text-center">
-              <div className="text-gray-500">로딩 중...</div>
+              <div className="text-gray-500 dark:text-gray-400">로딩 중...</div>
             </div>
           ) : schoolPeriods.length === 0 ? (
             <div className="p-6 text-center">
-              <div className="text-gray-500">설정된 학교 기간이 없습니다.</div>
+              <div className="text-gray-500 dark:text-gray-400">설정된 학교 기간이 없습니다.</div>
             </div>
           ) : (
             currentPeriods.map((period, idx) => (
-              <div key={period.id} className={`p-6 ${idx !== currentPeriods.length - 1 ? 'border-b border-gray-100' : ''} hover:bg-gray-50 transition-colors`}>
+              <div key={period.id} className={`p-6 ${idx !== currentPeriods.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''} hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors`}>
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <Building2 className="w-5 h-5 text-blue-500" />
-                      <h3 className="text-lg font-semibold text-gray-900">{period.school_name}</h3>
+                      <Building2 className="w-5 h-5 text-blue-500 dark:text-blue-400" />
+                      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100">{period.school_name}</h3>
                     </div>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
                       <Calendar className="w-4 h-4" />
                       <span>{formatDateDisplay(period.start_date)}</span>
                       <span>~</span>
                       <span>{formatDateDisplay(period.end_date)}</span>
                     </div>
                     {period.created_at && (
-                      <p className="text-xs text-gray-400 mt-1">
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
                         생성: {new Date(period.created_at).toLocaleString('ko-KR')}
                       </p>
                     )}
@@ -541,16 +544,16 @@ const SettingsTab: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => handleEdit(period)}
-                      className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+                      className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                     >
-                      <Edit2 className="w-5 h-5 text-gray-600" />
+                      <Edit2 className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     </button>
                     <button
                       type="button"
                       onClick={() => handleDelete(period.id!)}
-                      className="p-2 hover:bg-red-50 rounded-lg transition-colors"
+                      className="p-2 hover:bg-red-50 dark:hover:bg-red-900/30 rounded-lg transition-colors"
                     >
-                      <Trash2 className="w-5 h-5 text-red-500" />
+                      <Trash2 className="w-5 h-5 text-red-500 dark:text-red-400" />
                     </button>
                   </div>
                 </div>
