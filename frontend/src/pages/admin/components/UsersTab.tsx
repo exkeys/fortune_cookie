@@ -409,15 +409,15 @@ const UsersTab: React.FC<UsersTabProps> = ({
             {/* 검색창 및 일괄 작업 */}
             <div className="flex items-center gap-3">
               {/* 검색창 */}
-              <div className="relative w-full md:w-64">
-                <input
-                  type="text"
-                  placeholder="이름, 학교, 이메일로 검색..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+        <div className="relative w-full md:w-64">
+          <input
+            type="text"
+            placeholder="이름, 학교, 이메일로 검색..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
                   className="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:ring-2 focus:ring-amber-500 dark:focus:ring-amber-400 focus:border-transparent w-full transition-all"
-                />
-                <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
+          />
+          <i className="ri-search-line absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500"></i>
               </div>
 
               {/* 일괄 작업 버튼 (선택된 사용자가 있을 때만 표시) */}

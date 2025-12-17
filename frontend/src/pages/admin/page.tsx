@@ -44,7 +44,7 @@ export default function AdminPage() {
 
   // React Query로 데이터 관리 (관리자 권한이 확인된 후에만 활성화)
   const { data: users = [], isLoading: usersLoading, refetch: refetchUsers } = useAdminUsers(isAdmin);
-  const { data: stats = null, isLoading: statsLoading } = useDashboardStats(isAdmin);
+  const { data: stats = null, isLoading: statsLoading, refetch: refetchStats } = useDashboardStats(isAdmin);
 
   // 다크모드 토글 및 HTML 클래스 관리
   useEffect(() => {
@@ -153,6 +153,17 @@ export default function AdminPage() {
     checkAdminAndLoadData();
   }, [authLoading, isLoggedIn, user?.id]); // user 전체 대신 user.id만 의존성으로 설정
 
+  // 탭 전환 시 데이터 업데이트 
+  useEffect(() => {
+    if (!isAdmin) return;
+    
+    if (activeTab === 'dashboard') {
+      refetchStats();
+    } else if (activeTab === 'users') {
+      refetchUsers();
+    }
+  }, [activeTab, isAdmin, refetchUsers, refetchStats]);
+
   const handleUserAction = useCallback(async (action: string, userId?: string) => {
     if (!userId) return;
 
@@ -212,6 +223,38 @@ export default function AdminPage() {
       
       // 데이터 새로고침
       await refetchUsers();
+
+      // 🔔 권한 변경 시 즉시 반영 (현재 로그인한 사용자 자신인 경우)
+      if ((action === 'makeAdmin' || action === 'removeAdmin') && userId === user?.id) {
+        const newIsAdmin = action === 'makeAdmin';
+        
+        // 1. localStorage 캐시 직접 업데이트
+        const cachedProfile = localStorage.getItem(`user_profile_cache_${userId}`);
+        if (cachedProfile) {
+          try {
+            const profile = JSON.parse(cachedProfile);
+            profile.is_admin = newIsAdmin;
+            profile.cachedAt = Date.now();
+            localStorage.setItem(`user_profile_cache_${userId}`, JSON.stringify(profile));
+          } catch {
+            // 캐시 업데이트 실패 시 무시
+          }
+        }
+        
+        // 2. 커스텀 이벤트 발생 (모든 페이지에서 감지 가능)
+        window.dispatchEvent(new CustomEvent('userAdminStatusChanged', {
+          detail: { userId, isAdmin: newIsAdmin }
+        }));
+        
+        // 3. localStorage 변경 이벤트도 발생 (다른 탭 감지용)
+        const updatedProfile = cachedProfile ? JSON.parse(cachedProfile) : {};
+        updatedProfile.is_admin = newIsAdmin;
+        updatedProfile.cachedAt = Date.now();
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: `user_profile_cache_${userId}`,
+          newValue: JSON.stringify(updatedProfile)
+        }));
+      }
     } catch (error: unknown) {
       // 에러 메시지 및 status 코드 alert로 출력
       let msg = '사용자 작업 실패';
@@ -223,7 +266,7 @@ export default function AdminPage() {
       }
       alert(msg);
     }
-  }, [refetchUsers]);
+  }, [refetchUsers, user?.id]);
 
   // UserDetailModal 핸들러들
   const handleCloseModal = useCallback(() => {

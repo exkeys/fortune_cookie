@@ -8,12 +8,14 @@ import FloatingIcons from './components/FloatingIcons';
 import IntroMainContent from './components/IntroMainContent';
 import { supabase } from '../../supabaseClient';
 
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 
 export default function IntroPage() {
   const navigate = useNavigate();
   const { user, isLoggedIn, login, logout } = useAuth();
   const { isMobile, isTablet } = useResponsive();
+  const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+  const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   
   // 모바일/태블릿에서 페이지 진입 시 스크롤을 맨 위로 이동
   useEffect(() => {
@@ -143,6 +145,143 @@ export default function IntroPage() {
   if (user && !user.is_admin && user.status !== 'banned' && (user['school'] === null || user['school'] === undefined)) {
     return null;
   }
+
+  // 🔄 관리자 권한 실시간 업데이트 (캐시 우선 + Realtime)
+  useEffect(() => {
+    if (!user?.id) {
+      setIsAdmin(null);
+      return;
+    }
+
+    // 1. 초기값: 캐시 우선 (깜빡임 방지)
+    const cachedProfile = localStorage.getItem(`user_profile_cache_${user.id}`);
+    if (cachedProfile) {
+      try {
+        const profile = JSON.parse(cachedProfile);
+        if (profile.is_admin !== undefined) {
+          setIsAdmin(profile.is_admin);
+        } else {
+          setIsAdmin(user.is_admin ?? false);
+        }
+      } catch {
+        setIsAdmin(user.is_admin ?? false);
+      }
+    } else {
+      setIsAdmin(user.is_admin ?? false);
+    }
+
+    // 2. 🔄 Supabase Realtime 구독: 관리자 권한 변경 감지
+    const channel = supabase
+      .channel(`user-admin-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          // is_admin 필드가 실제로 변경되었는지 확인
+          const oldIsAdmin = payload.old?.is_admin;
+          const newIsAdmin = payload.new?.is_admin;
+          
+          // is_admin 필드가 변경되지 않았으면 스킵 (다른 필드 업데이트 시 불필요한 처리 방지)
+          if (oldIsAdmin === newIsAdmin) {
+            return;
+          }
+          
+          // is_admin 필드가 변경되었을 때만 업데이트
+          if (payload.new && 'is_admin' in payload.new) {
+            const updatedIsAdmin = newIsAdmin ?? false;
+            
+            // ✅ 상태 업데이트 (즉시 반영)
+            setIsAdmin(updatedIsAdmin);
+            
+            // ✅ 캐시도 즉시 업데이트 (다음 로딩 시 정확한 값 유지)
+            const cachedProfile = localStorage.getItem(`user_profile_cache_${user.id}`);
+            if (cachedProfile) {
+              try {
+                const profile = JSON.parse(cachedProfile);
+                profile.is_admin = updatedIsAdmin;
+                profile.cachedAt = Date.now();
+                localStorage.setItem(`user_profile_cache_${user.id}`, JSON.stringify(profile));
+              } catch {
+                // 캐시 업데이트 실패 시 무시
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    subscriptionRef.current = channel;
+
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
+  }, [user?.id, user?.is_admin]);
+
+  // 🔔 커스텀 이벤트 감지: 관리자 페이지에서 권한 변경 시 즉시 반영
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const handleAdminStatusChange = (event: Event) => {
+      const customEvent = event as CustomEvent<{ userId: string; isAdmin: boolean }>;
+      const { userId, isAdmin } = customEvent.detail;
+
+      // 현재 사용자 자신의 권한이 변경된 경우에만 처리
+      if (userId === user.id) {
+        // ✅ localStorage에서 직접 읽어서 즉시 업데이트 (API 호출 없이)
+        const cachedProfile = localStorage.getItem(`user_profile_cache_${user.id}`);
+        if (cachedProfile) {
+          try {
+            const profile = JSON.parse(cachedProfile);
+            // 이벤트에서 받은 값으로 업데이트
+            profile.is_admin = isAdmin;
+            profile.cachedAt = Date.now();
+            localStorage.setItem(`user_profile_cache_${user.id}`, JSON.stringify(profile));
+          } catch {
+            // 캐시 파싱 실패 시 무시
+          }
+        }
+        
+        // ✅ 상태 즉시 업데이트
+        setIsAdmin(isAdmin);
+      }
+    };
+
+    // 커스텀 이벤트 리스너 등록
+    window.addEventListener('userAdminStatusChanged', handleAdminStatusChange);
+
+    // 페이지 visibility 변경 시에도 확인 (다른 탭에서 돌아올 때)
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const cachedProfile = localStorage.getItem(`user_profile_cache_${user.id}`);
+        if (cachedProfile) {
+          try {
+            const profile = JSON.parse(cachedProfile);
+            if (profile.is_admin !== undefined && profile.is_admin !== isAdmin) {
+              setIsAdmin(profile.is_admin);
+            }
+          } catch {
+            // 캐시 파싱 실패 시 무시
+          }
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('userAdminStatusChanged', handleAdminStatusChange);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [user?.id, isAdmin]);
+
   const handleLogin = async () => {
     await login('kakao');
   };
@@ -176,7 +315,7 @@ export default function IntroPage() {
         onPastConcerns={handlePastConcerns}
         onFeedback={handleFeedback}
         onSettings={isLoggedIn ? handleSettings : undefined}
-        onAdmin={user?.is_admin ? handleAdmin : undefined}
+        onAdmin={isAdmin === true ? handleAdmin : undefined}
       />
       <BackgroundDecorations />
       <FloatingIcons />

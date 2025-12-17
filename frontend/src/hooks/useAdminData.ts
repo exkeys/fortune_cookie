@@ -35,7 +35,8 @@ export const useAdminUsers = (enabled: boolean = true) => {
       return users || [];
     },
     enabled,
-    staleTime: 2 * 60 * 1000, // 2분간 캐시 유지
+    staleTime: 0, // 캐시 없이 항상 최신 데이터
+    refetchOnMount: 'always',
   });
 };
 
@@ -68,7 +69,8 @@ export const useDashboardStats = (enabled: boolean = true) => {
       };
     },
     enabled,
-    staleTime: 1 * 60 * 1000, // 1분간 캐시 유지
+    staleTime: 0, // 캐시 없이 항상 최신 데이터
+    refetchOnMount: 'always',
   });
 };
 

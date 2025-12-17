@@ -833,6 +833,24 @@ export const useAuth = (): AuthReturn => {
   };
 
   const logout = async () => {
+    // 즉시 상태 초기화 및 필수 정리 작업
+    lastUserIdRef.current = null;
+    isInitializedRef.current = false;
+    setUser(null);
+    setIsLoggedIn(false);
+    setIsLoading(false);
+    
+    clearAccessToken();
+    clearSessionData({ full: true });
+    
+    localStorage.removeItem('user_email');
+    localStorage.removeItem('user_school');
+    localStorage.removeItem('user_created_at');
+    
+    // 즉시 intro 페이지로 리다이렉트 (API 호출 대기하지 않음)
+    window.location.href = '/intro';
+    
+    // 백그라운드에서 나머지 정리 작업 수행 (페이지 리다이렉트 이후)
     try {
       let userId: string | null = null;
       
@@ -841,30 +859,18 @@ export const useAuth = (): AuthReturn => {
         userId = user.id;
       }
       
+      // API 호출은 백그라운드에서 처리 (대기하지 않음)
       if (userId) {
-        try {
-          const token = await ensureAccessToken();
+        ensureAccessToken().then(token => {
           if (token) {
-            await apiFetch('/api/auth/logout', {
+            apiFetch('/api/auth/logout', {
               method: 'POST'
-            });
+            }).catch(() => {});
           }
-        } catch (apiError) {}
+        }).catch(() => {});
       }
       
-      lastUserIdRef.current = null;
-      isInitializedRef.current = false;
-      setUser(null);
-      setIsLoggedIn(false);
-      setIsLoading(false);
-      
-      clearAccessToken();
-      clearSessionData({ full: true });
-      
-      localStorage.removeItem('user_email');
-      localStorage.removeItem('user_school');
-      localStorage.removeItem('user_created_at');
-      
+      // 쿠키 정리
       const kakaoCookies = [
         'kauth', 'kakao', 'kakao_account', 'kakao_token',
         'kakao_access_token', 'kakao_refresh_token'
@@ -886,6 +892,7 @@ export const useAuth = (): AuthReturn => {
         });
       });
       
+      // localStorage 정리
       const allLocalStorageKeys = Object.keys(localStorage);
       allLocalStorageKeys.forEach(key => {
         if (key.toLowerCase().includes('kakao') || key.toLowerCase().includes('kauth')) {
@@ -893,14 +900,10 @@ export const useAuth = (): AuthReturn => {
         }
       });
       
-      // 즉시 리다이렉트 (Supabase signOut 대기하지 않음)
-      window.location.href = '/';
-      
-      // Supabase 로그아웃은 백그라운드에서 처리 (페이지 리다이렉트 이후)
-      supabase.auth.signOut().catch(() => {
-        // 에러 무시 - 이미 페이지가 리다이렉트됨
-      });
+      // Supabase 로그아웃은 백그라운드에서 처리
+      supabase.auth.signOut().catch(() => {});
     } catch (error) {
+      // 에러 발생해도 무시 (이미 리다이렉트됨)
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.id) {
         localStorage.removeItem(`user_profile_cache_${user.id}`);
@@ -918,20 +921,7 @@ export const useAuth = (): AuthReturn => {
         }
       });
       
-      lastUserIdRef.current = null;
-      isInitializedRef.current = false;
-      setUser(null);
-      setIsLoggedIn(false);
-      setIsLoading(false);
-      clearSessionData({ full: true });
-      
-      // 즉시 리다이렉트 (Supabase signOut 대기하지 않음)
-      window.location.href = '/';
-      
-      // Supabase 로그아웃은 백그라운드에서 처리 (페이지 리다이렉트 이후)
-      supabase.auth.signOut().catch(() => {
-        // 에러 무시 - 이미 페이지가 리다이렉트됨
-      });
+      supabase.auth.signOut().catch(() => {});
     }
   };
 

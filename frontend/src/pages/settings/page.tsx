@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useResponsive } from '../../hooks/useResponsive';
 import { apiFetch } from '../../utils/apiClient';
 import { logger } from '../../utils/logger';
+import { supabase } from '../../supabaseClient';
 import Header from '../../components/feature/Header';
 import { 
   MessageSquare,
@@ -31,8 +32,12 @@ export default function SettingsPage() {
     school: null,
     created_at: null
   });
+  const [isLoadingSchool, setIsLoadingSchool] = useState(false); // 초기값 false로 설정 (첫 렌더링에서 스켈레톤 방지)
 
-  // 이메일, 학교, 가입일 캐싱
+  // Realtime 구독 참조
+  const subscriptionRef = useRef<any>(null);
+
+  // 이메일, 생성일은 캐시 사용, 학교는 Realtime으로 실시간 업데이트
   useEffect(() => {
     if (!user?.id || !user?.email) {
       return;
@@ -51,20 +56,33 @@ export default function SettingsPage() {
     // 🔒 보안: 캐시된 이메일과 현재 사용자 이메일이 일치하는지 확인
     const isCacheValid = cachedEmail && cachedEmail === user.email;
     
-    // localStorage에 모든 값이 유효하고 현재 사용자와 일치하면 사용
-    if (isCacheValid && isValidValue(cachedEmail) && isValidValue(cachedSchool) && isValidValue(cachedCreatedAt)) {
+    // 이메일과 생성일은 캐시에서 로드 (변화 없음)
+    const initialEmail = (isCacheValid && isValidValue(cachedEmail)) ? cachedEmail : null;
+    
+    // 생성일 우선순위: user 객체 > 캐시 > null
+    const userCreatedAt = (user as any)?.created_at;
+    const initialCreatedAt = (userCreatedAt && isValidValue(userCreatedAt))
+      ? userCreatedAt
+      : ((isCacheValid && isValidValue(cachedCreatedAt)) ? cachedCreatedAt : null);
+    
+    // 학교 정보 우선순위: user 객체 > 캐시 > null
+    const userSchool = (user as any)?.school;
+    const initialSchool = (userSchool && isValidValue(userSchool)) 
+      ? userSchool 
+      : ((isCacheValid && isValidValue(cachedSchool)) ? cachedSchool : null);
+    
+    // 초기 상태 설정 (학교와 생성일은 user 객체 또는 캐시에서 먼저 로드)
       setCachedData({
-        email: cachedEmail,
-        school: cachedSchool,
-        created_at: cachedCreatedAt
-      });
-      return;
+      email: initialEmail,
+      school: initialSchool, // user 객체 또는 캐시된 학교 정보 먼저 사용
+      created_at: initialCreatedAt // user 객체 또는 캐시된 생성일 먼저 사용
+    });
+    
+    // 초기 학교 정보가 있으면 로딩 상태를 즉시 false로 설정 (첫 렌더링에서 스켈레톤 방지)
+    if (initialSchool) {
+      setIsLoadingSchool(false);
     }
     
-    // 캐시가 유효하지 않거나 하나라도 N/A이면 백엔드 API로 조회
-    const needsFetch = !isCacheValid || !isValidValue(cachedEmail) || !isValidValue(cachedSchool) || !isValidValue(cachedCreatedAt);
-    
-    if (needsFetch) {
       // 캐시가 다른 사용자 것이면 먼저 정리
       if (cachedEmail && cachedEmail !== user.email) {
         localStorage.removeItem('user_email');
@@ -72,12 +90,28 @@ export default function SettingsPage() {
         localStorage.removeItem('user_created_at');
       }
       
-      const fetchUserData = async () => {
-        try {
-          // 백엔드 API를 통해 조회 (JWT 토큰으로 인증)
+    // 초기 학교 데이터 가져오기 (마운트 시 1회)
+    const fetchInitialSchoolData = async () => {
+      // user 객체나 캐시에 학교 정보가 있으면 로딩 상태를 false로 설정 (깜빡임 방지)
+      const hasInitialSchool = (userSchool && isValidValue(userSchool)) || (isCacheValid && isValidValue(cachedSchool));
+      
+      // 초기 학교 정보가 없을 때만 로딩 상태를 true로 설정
+      if (!hasInitialSchool) {
+        setIsLoadingSchool(true);
+      }
+      
+      try {
           const response = await apiFetch(`/api/auth/profile`);
           
           if (!response.ok) {
+          // API 실패 시 initialSchool이 있으면 유지, 없으면 캐시 사용
+          if (!initialSchool && isCacheValid && isValidValue(cachedSchool)) {
+            setCachedData(prev => ({
+              ...prev,
+              school: cachedSchool
+            }));
+          }
+          setIsLoadingSchool(false);
             return;
           }
           
@@ -89,53 +123,149 @@ export default function SettingsPage() {
             const dbSchool = dbUser.school && dbUser.school !== 'unknown' ? dbUser.school : null;
             const dbCreatedAt = dbUser.created_at;
             
-            // 각 값이 유효하면 localStorage에 저장
-            if (dbEmail && isValidValue(dbEmail)) {
-              localStorage.setItem('user_email', dbEmail);
+          // 최종 값 계산 (한 번만 계산)
+          const finalEmail = initialEmail || (dbEmail && isValidValue(dbEmail) ? dbEmail : null);
+          const finalCreatedAt = initialCreatedAt || (dbCreatedAt && isValidValue(dbCreatedAt) ? dbCreatedAt : null);
+          const finalSchool = (dbSchool && isValidValue(dbSchool)) ? dbSchool : initialSchool;
+          
+          // localStorage 업데이트 (필요한 경우만)
+          if (!initialEmail && finalEmail) {
+            localStorage.setItem('user_email', finalEmail);
             }
-            if (dbSchool && isValidValue(dbSchool)) {
-              localStorage.setItem('user_school', dbSchool);
+          if (!initialCreatedAt && finalCreatedAt) {
+            localStorage.setItem('user_created_at', finalCreatedAt);
             }
-            if (dbCreatedAt && isValidValue(dbCreatedAt)) {
-              localStorage.setItem('user_created_at', dbCreatedAt);
+          if (finalSchool && finalSchool !== initialSchool) {
+            localStorage.setItem('user_school', finalSchool);
+          } else if (finalSchool === initialSchool && initialSchool) {
+            // 학교가 같아도 localStorage는 최신 값으로 동기화 (혹시 모를 동기화 문제 방지)
+            localStorage.setItem('user_school', finalSchool);
+          }
+          
+          // 한 번의 setCachedData 호출로 모든 업데이트 처리 (불필요한 리렌더링 방지)
+          setCachedData(prev => {
+            // 변경사항이 없으면 스킵
+            if (
+              prev.email === finalEmail &&
+              prev.school === finalSchool &&
+              prev.created_at === finalCreatedAt
+            ) {
+              return prev;
             }
             
-            // state 업데이트 (백엔드 값 우선)
-            setCachedData({
-              email: dbEmail && isValidValue(dbEmail) ? dbEmail : null,
-              school: dbSchool && isValidValue(dbSchool) ? dbSchool : null,
-              created_at: dbCreatedAt && isValidValue(dbCreatedAt) ? dbCreatedAt : null
+            return {
+              email: finalEmail,
+              school: finalSchool,
+              created_at: finalCreatedAt
+            };
             });
           } else {
-            // 백엔드에서 데이터를 못 가져왔으면 현재 사용자 정보 사용
-            setCachedData({
-              email: user.email || null,
-              school: null,
-              created_at: null
+          // 백엔드에서 데이터를 못 가져왔으면 initialSchool 유지, 없으면 캐시 사용
+          const fallbackEmail = initialEmail || user.email || null;
+          const fallbackSchool = initialSchool || (isCacheValid && isValidValue(cachedSchool) ? cachedSchool : null);
+          
+          setCachedData(prev => {
+            // 변경사항이 없으면 스킵
+            if (
+              prev.email === fallbackEmail &&
+              prev.school === fallbackSchool &&
+              prev.created_at === initialCreatedAt
+            ) {
+              return prev;
+            }
+            
+            return {
+              email: fallbackEmail,
+              school: fallbackSchool,
+              created_at: initialCreatedAt
+            };
             });
           }
-        } catch {
-          // 에러 발생 시 현재 사용자 정보 사용
-          setCachedData({
-            email: user.email || null,
-            school: null,
-            created_at: null
+      } catch (error) {
+        logger.error('[SettingsPage] API 호출 에러', error);
+        // 에러 발생 시 초기 값 유지 (이미 설정되어 있으므로 별도 업데이트 불필요)
+        // initialSchool, initialEmail, initialCreatedAt이 이미 초기 상태에 설정됨
+      } finally {
+        setIsLoadingSchool(false);
+      }
+    };
+    
+    fetchInitialSchoolData();
+    
+    // 🔄 Supabase Realtime 구독: 학교 정보 변경 감지 (최적화된 성능)
+    const channel = supabase
+      .channel(`user-school-${user.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'users',
+          filter: `id=eq.${user.id}`,
+        },
+        (payload) => {
+          // 학교 필드가 실제로 변경되었는지 확인
+          const oldSchool = payload.old?.school;
+          const newSchool = payload.new?.school;
+          
+          // 학교 필드가 변경되지 않았으면 스킵 (다른 필드 업데이트 시 불필요한 처리 방지)
+          if (oldSchool === newSchool) {
+            return;
+          }
+          
+          // 학교 필드가 변경되었을 때만 업데이트
+          if (payload.new && 'school' in payload.new) {
+            const isValidSchool = newSchool && newSchool !== 'unknown' && newSchool.trim() !== '';
+            
+            if (isValidSchool) {
+              setCachedData(prev => {
+                // 이전 값과 같으면 업데이트 스킵 (불필요한 리렌더링 방지)
+                if (prev.school === newSchool) {
+                  return prev;
+                }
+                // localStorage 업데이트는 한 번만 수행 (setState 내부에서)
+                localStorage.setItem('user_school', newSchool);
+                return {
+                  ...prev,
+                  school: newSchool
+                };
+              });
+            } else {
+              // 학교가 null이거나 'unknown'이면 제거
+              setCachedData(prev => {
+                // 이미 null이면 업데이트 스킵
+                if (prev.school === null) {
+                  return prev;
+                }
+                localStorage.removeItem('user_school');
+                return {
+                  ...prev,
+                  school: null
+                };
           });
         }
-      };
-      
-      fetchUserData();
-    }
+          }
+        }
+      )
+      .subscribe();
+    
+    subscriptionRef.current = channel;
+    
+    // 클린업: 컴포넌트 언마운트 시 구독 해제
+    return () => {
+      if (subscriptionRef.current) {
+        supabase.removeChannel(subscriptionRef.current);
+        subscriptionRef.current = null;
+      }
+    };
   }, [user?.id, user?.email]);
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      // logout 함수가 window.location.href로 리다이렉트하므로 navigate는 불필요
-    } catch (error) {
-      logger.error('로그아웃 실패:', error);
-      alert('로그아웃에 실패했습니다. 다시 시도해주세요.');
-    }
+  const handleLogout = () => {
+    // logout 함수가 이미 모든 처리를 하므로 await 불필요
+    // 즉시 /intro로 리다이렉트되므로 에러 처리도 불필요
+    logout().catch(() => {
+      // 에러는 무시 (logout 함수 내부에서 이미 리다이렉트 처리)
+    });
   };
 
   const handleDeleteClick = () => {
@@ -168,6 +298,13 @@ export default function SettingsPage() {
   };
 
   return (
+    <>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 0.5; }
+          50% { opacity: 0.8; }
+        }
+      `}</style>
     <div style={{
       fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif",
       background: "#fffbeb",
@@ -265,6 +402,27 @@ export default function SettingsPage() {
               {(() => {
                 const schoolValue = cachedData.school || (user as any)?.school;
                 const isValidSchool = schoolValue && schoolValue !== 'unknown' && schoolValue.trim() !== '';
+                
+                if (isLoadingSchool) {
+                  // 로딩 중일 때 스켈레톤 UI
+                  return (
+                    <div style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "6px",
+                      opacity: 0.5
+                    }}>
+                      <Building2 size={14} />
+                      <div style={{
+                        width: "60px",
+                        height: "14px",
+                        background: "rgba(255,255,255,0.3)",
+                        borderRadius: "4px",
+                        animation: "pulse 1.5s ease-in-out infinite"
+                      }}></div>
+                    </div>
+                  );
+                }
                 return isValidSchool ? (
                   <>
                     <div style={{
@@ -601,5 +759,6 @@ export default function SettingsPage() {
         </>
       )}
     </div>
+    </>
   );
 }

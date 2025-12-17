@@ -12,7 +12,8 @@
 5. [페이지별 상세 분석](#-페이지별-상세-분석)
 6. [일일 사용 제한 시스템](#-일일-사용-제한-시스템)
 7. [데이터 흐름](#-데이터-흐름)
-8. [코드 품질](#-코드-품질)
+8. [Supabase Realtime 실시간 업데이트](#-supabase-realtime-실시간-업데이트)
+9. [코드 품질](#-코드-품질)
 
 ---
 
@@ -29,7 +30,7 @@
 ## 📁 폴더 구조
 
 ```
-frontend_change/
+frontend/
 ├─ 📄 설정 파일들
 │  ├─ package.json          # 의존성 관리
 │  ├─ vite.config.ts        # Vite 설정
@@ -419,9 +420,9 @@ not-found/
 - 역할 선택 페이지에서 사용 여부 체크 및 제한 처리
 
 ### 🎯 **주요 파일**
-- **페이지**: `frontend_change/src/pages/role-select/page.tsx`
+- **페이지**: `frontend/src/pages/role-select/page.tsx`
 - **API 호출**: `/api/access-control/check-full-access` 엔드포인트 사용
-- **접근 제어**: `frontend_change/src/pages/intro/components/IntroMainContent.tsx`에서도 동일 API 사용
+- **접근 제어**: `frontend/src/pages/intro/components/IntroMainContent.tsx`에서도 동일 API 사용
 
 ### 🔄 **동작 흐름**
 
@@ -511,7 +512,7 @@ const response = await apiFetch('/api/daily-usage-logs', {
 - 시작일/종료일 설정으로 정확한 이용 기간 관리
 
 ### 🎯 **학교 데이터**
-- **위치**: `frontend_change/src/data/schools.json`
+- **위치**: `frontend/src/data/schools.json`
 - **포함 학교**: 서울/경기/인천 주요 대학교 24개
 - **검색 기능**: 학교명, 지역별 검색 지원
 
@@ -531,6 +532,132 @@ const response = await apiFetch('/api/daily-usage-logs', {
 2. **🏫 학교 정보** 존재 여부
 3. **📅 학교 이용 기간** 범위 내
 4. **⏰ 일일 사용 제한** (학교별)
+
+---
+
+## 🎛️ 관리자 설정 탭 (SettingsTab)
+
+### 📋 **개요**
+- **위치**: `frontend/src/pages/admin/components/SettingsTab.tsx`
+- **역할**: 학교별 서비스 이용 기간 관리 (Access Period)
+- **규모**: 620줄, 커스텀 캘린더 컴포넌트 포함
+
+### 🎨 **주요 기능**
+
+#### 1️⃣ **Apple Style Calendar 컴포넌트**
+- **커스텀 캘린더**: Apple 스타일의 모던한 날짜 선택 UI
+- **기능**:
+  - 월별 네비게이션 (이전/다음 달)
+  - 오늘 날짜 하이라이트
+  - 선택된 날짜 강조 표시
+  - 주말 색상 구분 (일요일: 빨강, 토요일: 파랑)
+  - "오늘" 버튼으로 빠른 선택
+  - 외부 클릭 시 자동 닫기
+- **자동 연속 선택**: 시작일 선택 후 종료일 달력 자동으로 열림
+
+#### 2️⃣ **학교 검색 및 선택**
+- **검색 기능**:
+  - 실시간 학교명 검색
+  - 학교 카테고리 검색 지원
+  - 검색어로 시작하는 학교 우선 정렬
+  - 최대 60개 결과 표시 (스크롤 가능)
+- **선택 UI**:
+  - 선택된 학교 하이라이트 (파란색 배경)
+  - 체크마크(✓) 표시
+  - 호버 효과 및 액티브 상태 피드백
+
+#### 3️⃣ **CRUD 기능**
+- **추가 (Create)**: 새로운 학교 기간 추가
+- **수정 (Update)**: 기존 기간 수정 (수정 버튼 클릭 시 폼으로 스크롤)
+- **삭제 (Delete)**: 확인 후 삭제
+- **조회 (Read)**: 페이지네이션으로 목록 조회
+
+#### 4️⃣ **로딩 상태 분리**
+- **리스트 로딩** (`listLoading`): 데이터 조회 시 표시
+- **폼 제출 로딩** (`formLoading`): 폼 제출 시 버튼만 "처리중..." 표시
+- **UX 최적화**: 리스트 로딩 중에도 폼은 사용 가능
+
+#### 5️⃣ **페이지네이션**
+- **페이지당 항목**: 5개
+- **네비게이션**: 이전/다음 버튼 + 페이지 번호 버튼
+- **현재 페이지**: 파란색 배경으로 강조
+
+### 🔄 **데이터 흐름**
+
+```
+사용자 입력
+    ↓
+폼 검증 (학교명, 시작일, 종료일)
+    ↓
+날짜 유효성 검사 (시작일 < 종료일)
+    ↓
+API 호출 (POST/PUT /api/school-periods)
+    ↓
+성공 시 목록 새로고침
+```
+
+### 📊 **상태 관리**
+
+```typescript
+// 데이터 상태
+const [schoolPeriods, setSchoolPeriods] = useState<SchoolPeriod[]>([]);
+const [formData, setFormData] = useState<SchoolPeriod>({
+  school_name: '',
+  start_date: '',
+  end_date: ''
+});
+
+// UI 상태
+const [listLoading, setListLoading] = useState(false);
+const [formLoading, setFormLoading] = useState(false);
+const [searchTerm, setSearchTerm] = useState('');
+const [editingId, setEditingId] = useState<string | null>(null);
+const [currentPage, setCurrentPage] = useState(1);
+const [openEndCalendar, setOpenEndCalendar] = useState(false);
+
+// 메모이제이션
+const filteredSchools = useMemo(() => {
+  // 검색어로 필터링 및 정렬
+}, [searchTerm]);
+```
+
+### 🎯 **주요 특징**
+
+1. **UX 최적화**:
+   - 시작일 선택 후 종료일 달력 자동 열기
+   - 수정 시 폼으로 자동 스크롤
+   - 선택된 학교 검색어에 자동 입력
+
+2. **검색 최적화**:
+   - 검색어로 시작하는 학교 우선 정렬
+   - 학교명과 카테고리 모두 검색 가능
+   - 대소문자 구분 없음
+
+3. **에러 처리**:
+   - 필수 필드 검증
+   - 날짜 범위 검증
+   - API 에러 메시지 표시
+
+4. **다크 모드 지원**:
+   - 모든 UI 요소에 다크 모드 스타일 적용
+   - 캘린더, 검색창, 버튼 등 일관된 테마
+
+### 📝 **API 엔드포인트**
+
+| 메서드 | 엔드포인트 | 설명 |
+|--------|-----------|------|
+| `GET` | `/api/school-periods` | 모든 학교 기간 조회 |
+| `POST` | `/api/school-periods` | 새로운 학교 기간 추가 |
+| `PUT` | `/api/school-periods/:id` | 학교 기간 수정 |
+| `DELETE` | `/api/school-periods/:id` | 학교 기간 삭제 |
+
+### 💡 **사용 안내 (Info Card)**
+
+설정 탭 하단에 표시되는 안내 메시지:
+- 밴된 사용자는 학교 날짜 설정과 관계없이 서비스 이용 불가
+- 사용자는 자신의 학교가 설정된 날짜에만 서비스 이용 가능
+- 일일 사용 제한은 학교별로 적용
+- 날짜 범위를 벗어난 경우 자동으로 서비스 이용 차단
 
 ---
 
@@ -591,19 +718,560 @@ localStorage (백업)
 
 ---
 
+## ⚡ Supabase Realtime 실시간 업데이트
+
+### 📋 **개요**
+- **위치**: `frontend/src/pages/settings/page.tsx`
+- **기능**: 사용자 학교 정보 실시간 동기화
+- **목적**: 관리자가 사용자 학교 정보를 변경하면 즉시 반영
+
+### 🎯 **구현 위치**
+- **페이지**: 설정 페이지 (My Info)
+- **구독 대상**: `users` 테이블의 `UPDATE` 이벤트
+- **필터링**: 현재 로그인한 사용자 ID만 구독
+
+### 🔄 **동작 흐름**
+
+```
+관리자가 사용자 학교 정보 변경
+    ↓
+Supabase DB 업데이트
+    ↓
+Realtime 이벤트 발생 (UPDATE)
+    ↓
+프론트엔드 구독 채널 수신
+    ↓
+학교 필드 변경 감지
+    ↓
+localStorage 업데이트
+    ↓
+React State 업데이트
+    ↓
+UI 즉시 반영 (리렌더링)
+```
+
+### 💻 **코드 구현**
+
+#### 1️⃣ **구독 설정 및 클린업**
+```typescript
+// Realtime 구독 참조
+const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+// Supabase Realtime 구독: 학교 정보 변경 감지 (최적화된 성능)
+useEffect(() => {
+  // ... 초기 데이터 로딩 코드 ...
+  
+  // 🔄 Supabase Realtime 구독: 학교 정보 변경 감지
+  const channel = supabase
+    .channel(`user-school-${user.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${user.id}`,  // 현재 사용자만 필터링
+      },
+      (payload) => {
+        // 학교 필드가 실제로 변경되었는지 확인
+        const oldSchool = payload.old?.school;
+        const newSchool = payload.new?.school;
+        
+        // 학교 필드가 변경되지 않았으면 스킵 (다른 필드 업데이트 시 불필요한 처리 방지)
+        if (oldSchool === newSchool) {
+          return;
+        }
+        
+        // 학교 필드가 변경되었을 때만 업데이트
+        if (payload.new && 'school' in payload.new) {
+          const isValidSchool = newSchool && newSchool !== 'unknown' && newSchool.trim() !== '';
+          
+          if (isValidSchool) {
+            setCachedData(prev => {
+              // 이전 값과 같으면 업데이트 스킵 (불필요한 리렌더링 방지)
+              if (prev.school === newSchool) {
+                return prev;
+              }
+              // localStorage 업데이트는 한 번만 수행 (setState 내부에서)
+              localStorage.setItem('user_school', newSchool);
+              return {
+                ...prev,
+                school: newSchool
+              };
+            });
+          } else {
+            // 학교가 null이거나 'unknown'이면 제거
+            setCachedData(prev => {
+              // 이미 null이면 업데이트 스킵
+              if (prev.school === null) {
+                return prev;
+              }
+              localStorage.removeItem('user_school');
+              return {
+                ...prev,
+                school: null
+              };
+            });
+          }
+        }
+      }
+    )
+    .subscribe();
+  
+  subscriptionRef.current = channel;
+  
+  // 클린업: 컴포넌트 언마운트 시 구독 해제
+  return () => {
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+  };
+}, [user?.id, user?.email]);
+```
+
+### ⚙️ **최적화 기능**
+
+#### 1️⃣ **필드 변경 확인 (최신)**
+- `oldSchool === newSchool` 체크로 다른 필드 업데이트 시 불필요한 처리 방지
+- `is_admin`, `status` 등 다른 필드가 변경되어도 학교 필드가 변경되지 않았으면 스킵
+
+#### 2️⃣ **불필요한 리렌더링 방지**
+- 이전 값과 동일하면 `setCachedData` 스킵
+- `prev.school === newSchool` 체크로 중복 업데이트 방지
+
+#### 3️⃣ **localStorage 최적화**
+- localStorage 업데이트를 `setState` 내부에서 한 번만 수행
+- 불필요한 localStorage 쓰기 작업 최소화
+
+#### 4️⃣ **초기 로딩 최적화**
+- 초기 학교 정보가 있으면 스켈레톤 UI 표시 안 함
+- `isLoadingSchool` 상태를 즉시 `false`로 설정
+
+#### 5️⃣ **유효성 검사**
+- `null`, `'unknown'`, 빈 문자열 체크
+- 유효한 학교 정보만 업데이트
+
+#### 6️⃣ **채널 이름 고유성**
+- `user-school-${user.id}` 형식으로 사용자별 고유 채널 생성
+- 여러 사용자가 동시에 접속해도 충돌 없음
+
+### 📊 **데이터 동기화 전략**
+
+| 데이터 | 업데이트 방식 | 이유 |
+|--------|--------------|------|
+| **학교 정보** | Realtime 구독 | 관리자가 변경 시 즉시 반영 필요 |
+| **이메일** | 초기 로딩만 | 변경 빈도 낮음 |
+| **생성일** | 초기 로딩만 | 변경 불가능 |
+
+### 🎯 **사용 시나리오**
+
+1. **사용자 A**가 설정 페이지에서 자신의 학교 정보 확인
+2. **관리자**가 관리자 페이지에서 사용자 A의 학교 정보 변경
+3. **Supabase Realtime**이 `UPDATE` 이벤트 발생
+4. **사용자 A의 브라우저**가 이벤트 수신
+5. **즉시 UI 업데이트** (페이지 새로고침 불필요)
+
+### ⚠️ **주의사항**
+
+1. **메모리 누수 방지**: 컴포넌트 언마운트 시 반드시 구독 해제
+2. **채널 이름 충돌**: 사용자별 고유 채널 이름 사용
+3. **에러 처리**: 구독 실패 시에도 초기 로딩으로 대체 가능
+4. **성능**: 불필요한 리렌더링 방지를 위한 값 비교 필수
+
+### 🔧 **백엔드 요구사항**
+
+- Supabase Realtime 기능 활성화 필요
+- `users` 테이블에 Realtime 구독 권한 설정
+- Row Level Security (RLS) 정책 확인
+
+---
+
+## 🔐 관리자 권한 실시간 업데이트
+
+### 📋 **개요**
+- **위치**: `frontend/src/pages/intro/page.tsx`
+- **기능**: 햄버거 메뉴의 관리자 메뉴 표시를 실시간으로 업데이트
+- **목적**: 관리자 페이지에서 권한을 변경하면 intro 페이지로 이동 시 즉시 반영되며, 깜빡임 없이 부드럽게 작동
+
+### 🎯 **구현 위치**
+- **페이지**: 인트로 페이지 (햄버거 메뉴)
+- **구독 대상**: `users` 테이블의 `UPDATE` 이벤트 (is_admin 필드)
+- **필터링**: 현재 로그인한 사용자 ID만 구독
+
+### 🔄 **동작 흐름**
+
+```
+관리자가 사용자 권한 변경 (makeAdmin/removeAdmin)
+    ↓
+Supabase DB 업데이트 (is_admin 필드)
+    ↓
+Realtime 이벤트 발생 (UPDATE)
+    ↓
+프론트엔드 구독 채널 수신
+    ↓
+is_admin 필드 변경 감지
+    ↓
+localStorage 캐시 업데이트
+    ↓
+React State 업데이트 (isAdmin)
+    ↓
+햄버거 메뉴 즉시 반영 (깜빡임 없음)
+```
+
+### 💻 **코드 구현**
+
+#### 1️⃣ **State 및 구독 설정** (`intro/page.tsx`)
+
+```typescript
+// Import 추가
+import { useEffect, useState, useRef } from 'react';
+import { supabase } from '../../supabaseClient';
+
+// 관리자 권한 상태 관리
+const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+
+// 🔄 관리자 권한 실시간 업데이트 (캐시 우선 + Realtime)
+useEffect(() => {
+  if (!user?.id) {
+    setIsAdmin(null);
+    return;
+  }
+
+  // 1. 초기값: 캐시 우선 (깜빡임 방지)
+  const cachedProfile = localStorage.getItem(`user_profile_cache_${user.id}`);
+  if (cachedProfile) {
+    try {
+      const profile = JSON.parse(cachedProfile);
+      if (profile.is_admin !== undefined) {
+        setIsAdmin(profile.is_admin);
+      } else {
+        setIsAdmin(user.is_admin ?? false);
+      }
+    } catch {
+      setIsAdmin(user.is_admin ?? false);
+    }
+  } else {
+    setIsAdmin(user.is_admin ?? false);
+  }
+
+  // 2. 🔄 Supabase Realtime 구독: 관리자 권한 변경 감지
+  const channel = supabase
+    .channel(`user-admin-${user.id}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'UPDATE',
+        schema: 'public',
+        table: 'users',
+        filter: `id=eq.${user.id}`,
+      },
+      (payload) => {
+        // is_admin 필드가 실제로 변경되었는지 확인
+        const oldIsAdmin = payload.old?.is_admin;
+        const newIsAdmin = payload.new?.is_admin;
+        
+        // is_admin 필드가 변경되지 않았으면 스킵 (다른 필드 업데이트 시 불필요한 처리 방지)
+        if (oldIsAdmin === newIsAdmin) {
+          return;
+        }
+        
+        // is_admin 필드가 변경되었을 때만 업데이트
+        if (payload.new && 'is_admin' in payload.new) {
+          const updatedIsAdmin = newIsAdmin ?? false;
+          
+          // ✅ 상태 업데이트 (즉시 반영)
+          setIsAdmin(updatedIsAdmin);
+          
+          // ✅ 캐시도 즉시 업데이트 (다음 로딩 시 정확한 값 유지)
+          const cachedProfile = localStorage.getItem(`user_profile_cache_${user.id}`);
+          if (cachedProfile) {
+            try {
+              const profile = JSON.parse(cachedProfile);
+              profile.is_admin = updatedIsAdmin;
+              profile.cachedAt = Date.now();
+              localStorage.setItem(`user_profile_cache_${user.id}`, JSON.stringify(profile));
+            } catch {
+              // 캐시 업데이트 실패 시 무시
+            }
+          }
+        }
+      }
+    )
+    .subscribe();
+
+  subscriptionRef.current = channel;
+
+  return () => {
+    if (subscriptionRef.current) {
+      supabase.removeChannel(subscriptionRef.current);
+      subscriptionRef.current = null;
+    }
+  };
+}, [user?.id, user?.is_admin]);
+```
+
+#### 2️⃣ **커스텀 이벤트 리스너** (`intro/page.tsx`)
+
+```typescript
+// 🔔 커스텀 이벤트 감지: 관리자 페이지에서 권한 변경 시 즉시 반영
+useEffect(() => {
+  if (!user?.id) return;
+
+  const handleAdminStatusChange = (event: Event) => {
+    const customEvent = event as CustomEvent<{ userId: string; isAdmin: boolean }>;
+    const { userId, isAdmin } = customEvent.detail;
+
+    // 현재 사용자 자신의 권한이 변경된 경우에만 처리
+    if (userId === user.id) {
+      // ✅ localStorage에서 직접 읽어서 즉시 업데이트 (API 호출 없이)
+      const cachedProfile = localStorage.getItem(`user_profile_cache_${user.id}`);
+      if (cachedProfile) {
+        try {
+          const profile = JSON.parse(cachedProfile);
+          profile.is_admin = isAdmin;
+          profile.cachedAt = Date.now();
+          localStorage.setItem(`user_profile_cache_${user.id}`, JSON.stringify(profile));
+        } catch {
+          // 캐시 파싱 실패 시 무시
+        }
+      }
+      
+      // ✅ 상태 즉시 업데이트
+      setIsAdmin(isAdmin);
+    }
+  };
+
+  // 커스텀 이벤트 리스너 등록
+  window.addEventListener('userAdminStatusChanged', handleAdminStatusChange);
+
+  // 페이지 visibility 변경 시에도 확인 (다른 탭에서 돌아올 때)
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'visible') {
+      const cachedProfile = localStorage.getItem(`user_profile_cache_${user.id}`);
+      if (cachedProfile) {
+        try {
+          const profile = JSON.parse(cachedProfile);
+          if (profile.is_admin !== undefined && profile.is_admin !== isAdmin) {
+            setIsAdmin(profile.is_admin);
+          }
+        } catch {
+          // 캐시 파싱 실패 시 무시
+        }
+      }
+    }
+  };
+
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+
+  return () => {
+    window.removeEventListener('userAdminStatusChanged', handleAdminStatusChange);
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+  };
+}, [user?.id, isAdmin]);
+```
+
+#### 3️⃣ **관리자 페이지에서 이벤트 발생** (`admin/page.tsx`)
+
+```typescript
+// handleUserAction 함수 내부에 추가
+// 🔔 권한 변경 시 즉시 반영 (현재 로그인한 사용자 자신인 경우)
+if ((action === 'makeAdmin' || action === 'removeAdmin') && userId === user?.id) {
+  const newIsAdmin = action === 'makeAdmin';
+  
+  // 1. localStorage 캐시 직접 업데이트
+  const cachedProfile = localStorage.getItem(`user_profile_cache_${userId}`);
+  if (cachedProfile) {
+    try {
+      const profile = JSON.parse(cachedProfile);
+      profile.is_admin = newIsAdmin;
+      profile.cachedAt = Date.now();
+      localStorage.setItem(`user_profile_cache_${userId}`, JSON.stringify(profile));
+    } catch {
+      // 캐시 업데이트 실패 시 무시
+    }
+  }
+  
+  // 2. 커스텀 이벤트 발생 (모든 페이지에서 감지 가능)
+  window.dispatchEvent(new CustomEvent('userAdminStatusChanged', {
+    detail: { userId, isAdmin: newIsAdmin }
+  }));
+  
+  // 3. localStorage 변경 이벤트도 발생 (다른 탭 감지용)
+  const updatedProfile = cachedProfile ? JSON.parse(cachedProfile) : {};
+  updatedProfile.is_admin = newIsAdmin;
+  updatedProfile.cachedAt = Date.now();
+  window.dispatchEvent(new StorageEvent('storage', {
+    key: `user_profile_cache_${userId}`,
+    newValue: JSON.stringify(updatedProfile)
+  }));
+}
+```
+
+**참고**: 이 코드는 `handleUserAction` 함수 내부, `await refetchUsers();` 이후에 위치합니다.
+
+#### 4️⃣ **HamburgerMenu에 isAdmin 전달**
+
+```typescript
+// 변경 전
+<HamburgerMenu
+  onAdmin={user?.is_admin ? handleAdmin : undefined}
+/>
+
+// 변경 후
+<HamburgerMenu
+  onAdmin={isAdmin === true ? handleAdmin : undefined}
+/>
+```
+
+### ⚙️ **3단계 업데이트 전략**
+
+#### 1️⃣ **캐시 우선 로딩**
+- 초기 로딩 시 localStorage에서 읽어 즉시 표시
+- 깜빡임 없이 관리자 메뉴 표시/숨김
+
+#### 2️⃣ **Supabase Realtime**
+- DB 변경 시 자동 감지 및 업데이트
+- 다른 관리자가 권한 변경 시에도 자동 반영
+
+#### 3️⃣ **커스텀 이벤트**
+- 관리자 페이지에서 권한 변경 시 즉시 이벤트 발생
+- API 호출 없이 localStorage에서 직접 읽어서 업데이트
+
+### 🎯 **사용 시나리오**
+
+#### 시나리오 1: 초기 로딩
+1. 사용자가 intro 페이지 접속
+2. `useEffect` 실행
+3. localStorage에서 `user_profile_cache_{userId}` 읽기
+4. 캐시에 `is_admin` 값이 있으면 즉시 `setIsAdmin` 호출
+5. 깜빡임 없이 관리자 메뉴 표시/숨김
+
+#### 시나리오 2: 관리자 페이지에서 권한 변경
+1. 관리자가 다른 사용자(또는 자신)의 권한 변경
+2. API 호출 성공
+3. **현재 로그인한 사용자 자신의 권한이 변경된 경우:**
+   - localStorage 캐시 직접 업데이트
+   - `userAdminStatusChanged` 커스텀 이벤트 발생
+   - StorageEvent 발생 (다른 탭 감지용)
+4. intro 페이지에서 이벤트 감지
+5. localStorage에서 직접 읽어서 `setIsAdmin` 업데이트
+6. 관리자 메뉴 즉시 표시/숨김
+
+#### 시나리오 3: Realtime 이벤트 수신
+1. DB에서 `users` 테이블의 `is_admin` 필드 변경
+2. Supabase Realtime 이벤트 발생
+3. intro 페이지의 Realtime 구독에서 감지
+4. `oldIsAdmin !== newIsAdmin` 확인
+5. `setIsAdmin` 업데이트
+6. localStorage 캐시도 업데이트
+7. 관리자 메뉴 즉시 표시/숨김
+
+#### 시나리오 4: 다른 탭에서 권한 변경
+1. 다른 탭에서 관리자 페이지 접속
+2. 권한 변경 (localStorage 업데이트)
+3. intro 페이지가 있는 탭으로 전환
+4. `visibilitychange` 이벤트 발생
+5. localStorage에서 최신 값 확인
+6. 변경사항이 있으면 `setIsAdmin` 업데이트
+
+### ⚙️ **최적화 포인트**
+
+#### 1️⃣ **불필요한 업데이트 방지**
+```typescript
+// is_admin 필드가 실제로 변경되었는지 확인
+if (oldIsAdmin === newIsAdmin) {
+  return; // 스킵
+}
+```
+다른 필드(`status`, `school` 등)가 업데이트되어도 `is_admin`이 변경되지 않았으면 처리하지 않습니다.
+
+#### 2️⃣ **API 호출 최소화**
+커스텀 이벤트 리스너에서는 API 호출 없이 localStorage에서 직접 읽어서 업데이트합니다.
+
+#### 3️⃣ **캐시 동기화**
+모든 업데이트 경로에서 localStorage 캐시도 함께 업데이트하여 다음 로딩 시 정확한 값을 보장합니다.
+
+### 🔍 **주요 특징**
+
+#### 1️⃣ **3중 보장 시스템**
+- **캐시 우선**: 초기 로딩 시 깜빡임 없음
+- **Realtime**: DB 변경 시 자동 감지
+- **커스텀 이벤트**: 관리자 페이지에서 즉시 반영
+
+#### 2️⃣ **다중 탭 지원**
+- `visibilitychange` 이벤트로 다른 탭에서 돌아올 때 확인
+- StorageEvent로 다른 탭의 localStorage 변경 감지
+
+#### 3️⃣ **성능 최적화**
+- API 호출 최소화 (커스텀 이벤트 시 localStorage 직접 읽기)
+- 불필요한 업데이트 방지 (필드 변경 확인)
+- Realtime 구독 최적화 (필터링 및 스킵 로직)
+
+### 📊 **이전 구현과의 차이점**
+
+#### 이전 구현
+```typescript
+// 단순히 user.is_admin 사용
+onAdmin={user?.is_admin ? handleAdmin : undefined}
+```
+
+**문제점:**
+- 초기 로딩 시 `user.is_admin`이 로딩되기 전까지 `undefined` → 깜빡임 발생
+- 권한 변경 시 페이지 새로고침 필요
+- 관리자 페이지에서 권한 변경 후 intro 페이지로 이동해도 반영 안 됨
+
+#### 현재 구현
+```typescript
+// isAdmin state로 관리 + 3중 업데이트 시스템
+const [isAdmin, setIsAdmin] = useState<boolean | null>(null);
+// ... 캐시 우선 + Realtime + 커스텀 이벤트
+onAdmin={isAdmin === true ? handleAdmin : undefined}
+```
+
+**개선점:**
+- 초기 로딩 시 캐시 우선 → 깜빡임 없음
+- 권한 변경 시 즉시 반영 (Realtime + 커스텀 이벤트)
+- 관리자 페이지에서 권한 변경 후 intro 페이지로 이동 시 즉시 반영
+
+### ⚠️ **주의사항**
+
+1. **Realtime 구독 관리**: 컴포넌트 언마운트 시 반드시 구독 해제
+2. **캐시 파싱 에러 처리**: try-catch로 안전하게 처리
+3. **이벤트 리스너 정리**: useEffect cleanup에서 반드시 제거
+4. **의존성 배열**: `user?.id`와 `isAdmin`을 정확히 지정
+
+### 🔗 **관련 파일**
+
+- `frontend/src/pages/intro/page.tsx`: 메인 구현
+- `frontend/src/pages/admin/page.tsx`: 이벤트 발생
+- `frontend/src/hooks/useAuth.ts`: 사용자 정보 관리
+- `frontend/src/pages/intro/components/HamburgerMenu.tsx`: UI 컴포넌트
+
+### ✅ **테스트 시나리오**
+
+1. ✅ 초기 로딩 시 관리자 메뉴 깜빡임 없이 표시
+2. ✅ 관리자 페이지에서 권한 변경 후 intro 페이지로 이동 시 즉시 반영
+3. ✅ 다른 관리자가 권한 변경 시 Realtime으로 자동 반영
+4. ✅ 다른 탭에서 권한 변경 후 돌아올 때 반영
+5. ✅ 권한이 없는 사용자에게는 메뉴가 표시되지 않음
+
+---
+
 ## 🔧 짧은 AI 조언 시스템 (주석처리됨)
 
 ### 📋 **현재 상태**
-- **위치**: `frontend_change/src/pages/fortune-cookie/page.tsx` (55-85줄)
+- **위치**: `frontend/src/pages/fortune-cookie/page.tsx` (55-85줄)
 - **상태**: 주석처리됨 (JSON 파일로 대체)
-- **데이터 소스**: `frontend_change/public/data/short-advices.json`
+- **데이터 소스**: `frontend/public/data/short-advices.json`
 
 > 백엔드 변경 반영: `POST /api/concerns/ai/both` 응답에서 `shortAdvice`는 이제 빈 문자열로 반환됩니다. 프런트 표시 로직에는 영향이 없습니다.
 
 ### 🔄 **복원 방법**
 
 #### 1️⃣ **주석 해제**
-`frontend_change/src/pages/fortune-cookie/page.tsx` 파일에서 다음 부분의 주석을 해제:
+`frontend/src/pages/fortune-cookie/page.tsx` 파일에서 다음 부분의 주석을 해제:
 
 ```typescript
 // 주석 해제할 부분 (60-65줄)

@@ -167,9 +167,9 @@ const UsersTable = ({
                       <span>차단됨</span>
                     </span>
                   ) : (
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(user.status)}`}>
-                      {getStatusText(user.status)}
-                    </span>
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusColor(user.status)}`}>
+                    {getStatusText(user.status)}
+                  </span>
                   )}
                 </td>
                 <td className="px-4 py-4" onClick={(e) => e.stopPropagation()}>
@@ -207,13 +207,13 @@ const UsersTable = ({
                         <i className="ri-close-circle-line text-base"></i>
                       </button>
                     ) : (
-                      <button
+                    <button
                         onClick={() => handleUserAction('ban', user.id)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50 transition-all duration-200 hover:scale-105"
                         title="사용자 차단"
-                      >
+                    >
                         <i className="ri-checkbox-circle-line text-base"></i>
-                      </button>
+                    </button>
                     )}
                     <button
                       onClick={() => setShowSchoolEditModal(user)}

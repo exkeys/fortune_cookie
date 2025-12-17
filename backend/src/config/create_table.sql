@@ -607,6 +607,16 @@ CREATE INDEX IF NOT EXISTS idx_daily_usage_log_user_used
 -- CREATE INDEX idx_deletion_restrictions_email_hash ON public.deletion_restrictions(email_hash);
 
 
+-- --------------------------------------------------------------------
+-- 7. Supabase Realtime 설정
+-- --------------------------------------------------------------------
+
+-- users 테이블을 Realtime Publication에 추가
+-- 프론트엔드에서 실시간으로 학교 정보 변경을 감지하기 위해 필요
+-- 이미 추가되어 있어도 에러가 발생하지 않음
+ALTER PUBLICATION supabase_realtime ADD TABLE users;
+
+
 -- ====================================================================
 -- 스키마 정리 완료
 -- 이 파일을 실행하면 전체 데이터베이스 스키마가 설정됩니다.
