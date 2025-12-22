@@ -3,10 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import emailjs from '@emailjs/browser';
 import Card from '../../components/base/Card';
 import Header from '../../components/feature/Header';
-import { supabase } from '../../supabaseClient';
+import { useAuth } from '../../hooks/useAuth';
 import PageTitle from './components/PageTitle';
 import LoadingState from './components/LoadingState';
-import LoginRequired from './components/LoginRequired';
 import SubmissionSuccess from './components/SubmissionSuccess';
 import FeedbackType from './components/FeedbackType';
 import Rating from './components/Rating';
@@ -16,6 +15,7 @@ import SubmitButtons from './components/SubmitButtons';
 
 export default function FeedbackPage() {
   const navigate = useNavigate();
+  const { user, isLoading: authLoading } = useAuth();
   const [feedback, setFeedback] = useState({
     type: 'suggestion',
     rating: 5,
@@ -24,40 +24,13 @@ export default function FeedbackPage() {
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
 
-  // 로그인 상태 체크
+  // 로그인되지 않은 사용자는 자동으로 홈으로 리다이렉트
   useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        // Supabase 세션 확인
-        const { data: auth } = await supabase.auth.getUser();
-        let userId = auth?.user?.id;
-        
-        // Supabase 세션이 없으면 localStorage의 백엔드 로그인 정보 확인
-        if (!userId) {
-          const backendAuthData = localStorage.getItem('auth_backend_user');
-          if (backendAuthData) {
-            try {
-              const backendUser = JSON.parse(backendAuthData);
-              userId = backendUser.id;
-            } catch (e) {
-              console.error('[Feedback] localStorage 파싱 실패:', e);
-            }
-          }
-        }
-        
-        setIsLoggedIn(!!userId);
-      } catch (error) {
-        setIsLoggedIn(false);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    checkAuth();
-  }, []);
+    if (!authLoading && !user?.id) {
+      navigate('/', { replace: true });
+    }
+  }, [authLoading, user?.id, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -102,7 +75,8 @@ export default function FeedbackPage() {
 
 
 
-  if (isLoading) {
+  // 로딩 중이거나 로그인되지 않은 사용자는 리다이렉트되므로 여기서는 처리 불필요
+  if (authLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
         <Header />
@@ -111,13 +85,9 @@ export default function FeedbackPage() {
     );
   }
 
-  if (!isLoggedIn) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">
-        <Header />
-        <LoginRequired />
-      </div>
-    );
+  // 로그인되지 않은 사용자는 이미 리다이렉트되었으므로 여기서는 처리 불필요
+  if (!user?.id) {
+    return null;
   }
 
   if (isSubmitted) {

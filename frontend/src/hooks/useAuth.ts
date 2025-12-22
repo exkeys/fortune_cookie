@@ -693,6 +693,16 @@ export const useAuth = (): AuthReturn => {
             };
             localStorage.setItem(`user_profile_cache_${userId}`, JSON.stringify(profileCache));
             
+            // 신규 가입자인 경우 학교 선택 페이지로 리다이렉트
+            const school = dbUser.school;
+            if (!school || school === 'unknown' || school.trim() === '') {
+              logger.log('[useAuth] 🏫 학교 정보 없음 - school-select로 리다이렉트');
+              if (window.location.pathname !== '/school-select') {
+                window.location.href = '/school-select';
+              }
+              return;
+            }
+            
             // 프로필 업데이트 완료
             // oauth-callback에서 이미 모든 처리를 완료했으므로 여기서는 플래그 제거 불필요
             return;
@@ -758,6 +768,16 @@ export const useAuth = (): AuthReturn => {
             cachedAt: Date.now()
           };
           localStorage.setItem(`user_profile_cache_${userId}`, JSON.stringify(profileCache));
+          
+          // 신규 가입자인 경우 학교 선택 페이지로 리다이렉트
+          const school = userRow.school;
+          if (!school || school === 'unknown' || school.trim() === '') {
+            logger.log('[useAuth] 🏫 학교 정보 없음 (Fallback 조회 후) - school-select로 리다이렉트');
+            if (window.location.pathname !== '/school-select') {
+              window.location.href = '/school-select';
+            }
+            return;
+          }
         }
       } catch (cacheError) {
         logger.warn('[useAuth] 프로필 캐시 저장 실패', cacheError);

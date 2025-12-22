@@ -1,23 +1,24 @@
-# 🥠 Frontend Change 구조 가이드
+# Frontend Change 구조 가이드
 
 > React + Vite + TypeScript + Tailwind CSS 기반의 포춘쿠키 AI 상담 서비스
 
 ---
 
-## 📋 목차
-1. [프로젝트 개요](#-프로젝트-개요)
-2. [폴더 구조](#-폴더-구조)
-3. [핵심 설정 파일](#️-핵심-설정-파일)
-4. [공통 컴포넌트](#-공통-컴포넌트)
-5. [페이지별 상세 분석](#-페이지별-상세-분석)
-6. [일일 사용 제한 시스템](#-일일-사용-제한-시스템)
-7. [데이터 흐름](#-데이터-흐름)
-8. [Supabase Realtime 실시간 업데이트](#-supabase-realtime-실시간-업데이트)
-9. [코드 품질](#-코드-품질)
+## 목차
+1. [프로젝트 개요](#프로젝트-개요)
+2. [폴더 구조](#폴더-구조)
+3. [핵심 설정 파일](#핵심-설정-파일)
+4. [공통 컴포넌트](#공통-컴포넌트)
+5. [페이지별 상세 분석](#페이지별-상세-분석)
+6. [일일 사용 제한 시스템](#일일-사용-제한-시스템)
+7. [데이터 흐름](#데이터-흐름)
+8. [Supabase Realtime 실시간 업데이트](#supabase-realtime-실시간-업데이트)
+9. [접근 제어 시스템 전역화](#접근-제어-시스템-전역화)
+10. [코드 품질](#코드-품질)
 
 ---
 
-## 🎯 프로젝트 개요
+## 프로젝트 개요
 
 **Frontend Change**는 포춘쿠키 스타일로 AI 조언을 제공하는 상담 서비스입니다.
 - **기술 스택**: React 18 + Vite + TypeScript + Tailwind CSS
@@ -27,11 +28,11 @@
 
 ---
 
-## 📁 폴더 구조
+## 폴더 구조
 
 ```
 frontend/
-├─ 📄 설정 파일들
+├─ 설정 파일들
 │  ├─ package.json          # 의존성 관리
 │  ├─ vite.config.ts        # Vite 설정
 │  ├─ tailwind.config.ts    # Tailwind 설정
@@ -39,31 +40,32 @@ frontend/
 │  └─ postcss.config.cjs    # PostCSS 설정
 │
 └─ src/
-   ├─ 🚀 앱 엔트리
+   ├─ 앱 엔트리
    │  ├─ main.tsx           # React 앱 부트스트랩
    │  ├─ App.tsx            # 전역 레이아웃 셸
    │  ├─ index.css          # 글로벌 스타일
    │  └─ supabaseClient.ts  # Supabase 클라이언트
    │
-   ├─ 🔧 공용 모듈
+   ├─ 공용 모듈
    │  ├─ constants/         # 상수 정의
    │  ├─ types/             # 타입 정의
    │  └─ utils/             # 유틸 함수
    │
-   ├─ 🎨 컴포넌트
+   ├─ 컴포넌트
    │  ├─ base/              # 기본 UI 컴포넌트
    │  └─ feature/           # 기능별 컴포넌트
    │
-   ├─ 🪝 훅(Hooks)
+   ├─ 훅(Hooks)
    │  ├─ useApi.ts          # API 호출
    │  ├─ useAuth.ts         # 인증 관리
-   │  └─ useSessionUsage.ts # 세션 추적
+   │  ├─ useSessionUsage.ts # 세션 추적
+   │  └─ useAccessControl.ts # 접근 제어
    │
-   ├─ 🛣️ 라우터
+   ├─ 라우터
    │  ├─ config.tsx         # 라우트 설정
    │  └─ index.ts           # 라우터 프로바이더
    │
-   └─ 📱 페이지들
+   └─ 페이지들
       ├─ intro/             # 인트로 화면
       ├─ school-select/     # 학교 선택
       ├─ role-select/       # 역할 선택
@@ -83,33 +85,33 @@ frontend/
 
 ---
 
-## ⚙️ 핵심 설정 파일
+## 핵심 설정 파일
 
-### 📦 `package.json`
+### `package.json`
 - **React 18** + TypeScript + Vite 기반 SPA
 - **주요 의존성**: React Router, Tailwind CSS, Supabase, EmailJS
 - **스크립트**: `dev` (개발), `build` (빌드), `preview` (미리보기)
 
-### ⚡ `vite.config.ts`
+### `vite.config.ts`
 - **개발서버**: 포트 3000, Hot reload, TypeScript 지원
 - **빌드 설정**: `/out` 폴더로 출력
 - **SPA 모드**: 모든 라우트를 `index.html`로 처리
 - **프록시**: `/api` 요청을 `http://localhost:4000`으로 프록시
 
-### 🎨 `tailwind.config.ts`
+### `tailwind.config.ts`
 - **스캔 경로**: `src/**/*.{js,ts,jsx,tsx}` 파일 감시
 - **커스텀 설정**: 확장 가능한 테마 구조
 
-### 📝 TypeScript 설정
+### TypeScript 설정
 - **앱용**: `tsconfig.json` (엄격한 타입 체크)
 - **노드용**: `tsconfig.node.json` (Vite 설정용)
 - **베이스**: `tsconfig.base.json` (공통 설정)
 
 ---
 
-## 🎨 공통 컴포넌트
+## 공통 컴포넌트
 
-### 🧱 Base 컴포넌트 (`components/base/`)
+### Base 컴포넌트 (`components/base/`)
 
 #### `Button.tsx`
 ```tsx
@@ -127,7 +129,7 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 }
 ```
 
-### 🚀 Feature 컴포넌트 (`components/feature/`)
+### Feature 컴포넌트 (`components/feature/`)
 
 #### `Header.tsx`
 - **역할**: 전역 상단 헤더바
@@ -136,23 +138,24 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
 
 ---
 
-## 🪝 핵심 훅(Hooks)
+## 핵심 훅(Hooks)
 
 | 훅 이름 | 역할 | 주요 기능 |
 |---------|------|-----------|
 | `useApi` | API 호출 래퍼 | 에러/로딩 처리 일원화 |
 | `useAuth` | 인증 관리 | Supabase 기반 로그인 상태 관리 |
 | `useSessionUsage` | 세션 추적 | 사용량/상태 모니터링 |
+| `useAccessControl` | 접근 제어 | 전역 접근 권한 체크 및 모달 표시 |
 
 ---
 
-## 📱 페이지별 상세 분석
+## 페이지별 상세 분석
 
-### 🎬 1. **인트로 페이지** (`intro/`)
+### 1. 인트로 페이지 (`intro/`)
 
-**📍 역할**: 앱 첫 화면, 로그인 처리  
-**📊 규모**: 46줄, 4개 컴포넌트  
-**🔐 인증**: 카카오 로그인/로그아웃
+**역할**: 앱 첫 화면, 로그인 처리  
+**규모**: 46줄, 4개 컴포넌트  
+**인증**: 카카오 로그인/로그아웃
 
 #### 컴포넌트 구성
 ```
@@ -165,9 +168,10 @@ intro/
 ```
 
 #### 주요 기능
-- ✅ 카카오 로그인/로그아웃
-- ✅ 피드백/과거기록 페이지 이동
-- ✅ 시각적 인트로 효과
+- 카카오 로그인/로그아웃
+- 피드백/과거기록 페이지 이동
+- 시각적 인트로 효과
+- 전역 접근 제어 시스템 적용 (`useAccessControl` 훅 사용)
 
 ---
 
@@ -191,7 +195,7 @@ role-select/
 #### 기본 제공 역할
 | 역할 | 아이콘 | 설명 |
 |------|-------|------|
-| 학생 | 📚 (ri-book-line) | 학업과 진로 상담 |
+| 학생 | ri-book-line | 학업과 진로 상담 |
 
 **참고**: 기본 제공 역할은 '학생' 1개만 있으며, 나머지 역할은 사용자가 커스텀 역할로 추가할 수 있습니다. 커스텀 역할은 백엔드 `custom_roles` 테이블에 저장되며, 사용자별로 관리됩니다.
 
@@ -202,7 +206,7 @@ role-select/
 
 ---
 
-### 💭 3. **고민 입력 페이지** (`concern-input/`)
+### 3. 고민 입력 페이지 (`concern-input/`)
 
 **📍 역할**: 상담 받을 고민 내용 입력  
 **📊 규모**: 82줄, 5개 컴포넌트  
@@ -231,7 +235,7 @@ concern-input/
 
 ---
 
-### 🥠 4. **포춘쿠키 페이지** (`fortune-cookie/`)
+### 4. 포춘쿠키 페이지 (`fortune-cookie/`)
 
 **📍 역할**: 쿠키 애니메이션 + AI 답변 표시  
 **📊 규모**: 233줄, 6개 컴포넌트  
@@ -272,11 +276,11 @@ fortune-cookie/
 
 ---
 
-### 📄 5. **이전 고민 페이지** (`past-concerns/`)
+### 5. 이전 고민 페이지 (`past-concerns/`)
 
-**📍 역할**: 과거 상담 기록 조회/관리  
-**📊 규모**: 503줄, 12개 컴포넌트  
-**🎯 특징**: 가장 복잡한 페이지, 전문가급 분리
+**역할**: 과거 상담 기록 조회/관리  
+**규모**: 503줄, 12개 컴포넌트  
+**특징**: 가장 복잡한 페이지, 전문가급 분리
 
 #### 컴포넌트 구성
 ```
@@ -305,12 +309,13 @@ past-concerns/
 | 📈 주 평균 | 주당 평균 상담 | 통계 계산 |
 
 #### 고급 기능
-- ✅ **검색**: 고민/답변 내용 텍스트 검색
-- ✅ **필터**: 역할별, 날짜 범위 필터링
-- ✅ **정렬**: 최신순, 오래된순
-- ✅ **뷰 모드**: 그리드/리스트 전환
-- ✅ **페이지네이션**: 페이지별 데이터 로드
-- ✅ **모달**: 상세보기, 삭제 확인
+- **검색**: 고민/답변 내용 텍스트 검색
+- **필터**: 역할별, 날짜 범위 필터링
+- **정렬**: 최신순, 오래된순
+- **뷰 모드**: 그리드/리스트 전환
+- **페이지네이션**: 페이지별 데이터 로드
+- **모달**: 상세보기, 삭제 확인
+- **전역 접근 제어**: `useAccessControl` 훅으로 접근 권한 체크 및 모달 표시
 
 #### 데이터 소스
 1. **Primary**: Supabase (로그인 사용자의 영구 저장)
@@ -347,9 +352,64 @@ const [currentPage, setCurrentPage] = useState(1)
 const [itemsPerPage] = useState(12)
 ```
 
+#### 역할 시스템 최적화
+
+**배경:**
+- role-select 페이지에서 기본 제공 역할이 '학생' 1개만 남음
+- DB에 저장된 과거 데이터에는 다른 역할(CEO, 디자이너, 개발자 등)이 있을 수 있음
+- roles 배열에 없는 역할은 커스텀 역할로 자동 처리
+
+**최적화 내용:**
+
+1. **roles 배열 단순화**
+   - 8개 역할 → 1개 역할(학생)만 유지
+   - role-select 페이지와 동일한 구조로 통일
+   ```typescript
+   const roles = [
+     {
+       id: 'student',
+       name: '학생',
+       icon: 'ri-book-line',
+       description: '학업과 진로 상담',
+       color: 'from-indigo-400 to-indigo-600'
+     }
+   ];
+   ```
+
+2. **커스텀 역할 처리**
+   - `getRoleFromPersona` 함수로 역할 매칭
+   - roles 배열에 없는 persona는 커스텀 역할로 처리
+   ```typescript
+   const getRoleFromPersona = (persona: string) => {
+     const foundRole = roles.find(role => role.name === persona);
+     if (foundRole) {
+       return foundRole;
+     }
+     // 커스텀 역할 처리
+     return {
+       id: 'custom',
+       name: persona,
+       icon: 'ri-user-3-line',  // 사람 아이콘
+       description: `${persona} 관련 조언`,
+       color: 'from-indigo-400 to-indigo-600'  // 파랑 그라데이션 (학생과 동일)
+     };
+   };
+   ```
+
+3. **커스텀 역할 스타일**
+   - **아이콘**: `ri-user-3-line` (명확한 사람 아이콘)
+   - **색상**: 파랑 그라데이션 (`from-indigo-400 to-indigo-600`) - 학생과 동일
+   - **아이콘 색상**: 흰색 (`text-white` 클래스)
+   - 기본 역할(학생)과 동일한 색상으로 통일
+
+**동작 방식:**
+- DB의 `persona` 값이 `roles` 배열에 있으면 해당 역할 정보 반환
+- 없으면 커스텀 역할로 처리 (파랑 배경 + 흰색 사람 아이콘)
+- 과거 데이터 호환성 유지 (기존 데이터 삭제 불필요)
+
 ---
 
-### 📝 6. **피드백 페이지** (`feedback/`)
+### 6. 피드백 페이지 (`feedback/`)
 
 **📍 역할**: 사용자 피드백 수집  
 **📊 규모**: 147줄, 9개 컴포넌트  
@@ -371,16 +431,13 @@ feedback/
 ```
 
 #### 피드백 유형 (FeedbackType.tsx)
-```
-┌─────────────┬─────────────┐
-│ 💡 개선제안  │ 🐛 버그신고  │
-├─────────────┼─────────────┤  
-│ ❤️ 칭찬     │ 💬 기타     │
-└─────────────┴─────────────┘
-```
+- 개선제안
+- 버그신고
+- 칭찬
+- 기타
 
 #### 평점 시스템 (Rating.tsx)
-- ⭐ 1~5점 별점 클릭 선택
+- 1~5점 별점 클릭 선택
 - hover/active 시 amber 색상 피드백
 - 필수 입력 항목
 
@@ -397,7 +454,7 @@ feedback/
 
 ---
 
-### ❌ 7. **404 에러 페이지** (`not-found/`)
+### 7. 404 에러 페이지 (`not-found/`)
 
 **📍 역할**: 잘못된 URL 처리  
 **📊 규모**: 18줄, 2개 컴포넌트  
@@ -413,20 +470,20 @@ not-found/
 
 ---
 
-## 📊 일일 사용 제한 시스템
+## 일일 사용 제한 시스템
 
-### 📋 **개요**
+### 개요
 - 사용자가 하루에 한 번만 포춘쿠키를 받을 수 있도록 제한
 - 역할 선택 페이지에서 사용 여부 체크 및 제한 처리
 
-### 🎯 **주요 파일**
+### 주요 파일
 - **페이지**: `frontend/src/pages/role-select/page.tsx`
 - **API 호출**: `/api/access-control/check-full-access` 엔드포인트 사용
 - **접근 제어**: `frontend/src/pages/intro/components/IntroMainContent.tsx`에서도 동일 API 사용
 
-### 🔄 **동작 흐름**
+### 동작 흐름
 
-#### 1️⃣ **페이지 진입 시 체크**
+#### 1. 페이지 진입 시 체크
 ```typescript
 // 접근 권한 및 일일 사용 제한 확인
 const response = await apiFetch(`/api/access-control/check-full-access`);
@@ -441,7 +498,7 @@ if (!data.canUse) {
 }
 ```
 
-#### 2️⃣ **차단 화면 표시**
+#### 2. 차단 화면 표시
 ```jsx
 // 접근 불가 또는 일일 사용 제한에 걸린 경우
 if (!data.canAccess) {
@@ -458,7 +515,7 @@ if (!data.canUse) {
 }
 ```
 
-#### 3️⃣ **사용 기록 생성**
+#### 3. 사용 기록 생성
 ```typescript
 // 포춘쿠키 페이지에서 결과 표시 시 자동 생성
 const response = await apiFetch('/api/daily-usage-logs', {
@@ -468,35 +525,35 @@ const response = await apiFetch('/api/daily-usage-logs', {
 });
 ```
 
-### ⚙️ **테스트 설정**
+### 테스트 설정
 **현재 상태**: 테스트용 (1분 제한) ⚡
 - 1분 후 다시 사용 가능  
 - 백엔드에서 제한 시간 설정 변경 가능
 
 **운영 전환**: `backend/src/services/accessControlService.js`에서 주석 변경
 
-### 🛡️ **회원탈퇴 시 재가입 제한 정책**
+### 회원탈퇴 시 재가입 제한 정책
 
-#### 📋 **정책 개요**
+#### 정책 개요
 - **회원탈퇴 시 `deletion_restrictions` 테이블에 해시값만 저장**
 - 이메일, User-Agent, IP 주소를 SHA-256 해시로 변환하여 저장 (개인정보 없음)
 - 탈퇴 후 같은 계정으로 재가입 시에도 24시간 동안 제한 유지
 - 24시간 후 자동 스케줄러에 의해 해시 정보 삭제
 
-#### 🔐 **해시화 방식**
+#### 해시화 방식
 - **이메일**: SHA-256 해시 (64자)
 - **User-Agent**: SHA-256 해시 (브라우저 핑거프린트)
 - **IP 주소**: SHA-256 해시
 - **개인정보 보호**: 원본 데이터는 저장하지 않고 해시값만 저장
 
-#### 🔄 **동작 시나리오**
+#### 동작 시나리오
 1. **사용자 A**: 포춘쿠키 사용 → 일일 제한 적용
 2. **회원탈퇴**: 계정 삭제, `daily_usage_log`는 즉시 삭제
 3. **해시 저장**: `deletion_restrictions` 테이블에 해시값 저장 (24시간 유효)
 4. **재가입**: 같은 계정으로 재가입 시도
 5. **제한 유지**: 24시간 경과 전까지 사용 불가 (해시값으로 확인)
 
-#### ⚠️ **중요 사항**
+#### 중요 사항
 - 회원탈퇴로 일일 제한을 우회할 수 없음
 - `daily_usage_log`는 회원탈퇴 시 즉시 삭제됨
 - 재가입 제한은 `deletion_restrictions` 테이블의 해시값으로 관리됨
@@ -504,47 +561,47 @@ const response = await apiFetch('/api/daily-usage-logs', {
 
 ---
 
-## 🏫 학교별 날짜 제한 시스템
+## 학교별 날짜 제한 시스템
 
-### 📋 **관리자 기능**
+### 관리자 기능
 - **관리자 대시보드** → **설정 탭**에서 학교별 이용 기간 설정
 - 24개 대학교 데이터 검색 및 선택 가능
 - 시작일/종료일 설정으로 정확한 이용 기간 관리
 
-### 🎯 **학교 데이터**
+### 학교 데이터
 - **위치**: `frontend/src/data/schools.json`
 - **포함 학교**: 서울/경기/인천 주요 대학교 24개
 - **검색 기능**: 학교명, 지역별 검색 지원
 
-### 🔄 **접근 제어 흐름**
+### 접근 제어 흐름
 1. **사용자 로그인** → 2. **인트로 페이지에서 접근 권한 체크** (`/api/access-control/check-full-access`)
 2. **결과에 따른 화면 분기**:
-   - ✅ **접근 가능 + 사용 가능**: 정상 화면 (역할 선택 페이지 등)
-   - ⚠️ **접근 가능 + 사용 불가**: AccessModal로 "오늘의 포춘쿠키를 이미 받으셨어요!" 표시
-   - ❌ **접근 불가**: 
+   - 접근 가능 + 사용 가능: 정상 화면 (역할 선택 페이지 등)
+   - 접근 가능 + 사용 불가: AccessModal로 "오늘의 포춘쿠키를 이미 받으셨어요!" 표시
+   - 접근 불가: 
      - 밴 상태 → `/account-banned` 페이지로 리다이렉트
      - 학교 정보 없음 → `/school-select` 페이지로 리다이렉트
      - 기간 외 → AccessModal로 경고 메시지 표시
      - 재가입 제한 → `/account-cooldown` 페이지로 리다이렉트
 
-### 📊 **체크 우선순위**
-1. **🚫 밴 상태** (최우선)
-2. **🏫 학교 정보** 존재 여부
-3. **📅 학교 이용 기간** 범위 내
-4. **⏰ 일일 사용 제한** (학교별)
+### 체크 우선순위
+1. 밴 상태 (최우선)
+2. 학교 정보 존재 여부
+3. 학교 이용 기간 범위 내
+4. 일일 사용 제한 (학교별)
 
 ---
 
-## 🎛️ 관리자 설정 탭 (SettingsTab)
+## 관리자 설정 탭 (SettingsTab)
 
-### 📋 **개요**
+### 개요
 - **위치**: `frontend/src/pages/admin/components/SettingsTab.tsx`
 - **역할**: 학교별 서비스 이용 기간 관리 (Access Period)
 - **규모**: 620줄, 커스텀 캘린더 컴포넌트 포함
 
-### 🎨 **주요 기능**
+### 주요 기능
 
-#### 1️⃣ **Apple Style Calendar 컴포넌트**
+#### 1. Apple Style Calendar 컴포넌트
 - **커스텀 캘린더**: Apple 스타일의 모던한 날짜 선택 UI
 - **기능**:
   - 월별 네비게이션 (이전/다음 달)
@@ -555,7 +612,7 @@ const response = await apiFetch('/api/daily-usage-logs', {
   - 외부 클릭 시 자동 닫기
 - **자동 연속 선택**: 시작일 선택 후 종료일 달력 자동으로 열림
 
-#### 2️⃣ **학교 검색 및 선택**
+#### 2. 학교 검색 및 선택
 - **검색 기능**:
   - 실시간 학교명 검색
   - 학교 카테고리 검색 지원
@@ -566,23 +623,23 @@ const response = await apiFetch('/api/daily-usage-logs', {
   - 체크마크(✓) 표시
   - 호버 효과 및 액티브 상태 피드백
 
-#### 3️⃣ **CRUD 기능**
+#### 3. CRUD 기능
 - **추가 (Create)**: 새로운 학교 기간 추가
 - **수정 (Update)**: 기존 기간 수정 (수정 버튼 클릭 시 폼으로 스크롤)
 - **삭제 (Delete)**: 확인 후 삭제
 - **조회 (Read)**: 페이지네이션으로 목록 조회
 
-#### 4️⃣ **로딩 상태 분리**
+#### 4. 로딩 상태 분리
 - **리스트 로딩** (`listLoading`): 데이터 조회 시 표시
 - **폼 제출 로딩** (`formLoading`): 폼 제출 시 버튼만 "처리중..." 표시
 - **UX 최적화**: 리스트 로딩 중에도 폼은 사용 가능
 
-#### 5️⃣ **페이지네이션**
+#### 5. 페이지네이션
 - **페이지당 항목**: 5개
 - **네비게이션**: 이전/다음 버튼 + 페이지 번호 버튼
 - **현재 페이지**: 파란색 배경으로 강조
 
-### 🔄 **데이터 흐름**
+### 데이터 흐름
 
 ```
 사용자 입력
@@ -596,7 +653,7 @@ API 호출 (POST/PUT /api/school-periods)
 성공 시 목록 새로고침
 ```
 
-### 📊 **상태 관리**
+### 상태 관리
 
 ```typescript
 // 데이터 상태
@@ -621,7 +678,7 @@ const filteredSchools = useMemo(() => {
 }, [searchTerm]);
 ```
 
-### 🎯 **주요 특징**
+### 주요 특징
 
 1. **UX 최적화**:
    - 시작일 선택 후 종료일 달력 자동 열기
@@ -642,7 +699,7 @@ const filteredSchools = useMemo(() => {
    - 모든 UI 요소에 다크 모드 스타일 적용
    - 캘린더, 검색창, 버튼 등 일관된 테마
 
-### 📝 **API 엔드포인트**
+### API 엔드포인트
 
 | 메서드 | 엔드포인트 | 설명 |
 |--------|-----------|------|
@@ -651,7 +708,7 @@ const filteredSchools = useMemo(() => {
 | `PUT` | `/api/school-periods/:id` | 학교 기간 수정 |
 | `DELETE` | `/api/school-periods/:id` | 학교 기간 삭제 |
 
-### 💡 **사용 안내 (Info Card)**
+### 사용 안내 (Info Card)
 
 설정 탭 하단에 표시되는 안내 메시지:
 - 밴된 사용자는 학교 날짜 설정과 관계없이 서비스 이용 불가
@@ -661,7 +718,7 @@ const filteredSchools = useMemo(() => {
 
 ---
 
-## 🔄 데이터 흐름
+## 데이터 흐름
 
 ### 일일 제한이 적용된 사용자 여정
 ```mermaid
@@ -718,19 +775,19 @@ localStorage (백업)
 
 ---
 
-## ⚡ Supabase Realtime 실시간 업데이트
+## Supabase Realtime 실시간 업데이트
 
-### 📋 **개요**
+### 개요
 - **위치**: `frontend/src/pages/settings/page.tsx`
 - **기능**: 사용자 학교 정보 실시간 동기화
 - **목적**: 관리자가 사용자 학교 정보를 변경하면 즉시 반영
 
-### 🎯 **구현 위치**
+### 구현 위치
 - **페이지**: 설정 페이지 (My Info)
 - **구독 대상**: `users` 테이블의 `UPDATE` 이벤트
 - **필터링**: 현재 로그인한 사용자 ID만 구독
 
-### 🔄 **동작 흐름**
+### 동작 흐름
 
 ```
 관리자가 사용자 학교 정보 변경
@@ -750,9 +807,9 @@ React State 업데이트
 UI 즉시 반영 (리렌더링)
 ```
 
-### 💻 **코드 구현**
+### 코드 구현
 
-#### 1️⃣ **구독 설정 및 클린업**
+#### 1. 구독 설정 및 클린업
 ```typescript
 // Realtime 구독 참조
 const subscriptionRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -830,33 +887,33 @@ useEffect(() => {
 }, [user?.id, user?.email]);
 ```
 
-### ⚙️ **최적화 기능**
+### 최적화 기능
 
-#### 1️⃣ **필드 변경 확인 (최신)**
+#### 1. 필드 변경 확인 (최신)
 - `oldSchool === newSchool` 체크로 다른 필드 업데이트 시 불필요한 처리 방지
 - `is_admin`, `status` 등 다른 필드가 변경되어도 학교 필드가 변경되지 않았으면 스킵
 
-#### 2️⃣ **불필요한 리렌더링 방지**
+#### 2. 불필요한 리렌더링 방지
 - 이전 값과 동일하면 `setCachedData` 스킵
 - `prev.school === newSchool` 체크로 중복 업데이트 방지
 
-#### 3️⃣ **localStorage 최적화**
+#### 3. localStorage 최적화
 - localStorage 업데이트를 `setState` 내부에서 한 번만 수행
 - 불필요한 localStorage 쓰기 작업 최소화
 
-#### 4️⃣ **초기 로딩 최적화**
+#### 4. 초기 로딩 최적화
 - 초기 학교 정보가 있으면 스켈레톤 UI 표시 안 함
 - `isLoadingSchool` 상태를 즉시 `false`로 설정
 
-#### 5️⃣ **유효성 검사**
+#### 5. 유효성 검사
 - `null`, `'unknown'`, 빈 문자열 체크
 - 유효한 학교 정보만 업데이트
 
-#### 6️⃣ **채널 이름 고유성**
+#### 6. 채널 이름 고유성
 - `user-school-${user.id}` 형식으로 사용자별 고유 채널 생성
 - 여러 사용자가 동시에 접속해도 충돌 없음
 
-### 📊 **데이터 동기화 전략**
+### 데이터 동기화 전략
 
 | 데이터 | 업데이트 방식 | 이유 |
 |--------|--------------|------|
@@ -864,7 +921,7 @@ useEffect(() => {
 | **이메일** | 초기 로딩만 | 변경 빈도 낮음 |
 | **생성일** | 초기 로딩만 | 변경 불가능 |
 
-### 🎯 **사용 시나리오**
+### 사용 시나리오
 
 1. **사용자 A**가 설정 페이지에서 자신의 학교 정보 확인
 2. **관리자**가 관리자 페이지에서 사용자 A의 학교 정보 변경
@@ -872,14 +929,14 @@ useEffect(() => {
 4. **사용자 A의 브라우저**가 이벤트 수신
 5. **즉시 UI 업데이트** (페이지 새로고침 불필요)
 
-### ⚠️ **주의사항**
+### 주의사항
 
 1. **메모리 누수 방지**: 컴포넌트 언마운트 시 반드시 구독 해제
 2. **채널 이름 충돌**: 사용자별 고유 채널 이름 사용
 3. **에러 처리**: 구독 실패 시에도 초기 로딩으로 대체 가능
 4. **성능**: 불필요한 리렌더링 방지를 위한 값 비교 필수
 
-### 🔧 **백엔드 요구사항**
+### 백엔드 요구사항
 
 - Supabase Realtime 기능 활성화 필요
 - `users` 테이블에 Realtime 구독 권한 설정
@@ -887,19 +944,19 @@ useEffect(() => {
 
 ---
 
-## 🔐 관리자 권한 실시간 업데이트
+## 관리자 권한 실시간 업데이트
 
-### 📋 **개요**
+### 개요
 - **위치**: `frontend/src/pages/intro/page.tsx`
 - **기능**: 햄버거 메뉴의 관리자 메뉴 표시를 실시간으로 업데이트
 - **목적**: 관리자 페이지에서 권한을 변경하면 intro 페이지로 이동 시 즉시 반영되며, 깜빡임 없이 부드럽게 작동
 
-### 🎯 **구현 위치**
+### 구현 위치
 - **페이지**: 인트로 페이지 (햄버거 메뉴)
 - **구독 대상**: `users` 테이블의 `UPDATE` 이벤트 (is_admin 필드)
 - **필터링**: 현재 로그인한 사용자 ID만 구독
 
-### 🔄 **동작 흐름**
+### 동작 흐름
 
 ```
 관리자가 사용자 권한 변경 (makeAdmin/removeAdmin)
@@ -919,9 +976,9 @@ React State 업데이트 (isAdmin)
 햄버거 메뉴 즉시 반영 (깜빡임 없음)
 ```
 
-### 💻 **코드 구현**
+### 코드 구현
 
-#### 1️⃣ **State 및 구독 설정** (`intro/page.tsx`)
+#### 1. State 및 구독 설정 (`intro/page.tsx`)
 
 ```typescript
 // Import 추가
@@ -1012,7 +1069,7 @@ useEffect(() => {
 }, [user?.id, user?.is_admin]);
 ```
 
-#### 2️⃣ **커스텀 이벤트 리스너** (`intro/page.tsx`)
+#### 2. 커스텀 이벤트 리스너 (`intro/page.tsx`)
 
 ```typescript
 // 🔔 커스텀 이벤트 감지: 관리자 페이지에서 권한 변경 시 즉시 반영
@@ -1072,7 +1129,7 @@ useEffect(() => {
 }, [user?.id, isAdmin]);
 ```
 
-#### 3️⃣ **관리자 페이지에서 이벤트 발생** (`admin/page.tsx`)
+#### 3. 관리자 페이지에서 이벤트 발생 (`admin/page.tsx`)
 
 ```typescript
 // handleUserAction 함수 내부에 추가
@@ -1111,7 +1168,7 @@ if ((action === 'makeAdmin' || action === 'removeAdmin') && userId === user?.id)
 
 **참고**: 이 코드는 `handleUserAction` 함수 내부, `await refetchUsers();` 이후에 위치합니다.
 
-#### 4️⃣ **HamburgerMenu에 isAdmin 전달**
+#### 4. HamburgerMenu에 isAdmin 전달
 
 ```typescript
 // 변경 전
@@ -1125,21 +1182,21 @@ if ((action === 'makeAdmin' || action === 'removeAdmin') && userId === user?.id)
 />
 ```
 
-### ⚙️ **3단계 업데이트 전략**
+### 3단계 업데이트 전략
 
-#### 1️⃣ **캐시 우선 로딩**
+#### 1. 캐시 우선 로딩
 - 초기 로딩 시 localStorage에서 읽어 즉시 표시
 - 깜빡임 없이 관리자 메뉴 표시/숨김
 
-#### 2️⃣ **Supabase Realtime**
+#### 2. Supabase Realtime
 - DB 변경 시 자동 감지 및 업데이트
 - 다른 관리자가 권한 변경 시에도 자동 반영
 
-#### 3️⃣ **커스텀 이벤트**
+#### 3. 커스텀 이벤트
 - 관리자 페이지에서 권한 변경 시 즉시 이벤트 발생
 - API 호출 없이 localStorage에서 직접 읽어서 업데이트
 
-### 🎯 **사용 시나리오**
+### 사용 시나리오
 
 #### 시나리오 1: 초기 로딩
 1. 사용자가 intro 페이지 접속
@@ -1176,9 +1233,9 @@ if ((action === 'makeAdmin' || action === 'removeAdmin') && userId === user?.id)
 5. localStorage에서 최신 값 확인
 6. 변경사항이 있으면 `setIsAdmin` 업데이트
 
-### ⚙️ **최적화 포인트**
+### 최적화 포인트
 
-#### 1️⃣ **불필요한 업데이트 방지**
+#### 1. 불필요한 업데이트 방지
 ```typescript
 // is_admin 필드가 실제로 변경되었는지 확인
 if (oldIsAdmin === newIsAdmin) {
@@ -1187,29 +1244,29 @@ if (oldIsAdmin === newIsAdmin) {
 ```
 다른 필드(`status`, `school` 등)가 업데이트되어도 `is_admin`이 변경되지 않았으면 처리하지 않습니다.
 
-#### 2️⃣ **API 호출 최소화**
+#### 2. API 호출 최소화
 커스텀 이벤트 리스너에서는 API 호출 없이 localStorage에서 직접 읽어서 업데이트합니다.
 
-#### 3️⃣ **캐시 동기화**
+#### 3. 캐시 동기화
 모든 업데이트 경로에서 localStorage 캐시도 함께 업데이트하여 다음 로딩 시 정확한 값을 보장합니다.
 
-### 🔍 **주요 특징**
+### 주요 특징
 
-#### 1️⃣ **3중 보장 시스템**
+#### 1. 3중 보장 시스템
 - **캐시 우선**: 초기 로딩 시 깜빡임 없음
 - **Realtime**: DB 변경 시 자동 감지
 - **커스텀 이벤트**: 관리자 페이지에서 즉시 반영
 
-#### 2️⃣ **다중 탭 지원**
+#### 2. 다중 탭 지원
 - `visibilitychange` 이벤트로 다른 탭에서 돌아올 때 확인
 - StorageEvent로 다른 탭의 localStorage 변경 감지
 
-#### 3️⃣ **성능 최적화**
+#### 3. 성능 최적화
 - API 호출 최소화 (커스텀 이벤트 시 localStorage 직접 읽기)
 - 불필요한 업데이트 방지 (필드 변경 확인)
 - Realtime 구독 최적화 (필터링 및 스킵 로직)
 
-### 📊 **이전 구현과의 차이점**
+### 이전 구현과의 차이점
 
 #### 이전 구현
 ```typescript
@@ -1235,21 +1292,21 @@ onAdmin={isAdmin === true ? handleAdmin : undefined}
 - 권한 변경 시 즉시 반영 (Realtime + 커스텀 이벤트)
 - 관리자 페이지에서 권한 변경 후 intro 페이지로 이동 시 즉시 반영
 
-### ⚠️ **주의사항**
+### 주의사항
 
 1. **Realtime 구독 관리**: 컴포넌트 언마운트 시 반드시 구독 해제
 2. **캐시 파싱 에러 처리**: try-catch로 안전하게 처리
 3. **이벤트 리스너 정리**: useEffect cleanup에서 반드시 제거
 4. **의존성 배열**: `user?.id`와 `isAdmin`을 정확히 지정
 
-### 🔗 **관련 파일**
+### 관련 파일
 
 - `frontend/src/pages/intro/page.tsx`: 메인 구현
 - `frontend/src/pages/admin/page.tsx`: 이벤트 발생
 - `frontend/src/hooks/useAuth.ts`: 사용자 정보 관리
 - `frontend/src/pages/intro/components/HamburgerMenu.tsx`: UI 컴포넌트
 
-### ✅ **테스트 시나리오**
+### 테스트 시나리오
 
 1. ✅ 초기 로딩 시 관리자 메뉴 깜빡임 없이 표시
 2. ✅ 관리자 페이지에서 권한 변경 후 intro 페이지로 이동 시 즉시 반영
@@ -1259,18 +1316,18 @@ onAdmin={isAdmin === true ? handleAdmin : undefined}
 
 ---
 
-## 🔧 짧은 AI 조언 시스템 (주석처리됨)
+## 짧은 AI 조언 시스템 (주석처리됨)
 
-### 📋 **현재 상태**
+### 현재 상태
 - **위치**: `frontend/src/pages/fortune-cookie/page.tsx` (55-85줄)
 - **상태**: 주석처리됨 (JSON 파일로 대체)
 - **데이터 소스**: `frontend/public/data/short-advices.json`
 
 > 백엔드 변경 반영: `POST /api/concerns/ai/both` 응답에서 `shortAdvice`는 이제 빈 문자열로 반환됩니다. 프런트 표시 로직에는 영향이 없습니다.
 
-### 🔄 **복원 방법**
+### 복원 방법
 
-#### 1️⃣ **주석 해제**
+#### 1. 주석 해제
 `frontend/src/pages/fortune-cookie/page.tsx` 파일에서 다음 부분의 주석을 해제:
 
 ```typescript
@@ -1282,7 +1339,7 @@ setFortuneMessage(shortAdvice);
 setLongAdvice(longAdviceText);
 ```
 
-#### 2️⃣ **JSON 파일 로직 제거**
+#### 2. JSON 파일 로직 제거
 다음 부분을 주석처리하거나 삭제:
 
 ```typescript
@@ -1294,7 +1351,7 @@ const randomAdvice = advicesData.advices[randomIndex];
 setFortuneMessage(randomAdvice.text);
 ```
 
-#### 3️⃣ **긴 조언 API 호출 정리**
+#### 3. 긴 조언 API 호출 정리
 중복된 API 호출을 하나로 통합:
 
 ```typescript
@@ -1306,7 +1363,7 @@ setFortuneMessage(shortAdvice);
 setLongAdvice(longAdviceText);
 ```
 
-### 📊 **JSON 데이터 구조**
+### JSON 데이터 구조
 현재 사용 중인 JSON 파일 (`public/data/short-advices.json`):
 
 ```json
@@ -1328,8 +1385,104 @@ setLongAdvice(longAdviceText);
 }
 ```
 
-### ⚙️ **현재 동작 방식**
+### 현재 동작 방식
 1. **JSON 파일 로드**: `/data/short-advices.json`에서 조언 목록 가져오기
 2. **랜덤 선택**: `Math.random()`으로 조언 목록 중 하나 선택
 3. **표시**: 선택된 조언의 `text` 필드를 포춘쿠키 메시지로 표시
 4. **긴 조언**: `FortuneResultDisplay` 컴포넌트에서 별도로 AI 백엔드 API 호출
+
+---
+
+## 접근 제어 시스템 전역화
+
+### 개요
+접근 제어 로직을 전역화하여 코드 중복을 제거하고 유지보수성을 향상시켰습니다.
+
+### 주요 변경사항
+
+#### 1. `useAccessControl` 훅 생성
+- **위치**: `frontend/src/hooks/useAccessControl.ts`
+- **역할**: 접근 권한 체크 로직 중앙화
+- **주요 기능**:
+  - 중복 요청 방지 (`isCheckingAccess` 상태)
+  - 401 에러 처리 (회원탈퇴 후 24시간 제한, 토큰 검증 실패)
+  - 접근 불가 처리 (차단된 계정, 이용 기간 미설정)
+  - 일일 사용 제한 처리 (카운트다운 모달)
+  - 학교명 자동 추출 로직
+
+#### 2. `AccessModal` 컴포넌트 개선
+- **변경사항**:
+  - `icon` prop 제거 (하드코딩으로 변경)
+  - iOS 스타일 UI 적용
+  - 에러 메시지 자동 처리 (title 기반)
+- **모달 타입**:
+  - 로그인 필요 (초록색 헤더)
+  - 일일 제한 (카운트다운)
+  - 이용 기간 미설정 (초록색 UI)
+  - 에러 모달 (검은색 배경, SVG 아이콘)
+  - 포춘쿠키 이용 안내 (검은색 배경)
+
+#### 3. 페이지별 적용
+- **`IntroMainContent.tsx`**:
+  - 기존 접근 권한 체크 로직 제거
+  - `useAccessControl` 훅 사용
+  - 에러 메시지 간소화 (`message: ''` 사용)
+- **`past-concerns/page.tsx`**:
+  - 기존 접근 권한 체크 로직 제거
+  - `useAccessControl` 훅 사용
+  - 모든 `showAccessModal` 호출에서 `icon` 인자 제거
+  - 에러 메시지 간소화
+
+### 효과
+- 접근 제어 로직 중앙화로 코드 재사용성 향상
+- 일관된 에러 처리 및 UI 표시
+- 유지보수 용이성 증대
+- 중복 코드 제거
+- 타입 안정성 향상 (불필요한 prop 제거)
+
+### 인터페이스
+
+```typescript
+interface ModalConfig {
+  title: string;
+  message: string;
+  actionButton?: {
+    text: string;
+    onClick: () => void;
+  };
+  cancelButtonText?: string;
+  variant?: 'default' | 'dailyLimit';
+  nextAvailableAt?: string | null;
+}
+
+interface UseAccessControlOptions {
+  userId: string | undefined;
+  navigate: NavigateFunction;
+  onShowModal: (config: ModalConfig) => void;
+  onCloseModal?: () => void;
+}
+```
+
+### 사용 예시
+
+```typescript
+const { checkAccessPermission, isCheckingAccess } = useAccessControl({
+  userId: user?.id,
+  navigate,
+  onShowModal: (config) => {
+    setModal({
+      isOpen: true,
+      ...config
+    });
+  },
+  onCloseModal: () => {
+    setModal(prev => ({ ...prev, isOpen: false }));
+  }
+});
+
+// 접근 권한 체크
+const canAccess = await checkAccessPermission();
+if (!canAccess) {
+  return; // 모달이 이미 표시됨
+}
+```

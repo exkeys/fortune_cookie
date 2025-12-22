@@ -34,8 +34,10 @@ export const useConcerns = (userId: string | undefined, enabled: boolean = true)
       return data || [];
     },
     enabled: !!userId && enabled,
-    staleTime: 0, // 캐시 없이 항상 최신 데이터 조회 (운세 저장 후 즉시 반영)
+    staleTime: 0, // 항상 최신 데이터 조회 (운세 저장 후 즉시 반영)
+    gcTime: 300000, // 5분간 캐시 보관 (메모리 최적화)
     refetchOnWindowFocus: false, // 포커스 시 자동 refetch 비활성화 (불필요한 API 호출 방지)
+    refetchOnMount: true, // 마운트 시 항상 refetch (최신 데이터 보장)
   });
 };
 

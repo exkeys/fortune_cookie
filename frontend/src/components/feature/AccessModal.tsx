@@ -1,13 +1,131 @@
 import { useState, useEffect } from 'react';
-import { X, Calendar, AlertCircle } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { X, Calendar, AlertCircle, Mail } from 'lucide-react';
 import { logger } from '../../utils/logger';
+import { SUPPORT_EMAIL } from '../../constants';
+
+// 공통 SupportSection 컴포넌트
+const SupportSection = () => (
+  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+    <div className="flex items-start gap-3">
+      <Mail size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+      <div>
+        <p className="font-semibold text-gray-900 text-sm mb-1">도움이 필요하신가요?</p>
+        <p className="text-gray-600 text-xs mb-2">관리자에게 문의해 주세요</p>
+        <p className="text-blue-600 text-xs font-mono">{SUPPORT_EMAIL}</p>
+      </div>
+    </div>
+  </div>
+);
+
+// 공통 ErrorModalContent 컴포넌트
+interface ErrorModalContentProps {
+  iconBgColor: 'bg-red-50' | 'bg-orange-50' | 'bg-yellow-50' | 'bg-purple-50';
+  iconTextColor: 'text-red-500' | 'text-orange-500' | 'text-yellow-500' | 'text-purple-500';
+  iconSvg: ReactNode;
+  title: string;
+  message: string;
+  causes?: string[];
+  detailContent?: string;
+  bottomMessage?: string;
+  actionButton?: {
+    text: string;
+    onClick: () => void;
+  };
+  onClose: () => void;
+}
+
+const ErrorModalContent = ({
+  iconBgColor,
+  iconTextColor,
+  iconSvg,
+  title,
+  message,
+  causes,
+  detailContent,
+  bottomMessage,
+  actionButton,
+  onClose
+}: ErrorModalContentProps) => {
+  return (
+    <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
+      <div className="text-center p-6">
+        {/* 아이콘 */}
+        <div className="mb-5">
+          <div className={`w-16 h-16 mx-auto ${iconBgColor} rounded-full flex items-center justify-center`}>
+            <div className={`w-8 h-8 ${iconTextColor}`}>
+              {iconSvg}
+            </div>
+          </div>
+        </div>
+
+        {/* 제목 */}
+        <h3 className="text-xl font-semibold text-gray-900 mb-2">
+          {title}
+        </h3>
+
+        {/* 메시지 */}
+        <p className="text-gray-500 text-sm leading-relaxed mb-3">
+          {message}
+        </p>
+
+        {/* 가능한 원인 또는 상세 내용 */}
+        {causes && (
+          <div className="bg-gray-50 rounded-xl p-3 mb-5 text-left">
+            <p className="text-xs text-gray-600 mb-1.5 font-semibold">가능한 원인:</p>
+            <ul className="text-xs text-gray-600 space-y-0.5">
+              {causes.map((cause, index) => (
+                <li key={index}>• {cause}</li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {detailContent && (
+          <div className="bg-gray-50 rounded-xl p-3 mb-5 text-left">
+            <p className="text-xs text-gray-600 mb-1.5 font-semibold">상세 내용:</p>
+            <p className="text-xs text-gray-700 leading-relaxed">
+              {detailContent}
+            </p>
+          </div>
+        )}
+
+        {/* 도움이 필요하신가요? */}
+        <SupportSection />
+
+        {/* 버튼 */}
+        {actionButton ? (
+          <button 
+            onClick={actionButton.onClick}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md mb-2"
+          >
+            {actionButton.text}
+          </button>
+        ) : (
+          <button 
+            onClick={onClose}
+            className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md mb-2"
+          >
+            확인
+          </button>
+        )}
+
+        {/* 안내 문구 */}
+        {bottomMessage && (
+          <p className="text-gray-400 text-xs text-center">
+            {bottomMessage}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+};
 
 interface AccessModalProps {
   isOpen: boolean;
   onClose: () => void;
   title: string;
-  message: string;
-  icon: string;
+  message?: string; // 특별 스타일 모달에서는 사용하지 않음
   actionButton?: {
     text: string;
     onClick: () => void;
@@ -22,7 +140,6 @@ export default function AccessModal({
   onClose,
   title,
   message,
-  icon,
   actionButton,
   cancelButtonText = "메인으로 돌아가기 🏠",
   variant = 'default',
@@ -32,6 +149,19 @@ export default function AccessModal({
   const isDailyLimitStyle = variant === 'dailyLimit';
   const isFortuneCookieGuide = title === '포춘쿠키 이용 안내';
   const isPeriodNotSet = title === '이용 기간 미설정';
+  const isApiError = title === 'API 연결 오류' || title === '서버 연결 실패';
+  const isUserError = title === '사용자 정보 오류';
+  const isJavaScriptError = title === 'JavaScript 오류';
+  const isPermissionError = title === '접근 권한 오류';
+  const isSchoolSelection = title === '학교 선택 필요';
+  const isLoginError = title === '로그인 실패';
+  const isServiceRestricted = title === '서비스 이용 제한';
+  
+  // JavaScript 에러 메시지에서 에러 내용 추출
+  const extractJavaScriptError = (msg: string) => {
+    const errorMatch = msg.match(/오류 내용:\s*(.+?)(?:\n\n|$)/s);
+    return errorMatch ? errorMatch[1].trim() : '알 수 없는 오류';
+  };
   
   // 이용 기간 미설정 모달에서 학교명 추출
   const extractSchoolName = (msg: string) => {
@@ -115,20 +245,20 @@ export default function AccessModal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* 배경 오버레이 */}
       <div
-        className={`fixed inset-0 transition-opacity ${isDailyLimitStyle || isFortuneCookieGuide || isPeriodNotSet ? 'bg-black/70' : 'bg-black bg-opacity-50'}`}
+        className={`fixed inset-0 transition-opacity ${isDailyLimitStyle || isFortuneCookieGuide || isPeriodNotSet || isApiError || isUserError || isJavaScriptError || isPermissionError || isSchoolSelection || isLoginError || isServiceRestricted ? 'bg-gray-900 bg-opacity-50' : 'bg-black bg-opacity-50'}`}
         onClick={onClose}
       />
 
       {/* 모달 컨테이너 */}
       <div className="flex items-center justify-center min-h-screen px-4 py-6">
         <div
-          className={`relative rounded-2xl shadow-2xl ${isFortuneCookieGuide ? 'max-w-md' : isPeriodNotSet ? 'max-w-lg' : 'max-w-xl'} w-full mx-4 transform transition-all overflow-hidden ${
+          className={`relative rounded-2xl shadow-2xl ${isFortuneCookieGuide ? 'max-w-md' : isPeriodNotSet || isApiError || isUserError || isJavaScriptError || isPermissionError || isSchoolSelection || isLoginError || isServiceRestricted ? 'max-w-md' : 'max-w-xl'} w-full mx-4 transform transition-all overflow-hidden ${
             isDailyLimitStyle || isFortuneCookieGuide || isPeriodNotSet ? 'bg-transparent' : 'bg-white'
           }`}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 닫기 X 버튼 (일일 제한 스타일, 포춘쿠키 안내 스타일, 이용 기간 미설정 스타일이 아닐 때만 표시) */}
-          {!isDailyLimitStyle && !isFortuneCookieGuide && !isPeriodNotSet && (
+          {/* 닫기 X 버튼 (일일 제한 스타일, 포춘쿠키 안내 스타일, 이용 기간 미설정 스타일, API 에러 스타일, 사용자 정보 오류 스타일, JavaScript 오류 스타일, 접근 권한 오류 스타일, 학교 선택 스타일, 로그인 실패 스타일, 서비스 이용 제한 스타일이 아닐 때만 표시) */}
+          {!isDailyLimitStyle && !isFortuneCookieGuide && !isPeriodNotSet && !isApiError && !isUserError && !isJavaScriptError && !isPermissionError && !isSchoolSelection && !isLoginError && !isServiceRestricted && (
             <button
               type="button"
               aria-label="닫기"
@@ -142,7 +272,7 @@ export default function AccessModal({
             <>
               {/* 상단 그린 헤더 */}
               <div className="bg-gradient-to-r from-green-500 to-green-600 p-6 text-center">
-                <div className="text-5xl mb-3">{icon || '🔐'}</div>
+                <div className="text-5xl mb-3">🔐</div>
                 <h3 className="text-xl font-bold text-white">로그인이 필요합니다</h3>
               </div>
 
@@ -300,7 +430,7 @@ export default function AccessModal({
                   <div className="bg-gray-50 rounded-lg p-4">
                     <div className="flex items-center justify-between mb-3">
                       <span className="text-sm text-gray-600">학교명</span>
-                      <span className="text-sm font-bold text-gray-900">{extractSchoolName(message)}</span>
+                      <span className="text-sm font-bold text-gray-900">{extractSchoolName(message || '')}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-600">서비스 상태</span>
@@ -329,15 +459,251 @@ export default function AccessModal({
                 </button>
               </div>
             </>
+          ) : isApiError ? (
+            <>
+              {/* 서버 연결 실패 모달 */}
+              <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
+                <div className="text-center p-6">
+                  {/* 아이콘 */}
+                  <div className="mb-5">
+                    <div className="w-16 h-16 mx-auto bg-red-50 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 5.636a9 9 0 010 12.728m0 0l-2.829-2.829m2.829 2.829L21 21M15.536 8.464a5 5 0 010 7.072m0 0l-2.829-2.829m-4.243 2.829a4.978 4.978 0 01-1.414-2.83m-1.414 5.658a9 9 0 01-2.167-9.238m7.824 2.167a1 1 0 111.414 1.414m-1.414-1.414L3 3m8.293 8.293l1.414 1.414" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* 제목 */}
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {title === 'API 연결 오류' ? '서버 연결 실패' : title}
+                  </h3>
+
+                  {/* 메시지 */}
+                  <p className="text-gray-500 text-sm leading-relaxed mb-3">
+                    백엔드 서버에 연결할 수 없습니다.
+                  </p>
+
+                  {/* 에러 상세 정보 */}
+                  <div className="bg-gray-50 rounded-xl p-3 mb-5 text-left">
+                    <p className="text-xs text-gray-600 mb-1.5 font-semibold">가능한 원인:</p>
+                    <ul className="text-xs text-gray-600 space-y-0.5">
+                      <li>• 백엔드 서버가 실행되지 않음</li>
+                      <li>• 네트워크 연결 문제</li>
+                      <li>• 프록시 설정 오류</li>
+                    </ul>
+                  </div>
+
+                  {/* 도움이 필요하신가요? */}
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-xl p-4 mb-6">
+                    <div className="flex items-start gap-3">
+                      <Mail size={20} className="text-blue-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-semibold text-gray-900 text-sm mb-1">도움이 필요하신가요?</p>
+                        <p className="text-gray-600 text-xs mb-2">관리자에게 문의해 주세요</p>
+                        <p className="text-blue-600 text-xs font-mono">{SUPPORT_EMAIL}</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 버튼 */}
+                  <button 
+                    onClick={onClose}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md mb-2"
+                  >
+                    확인
+                  </button>
+
+                  {/* 안내 문구 */}
+                  <p className="text-gray-400 text-xs text-center">
+                    서버 상태를 확인해 주세요.
+                  </p>
+                </div>
+              </div>
+            </>
+          ) : isJavaScriptError ? (
+            <>
+              {/* JavaScript 오류 모달 */}
+              <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-fade-in">
+                <div className="text-center p-6">
+                  {/* 아이콘 */}
+                  <div className="mb-5">
+                    <div className="w-16 h-16 mx-auto bg-purple-50 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-purple-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* 제목 */}
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {title}
+                  </h3>
+
+                  {/* 메시지 */}
+                  <p className="text-gray-500 text-sm leading-relaxed mb-3">
+                    코드 실행 중 오류가 발생했습니다.
+                  </p>
+
+                  {/* 에러 상세 정보 */}
+                  {(() => {
+                    const errorContent = extractJavaScriptError(message || '');
+                    return (
+                      <div className="bg-gray-50 rounded-xl p-3 mb-5 text-left">
+                        <p className="text-xs text-gray-600 mb-1 font-semibold">오류 내용:</p>
+                        <p className="text-xs text-gray-700 font-mono bg-gray-100 p-2 rounded break-all">
+                          {errorContent}
+                        </p>
+                      </div>
+                    );
+                  })()}
+
+                  {/* 안내 문구 */}
+                  <p className="text-gray-400 text-xs mb-6">
+                    개발자 도구(F12) 콘솔을 확인해 주세요.
+                  </p>
+
+                  {/* 버튼 */}
+                  <button 
+                    onClick={onClose}
+                    className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md"
+                  >
+                    확인
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : isPermissionError ? (
+            <ErrorModalContent
+              iconBgColor="bg-orange-50"
+              iconTextColor="text-orange-500"
+              iconSvg={
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              }
+              title={title}
+              message="이 기능에 접근할 권한이 없습니다."
+              causes={[
+                '로그인이 필요합니다',
+                '권한이 부족합니다',
+                '세션이 만료되었습니다'
+              ]}
+              bottomMessage="관리자에게 문의하거나 다시 로그인해 주세요."
+              actionButton={actionButton}
+              onClose={onClose}
+            />
+          ) : isUserError ? (
+            <ErrorModalContent
+              iconBgColor="bg-orange-50"
+              iconTextColor="text-orange-500"
+              iconSvg={
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              }
+              title={title}
+              message="사용자 정보를 불러올 수 없습니다."
+              causes={[
+                '세션이 만료되었습니다',
+                '로그인 정보가 유효하지 않습니다',
+                '서버와의 연결이 끊어졌습니다'
+              ]}
+              bottomMessage="다시 로그인해 주세요."
+              onClose={onClose}
+            />
+          ) : isSchoolSelection ? (
+            <>
+              {/* 학교 선택 필요 모달 */}
+              <div className="bg-white rounded-3xl shadow-2xl max-w-sm w-full overflow-hidden">
+                <div className="text-center p-6">
+                  {/* 아이콘 */}
+                  <div className="mb-5">
+                    <div className="w-16 h-16 mx-auto bg-blue-50 rounded-full flex items-center justify-center">
+                      <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* 제목 */}
+                  <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                    {title}
+                  </h3>
+
+                  {/* 메시지 */}
+                  <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                    포춘쿠키 서비스를 이용하려면<br />
+                    먼저 학교를 선택해야 합니다.
+                  </p>
+
+                  {/* 버튼 */}
+                  {actionButton && (
+                    <button 
+                      onClick={actionButton.onClick}
+                      className="w-full bg-blue-500 hover:bg-blue-600 text-white font-medium py-3 px-6 rounded-xl transition-all duration-200 shadow-sm hover:shadow-md mb-2"
+                    >
+                      {actionButton.text}
+                    </button>
+                  )}
+
+                  <button 
+                    onClick={onClose}
+                    className="w-full text-gray-500 hover:text-gray-700 font-medium py-2 transition-colors text-sm"
+                  >
+                    나중에 하기
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : isLoginError ? (
+            <ErrorModalContent
+              iconBgColor="bg-yellow-50"
+              iconTextColor="text-yellow-500"
+              iconSvg={
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              }
+              title={title}
+              message="로그인 중 문제가 발생했습니다."
+              causes={[
+                '아이디 또는 비밀번호가 올바르지 않습니다',
+                '네트워크 연결이 불안정합니다',
+                '서버에 일시적인 문제가 있습니다'
+              ]}
+              bottomMessage="잠시 후 다시 시도해 주세요."
+              onClose={onClose}
+            />
+          ) : isServiceRestricted ? (
+            <ErrorModalContent
+              iconBgColor="bg-red-50"
+              iconTextColor="text-red-500"
+              iconSvg={
+                <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                </svg>
+              }
+              title={title}
+              message="서비스 이용이 일시적으로 제한되었습니다."
+              detailContent={message ? (() => {
+                const reasonMatch = message.match(/상세 내용:\s*(.+?)(?:\n\n|$)/s);
+                return reasonMatch ? reasonMatch[1].trim() : '서비스 이용이 제한되었습니다.';
+              })() : '서비스 이용이 제한되었습니다.'}
+              bottomMessage="문제가 지속되면 관리자에게 문의해 주세요."
+              onClose={onClose}
+            />
           ) : (
             <>
               {/* 기본(기존) 모달 */}
               <div className="text-center pt-8 pb-4">
-                <div className="text-6xl mb-4">{icon}</div>
+                <div className="text-6xl mb-4"></div>
                 <h3 className="text-xl font-bold text-gray-900 mb-2">{title}</h3>
               </div>
               <div className="px-6 pb-6">
-                <div className="text-gray-600 text-center leading-relaxed mb-6 whitespace-pre-line">{message}</div>
+                {message && (
+                  <div className="text-gray-600 text-center leading-relaxed mb-6 whitespace-pre-line">{message}</div>
+                )}
                 <div className="flex flex-row gap-4 justify-center">
                   {actionButton && (
                     <button

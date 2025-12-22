@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../hooks/useAuth';
-import { supabase } from '../../../supabaseClient';
+import { useAccessControl } from '../../../hooks/useAccessControl';
 import Button from '../../../components/base/Button';
 import Card from '../../../components/base/Card';
 import AccessModal from '../../../components/feature/AccessModal';
-import { apiFetch } from '../../../utils/apiClient';
 
 interface IntroMainContentProps {
   isLoggedIn: boolean;
@@ -14,8 +13,7 @@ interface IntroMainContentProps {
 interface ModalState {
   isOpen: boolean;
   title: string;
-  message: string;
-  icon: string;
+  message?: string; // 특별 스타일 모달에서는 사용하지 않음
   actionButton?: {
     text: string;
     onClick: () => void;
@@ -32,10 +30,8 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
   const [modal, setModal] = useState<ModalState>({
     isOpen: false,
     title: '',
-    message: '',
-    icon: ''
+    message: ''
   });
-  const [isCheckingAccess, setIsCheckingAccess] = useState(false); // 중복 요청 방지
   
   const handleLogin = async () => {
     try {
@@ -45,8 +41,7 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
       setModal({
         isOpen: true,
         title: '로그인 실패',
-        message: '로그인 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.',
-        icon: '⚠️'
+        message: ''
       });
     }
   };
@@ -56,197 +51,20 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
     return () => clearTimeout(timer);
   }, []);
 
-  // 접근 권한 체크 함수
-  const checkAccessPermission = async () => {
-    if (!user?.id) return false;
-    
-    // 중복 요청 방지
-    if (isCheckingAccess) {
-      return false;
-    }
-    
-    setIsCheckingAccess(true);
-    
-    try {
-      await supabase.auth.getSession();
-      const response = await apiFetch(`/api/access-control/check-full-access`);
-      
-      if (!response.ok) {
-        // 401 에러 처리
-        if (response.status === 401) {
-          try {
-            const errorText = await response.text();
-            let errorData: Record<string, unknown> = {};
-            
-            // JSON 파싱 시도
-            try {
-              errorData = JSON.parse(errorText) as Record<string, unknown>;
-            } catch {
-              // JSON이 아니면 빈 객체 유지
-            }
-            
-            // DB에 deletion이 실제로 있는 경우에만 account-cooldown으로 리다이렉트
-            if (errorData.isRestricted === true) {
-              console.error('회원탈퇴 후 24시간 제한 (DB 확인됨), account-cooldown으로 리다이렉트');
-              await supabase.auth.signOut();
-              navigate('/account-cooldown');
-              return false;
-            }
-          } catch (e) {
-            // 에러 처리 실패 시 intro로 리다이렉트
-            console.error('401 에러 처리 중 오류:', e);
-          }
-          
-          // 그 외의 401 에러는 intro로 리다이렉트
-          console.error('토큰 검증 실패, intro로 리다이렉트');
-          await supabase.auth.signOut();
-          navigate('/');
-          return false;
-        }
-        
-        const errorText = await response.text();
-        console.error('API 응답 에러:', { status: response.status, text: errorText });
-        
-        setModal({
-          isOpen: true,
-          title: 'API 연결 오류',
-          message: `서버와의 연결에 문제가 있습니다.\n\n응답 코드: ${response.status}\n오류 내용: ${errorText || '알 수 없는 오류'}\n\n잠시 후 다시 시도해주세요.`,
-          icon: '🔌'
-        });
-        return false;
-      }
-      
-      const data = await response.json();
-      
-      // 접근 불가능한 경우
-      if (!data.canAccess) {
-        let icon = '🚫';
-        let title = '서비스 이용 제한';
-        let message = data.reason || '서비스 이용이 제한되었습니다.';
-        let actionButton = undefined;
-        
-        if (data.reason?.includes('차단된')) {
-          // 차단된 계정은 항상 /account-banned 페이지로 리다이렉트
-          navigate('/account-banned');
-          return false;
-          
-        } else if (data.reason?.includes('학교 정보가 설정되지')) {
-          icon = '🏫';
-          title = '학교 선택 필요';
-          message = '포춘쿠키 서비스를 이용하려면 먼저 학교를 선택해야 합니다.\n\n"학교 선택하기" 버튼을 눌러 소속 학교를 등록해 주세요.';
-          actionButton = {
-            text: '학교 선택하기',
-            onClick: () => {
-              setModal(prev => ({ ...prev, isOpen: false }));
-              navigate('/school-select');
-            }
-          };
-          
-        } else if (data.reason?.includes('이용 기간이 설정되지')) {
-          // 학교명 추출
-          const schoolMatch = data.reason.match(/(.+)의 이용 기간이/);
-          const schoolName = schoolMatch ? schoolMatch[1] : '해당 학교';
-          
-          icon = ''; // AccessModal에서 Calendar 아이콘을 사용하므로 이모지 불필요
-          title = '이용 기간 미설정';
-          message = `${schoolName}의 포춘쿠키 서비스 이용 기간이 아직 설정되지 않았습니다.\n\n관리자가 이용 기간을 설정하면 서비스를 이용하실 수 있습니다. 관리자에게 문의해 주세요.`;
-          
-        } else if (data.reason?.includes('이용 기간(') && data.reason.includes('이 아닙니다')) {
-          // 학교명과 날짜 추출
-          const periodMatch = data.reason.match(/(.+)의 이용 기간\((.+) ~ (.+)\)이 아닙니다/);
-          const schoolName = periodMatch ? periodMatch[1] : '해당 학교';
-          const startDate = periodMatch ? periodMatch[2] : '';
-          const endDate = periodMatch ? periodMatch[3] : '';
-          
-          // 현재 날짜와 비교해서 메시지 결정
-          const currentDate = new Date();
-          const startDateObj = new Date(startDate);
-          const endDateObj = new Date(endDate);
-          
-          let statusMessage = '';
-          if (currentDate < startDateObj) {
-            const daysUntilStart = Math.ceil((startDateObj.getTime() - currentDate.getTime()) / (1000 * 60 * 60 * 24));
-            statusMessage = `서비스 시작까지 ${daysUntilStart}일 남았습니다.`;
-          } else if (currentDate > endDateObj) {
-            const daysAfterEnd = Math.ceil((currentDate.getTime() - endDateObj.getTime()) / (1000 * 60 * 60 * 24));
-            statusMessage = `서비스 종료 후 ${daysAfterEnd}일이 지났습니다.`;
-          }
-          
-          icon = '📅';
-          title = '이용 기간 종료';
-          message = `${schoolName}의 포춘쿠키 서비스 이용 기간이 아닙니다.\n\n📅 이용 기간: ${startDate} ~ ${endDate}\n${statusMessage}\n\n새로운 이용 기간에 대해서는 관리자에게 문의해 주세요.`;
-          
-        } else {
-          // 기타 경우는 원본 메시지 사용하되 좀 더 친절하게
-          message = `서비스 이용이 일시적으로 제한되었습니다.\n\n상세 내용: ${data.reason}\n\n문제가 지속되면 관리자에게 문의해 주세요.`;
-        }
-        
-        setModal({
-          isOpen: true,
-          title,
-          message,
-          icon,
-          actionButton
-        });
-        return false;
-      }
-      
-      // 일일 사용 제한에 걸린 경우 (일일 제한 스타일 모달)
-      if (!data.canUse) {
-        const nextAvailableAt = (data as any).nextAvailableAt || null;
-        
-        setModal({
-          isOpen: true,
-          title: '오늘의 포춘쿠키를 이미 받으셨어요!',
-          message: '', // 일일 제한 스타일에서는 메시지 미사용
-          icon: '✨',
-          actionButton: {
-            text: '나의 기록 보기',
-            onClick: () => {
-              setModal(prev => ({ ...prev, isOpen: false }));
-              navigate('/past-concerns');
-            }
-          },
-          variant: 'dailyLimit', // 일일 제한 스타일 적용 (카운트다운 표시)
-          nextAvailableAt // 다음 이용 가능 시간 전달
-        });
-        return false;
-      }
-      
-      return true;
-    } catch (error) {
-      console.error('접근 권한 체크 실패:', error);
-      
-      let errorMessage = '접근 권한 확인 중 오류가 발생했습니다.';
-      let icon = '⚠️';
-      let title = '연결 오류';
-      
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        // 네트워크 연결 오류
-        title = '서버 연결 실패';
-        errorMessage = '백엔드 서버에 연결할 수 없습니다.\n\n가능한 원인:\n• 백엔드 서버가 실행되지 않음\n• 네트워크 연결 문제\n• 프록시 설정 오류\n\n서버 상태를 확인해 주세요.';
-        icon = '🔌';
-      } else if (error instanceof Error && error.message) {
-        // 기타 JavaScript 에러
-        errorMessage = `JavaScript 오류가 발생했습니다.\n\n오류 내용: ${error.message}\n\n개발자 도구(F12) 콘솔을 확인해 주세요.`;
-        icon = '💻';
-      }
-      
+  // 전역 접근 권한 체크 훅 사용
+  const { checkAccessPermission, isCheckingAccess } = useAccessControl({
+    userId: user?.id,
+    navigate,
+    onShowModal: (config) => {
       setModal({
         isOpen: true,
-        title,
-        message: errorMessage,
-        icon,
-        actionButton: {
-          text: '새로고침',
-          onClick: () => window.location.reload()
-        }
+        ...config
       });
-      return false;
-    } finally {
-      setIsCheckingAccess(false); // 중복 요청 방지 상태 리셋
+    },
+    onCloseModal: () => {
+      setModal(prev => ({ ...prev, isOpen: false }));
     }
-  };
+  });
 
   // 시작하기 버튼 핸들러
   const handleStartClick = async () => {
@@ -259,8 +77,7 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
       setModal({
         isOpen: true,
         title: '로그인 필요',
-        message: '포춘쿠키 서비스를 이용하려면 로그인이 필요합니다.',
-        icon: '🔐',
+        message: '',
         actionButton: {
           text: '카카오 로그인',
           onClick: handleLogin
@@ -275,8 +92,7 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
       setModal({
         isOpen: true,
         title: '사용자 정보 오류',
-        message: '사용자 정보를 불러올 수 없습니다.\n\n다시 로그인해 주세요.',
-        icon: '👤'
+        message: ''
       });
       return;
     }
@@ -299,8 +115,7 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
     setModal({
       isOpen: true,
       title: '포춘쿠키 이용 안내',
-      message: '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
-      icon: '💡',
+      message: '', // AccessModal에서 하드코딩된 메시지 사용
       actionButton: {
         text: '확인',
         onClick: () => {
@@ -386,7 +201,6 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
         onClose={closeModal}
         title={modal.title}
         message={modal.message}
-        icon={modal.icon}
         actionButton={modal.actionButton}
         cancelButtonText={modal.cancelButtonText}
         variant={modal.variant}

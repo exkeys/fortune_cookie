@@ -95,6 +95,14 @@ export default function AuthCallbackPage() {
                   cachedAt: Date.now()
                 };
                 localStorage.setItem(`user_profile_cache_${syncResult.userId}`, JSON.stringify(profileCache));
+                
+                // 신규 가입자인 경우 학교 선택 페이지로 리다이렉트
+                const school = syncResult.school;
+                if (!school || school === 'unknown' || school.trim() === '') {
+                  window.history.replaceState({}, '', '/');
+                  window.location.href = '/school-select';
+                  return;
+                }
               }
             }
           } catch (syncError) {

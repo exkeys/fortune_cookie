@@ -78,18 +78,42 @@ interface KakaoSDK {
   init: (key: string) => void;
   isInitialized: () => boolean;
   Share?: {
-    sendDefault: (options: {
-      objectType: string;
-      content: {
-        title: string;
-        description: string;
-        imageUrl?: string;
-        link: {
-          mobileWebUrl?: string;
-          webUrl?: string;
-        };
-      };
-    }) => void;
+    sendDefault: (options: 
+      | {
+          objectType: 'text';
+          text: string;
+          link: {
+            mobileWebUrl?: string;
+            webUrl?: string;
+          };
+          buttons?: Array<{
+            title: string;
+            link: {
+              mobileWebUrl?: string;
+              webUrl?: string;
+            };
+          }>;
+        }
+      | {
+          objectType: string;
+          content: {
+            title: string;
+            description: string;
+            imageUrl?: string;
+            link: {
+              mobileWebUrl?: string;
+              webUrl?: string;
+            };
+          };
+          buttons?: Array<{
+            title: string;
+            link: {
+              mobileWebUrl?: string;
+              webUrl?: string;
+            };
+          }>;
+        }
+    ) => void;
   };
 }
 

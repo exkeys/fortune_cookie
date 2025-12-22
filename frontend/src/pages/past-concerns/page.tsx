@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Header from '../../components/feature/Header';
-import { supabase } from '../../supabaseClient';
 import { useAuth } from '../../hooks/useAuth';
+import { useAccessControl } from '../../hooks/useAccessControl';
 import { useConcerns, useDeleteConcern } from '../../hooks/useConcerns';
 import { apiFetch } from '../../utils/apiClient';
 import { logger } from '../../utils/logger';
@@ -11,7 +11,6 @@ import CopySuccessModal from '../../components/base/CopySuccessModal';
 import PageHeader from './components/PageHeader';
 import LoadingState from './components/LoadingState';
 import EmptyState from './components/EmptyState';
-import LoginPrompt from './components/LoginPrompt';
 import StatisticsCards from './components/StatisticsCards';
 import FilterAndSearchBar from './components/FilterAndSearchBar';
 import PastConcernGrid from './components/PastConcernGrid';
@@ -45,63 +44,14 @@ interface Role {
   color: string;
 }
 
-// 역할 데이터 (role-select 페이지와 동일)
+// 역할 데이터 (role-select 페이지와 동일 - 학생만 유지)
 const roles = [
-  {
-    id: 'ceo',
-    name: 'CEO/리더',
-    icon: 'ri-crown-line',
-    description: '리더십과 경영 관련 조언',
-    color: 'from-gray-900 to-gray-800'
-  },
-  {
-    id: 'designer',
-    name: '디자이너',
-    icon: 'ri-palette-line',
-    description: '창작과 디자인 영감',
-    color: 'from-pink-400 to-pink-600'
-  },
-  {
-    id: 'developer',
-    name: '개발자',
-    icon: 'ri-code-line',
-    description: '기술과 개발 관련 통찰',
-    color: 'from-blue-400 to-blue-600'
-  },
-  {
-    id: 'marketer',
-    name: '마케터',
-    icon: 'ri-megaphone-line',
-    description: '마케팅과 브랜딩 전략',
-    color: 'from-green-400 to-green-600'
-  },
   {
     id: 'student',
     name: '학생',
     icon: 'ri-book-line',
     description: '학업과 진로 상담',
     color: 'from-indigo-400 to-indigo-600'
-  },
-  {
-    id: 'freelancer',
-    name: '프리랜서',
-    icon: 'ri-briefcase-line',
-    description: '독립적인 일과 자유로운 삶',
-    color: 'from-amber-400 to-amber-600'
-  },
-  {
-    id: 'parent',
-    name: '부모',
-    icon: 'ri-heart-line',
-    description: '육아와 가족 관계',
-    color: 'from-rose-400 to-rose-600'
-  },
-  {
-    id: 'other',
-    name: '기타',
-    icon: 'ri-user-line',
-    description: '직접 역할을 입력해보세요',
-    color: 'from-gray-400 to-gray-600'
   }
 ];
 
@@ -115,9 +65,9 @@ const getRoleFromPersona = (persona: string) => {
   return {
     id: 'custom',
     name: persona,
-    icon: 'ri-user-line',
+    icon: 'ri-user-3-line',
     description: `${persona} 관련 조언`,
-    color: 'from-gray-400 to-gray-600'
+    color: 'from-indigo-400 to-indigo-600'
   };
 };
 
@@ -126,12 +76,21 @@ export default function PastConcernsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoading: authLoading } = useAuth();
   
-  // React Query로 고민 목록 관리
-  const { data: concernsData = [], isLoading: concernsLoading, refetch: refetchConcerns } = useConcerns(user?.id, !authLoading && !!user?.id);
+  // 로그인되지 않은 사용자는 자동으로 홈으로 리다이렉트 (Route Guard)
+  useEffect(() => {
+    if (!authLoading && !user?.id) {
+      navigate('/', { replace: true });
+    }
+  }, [authLoading, user?.id, navigate]);
+  
+  // React Query로 고민 목록 관리 (인증 완료 후에만 활성화)
+  const { data: concernsData = [], isLoading: concernsLoading, refetch: refetchConcerns } = useConcerns(
+    user?.id, 
+    !authLoading && !!user?.id
+  );
   const deleteConcernMutation = useDeleteConcern();
   
   const [selectedItem, setSelectedItem] = useState<HistoryItem | null>(null);
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState<'newest' | 'oldest'>('newest');
@@ -139,12 +98,10 @@ export default function PastConcernsPage() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [showCopyModal, setShowCopyModal] = useState(false);
-  const [isCheckingAccess, setIsCheckingAccess] = useState(false);
   const [accessModal, setAccessModal] = useState<{
     isOpen: boolean;
     title: string;
     message: string;
-    icon: string;
     actionButton?: {
       text: string;
       onClick: () => void;
@@ -155,8 +112,7 @@ export default function PastConcernsPage() {
   }>({
     isOpen: false,
     title: '',
-    message: '',
-    icon: ''
+    message: ''
   });
   const itemsPerPage = 9;
   
@@ -174,16 +130,15 @@ export default function PastConcernsPage() {
     }));
   }, [concernsData]);
   
-  // 로딩 상태는 concernsLoading 사용
-  const isLoading = concernsLoading;
+  // 로딩 상태: 인증 로딩 또는 데이터 로딩 중
+  const isLoading = authLoading || concernsLoading;
   
   // 모달 헬퍼 함수들
-  const showAccessModal = useCallback((title: string, message: string, icon: string, actionButton?: { text: string; onClick: () => void }, cancelButtonText?: string, variant?: 'default' | 'dailyLimit', nextAvailableAt?: string | null) => {
+  const showAccessModal = useCallback((title: string, message: string, actionButton?: { text: string; onClick: () => void }, cancelButtonText?: string, variant?: 'default' | 'dailyLimit', nextAvailableAt?: string | null) => {
     setAccessModal({
       isOpen: true,
       title,
       message,
-      icon,
       actionButton,
       cancelButtonText,
       variant,
@@ -195,151 +150,23 @@ export default function PastConcernsPage() {
     setAccessModal(prev => ({ ...prev, isOpen: false }));
   }, []);
 
-  // 접근 권한 체크 함수 (IntroMainContent와 동일)
-  const checkAccessPermission = useCallback(async (userId: string) => {
-    if (!userId) return false;
-    
-    // 중복 요청 방지
-    if (isCheckingAccess) {
-      return false;
-    }
-    
-    setIsCheckingAccess(true);
-    
-    try {
-      await supabase.auth.getSession();
-      const response = await apiFetch(`/api/access-control/check-full-access`);
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        
-        showAccessModal(
-          'API 연결 오류',
-          `서버와의 연결에 문제가 있습니다.\n\n응답 코드: ${response.status}\n오류 내용: ${errorText || '알 수 없는 오류'}\n\n잠시 후 다시 시도해주세요.`,
-          '🔌'
-        );
-        return false;
-      }
-      
-      const data = await response.json();
-      
-      // 접근 불가능한 경우
-      if (!data.canAccess) {
-        let icon = '🚫';
-        let title = '서비스 이용 제한';
-        let message = data.reason || '서비스 이용이 제한되었습니다.';
-        let actionButton = undefined;
-        
-        if (data.reason?.includes('차단된')) {
-          // 차단된 계정은 항상 /account-banned 페이지로 리다이렉트
-          navigate('/account-banned');
-          return false;
-          
-        } else if (data.reason?.includes('학교 정보가 설정되지')) {
-          icon = '🏫';
-          title = '학교 선택 필요';
-          message = '포춘쿠키 서비스를 이용하려면 먼저 학교를 선택해야 합니다.\n\n"학교 선택하기" 버튼을 눌러 소속 학교를 등록해 주세요.';
-          actionButton = {
-            text: '학교 선택하기',
-            onClick: () => {
-              closeAccessModal();
-              navigate('/school-select');
-            }
-          };
-          
-        } else if (data.reason?.includes('이용 기간이 설정되지')) {
-          const schoolMatch = data.reason.match(/(.+)의 이용 기간이/);
-          const schoolName = schoolMatch ? schoolMatch[1] : '해당 학교';
-          
-          icon = ''; // AccessModal에서 Calendar 아이콘을 사용하므로 이모지 불필요
-          title = '이용 기간 미설정';
-          message = `${schoolName}의 포춘쿠키 서비스 이용 기간이 아직 설정되지 않았습니다.\n\n관리자가 이용 기간을 설정하면 서비스를 이용하실 수 있습니다. 관리자에게 문의해 주세요.`;
-          
-        } else if (data.reason?.includes('이용 기간(') && data.reason.includes('이 아닙니다')) {
-          const periodMatch = data.reason.match(/(.+)의 이용 기간\((.+) ~ (.+)\)이 아닙니다/);
-          const schoolName = periodMatch ? periodMatch[1] : '해당 학교';
-          const startDate = periodMatch ? periodMatch[2] : '';
-          const endDate = periodMatch ? periodMatch[3] : '';
-          
-          const currentDate = new Date();
-          const startDateObj = new Date(startDate);
-          const endDateObj = new Date(endDate);
-          
-          let statusMessage = '';
-          if (currentDate < startDateObj) {
-            statusMessage = '아직 이용 기간이 시작되지 않았습니다.';
-          } else if (currentDate > endDateObj) {
-            statusMessage = '이용 기간이 종료되었습니다.';
-          }
-          
-          icon = '📅';
-          title = '이용 기간 종료';
-          message = `${schoolName}의 포춘쿠키 서비스 이용 기간이 아닙니다.\n\n📅 이용 기간: ${startDate} ~ ${endDate}\n${statusMessage}\n\n새로운 이용 기간에 대해서는 관리자에게 문의해 주세요.`;
-          
-        } else {
-          message = `서비스 이용이 일시적으로 제한되었습니다.\n\n상세 내용: ${data.reason}\n\n문제가 지속되면 관리자에게 문의해 주세요.`;
-        }
-        
-        showAccessModal(title, message, icon, actionButton);
-        return false;
-      }
-      
-      // 일일 사용 제한에 걸린 경우 (일일 제한 스타일 모달)
-      if (!data.canUse) {
-        const nextAvailableAt = (data && typeof data === 'object' && 'nextAvailableAt' in data) 
-          ? (data.nextAvailableAt as string | null) 
-          : null;
-        
-        showAccessModal(
-          '오늘의 포춘쿠키를 이미 받으셨어요!',
-          '', // 일일 제한 스타일에서는 메시지 미사용
-          '✨',
-          {
-            text: '나의 기록 보기',
-            onClick: () => {
-              closeAccessModal();
-              // 이미 지난 고민 페이지에 있으므로 모달만 닫기
-            }
-          },
-          undefined, // cancelButtonText
-          'dailyLimit', // 일일 제한 스타일 적용 (카운트다운 표시)
-          nextAvailableAt // 다음 이용 가능 시간 전달
-        );
-        return false;
-      }
-      
-      return true;
-    } catch (error: unknown) {
-      let errorMessage = '접근 권한 확인 중 오류가 발생했습니다.';
-      let icon = '⚠️';
-      let title = '연결 오류';
-      
-      if (error instanceof TypeError && error.message.includes('fetch')) {
-        title = '서버 연결 실패';
-        errorMessage = '서버에 연결할 수 없습니다.\n\n네트워크 연결을 확인하고 다시 시도해주세요.';
-        icon = '🌐';
-      } else if (error instanceof SyntaxError) {
-        title = '응답 처리 오류';
-        errorMessage = '서버 응답을 처리하는 중 오류가 발생했습니다.\n\n잠시 후 다시 시도해주세요.';
-        icon = '🔧';
-      }
-      
-      showAccessModal(title, errorMessage, icon);
-      return false;
-    } finally {
-      setIsCheckingAccess(false);
-    }
-  }, [isCheckingAccess, showAccessModal, navigate, closeAccessModal]);
+  // 전역 접근 권한 체크 훅 사용
+  const { checkAccessPermission } = useAccessControl({
+    userId: user?.id,
+    navigate,
+    onShowModal: (config) => {
+      showAccessModal(
+        config.title,
+        config.message,
+        config.actionButton,
+        config.cancelButtonText,
+        config.variant,
+        config.nextAvailableAt
+      );
+    },
+    onCloseModal: closeAccessModal
+  });
   
-  // Supabase에서 실제 기록 로드
-  // 로그인 상태 확인
-  useEffect(() => {
-    if (!authLoading && user?.id) {
-      setIsLoggedIn(true);
-    } else {
-      setIsLoggedIn(false);
-    }
-  }, [authLoading, user?.id]);
 
   // URL의 refresh 파라미터 감지하여 데이터 새로고침
   useEffect(() => {
@@ -529,31 +356,12 @@ export default function PastConcernsPage() {
   }, [deleteConcernMutation, history, searchTerm, filterRole, currentPage, itemsPerPage]);
   
   const handleClearAll = useCallback(async () => {
+    if (!user?.id) {
+      alert('로그인이 필요합니다. 다시 로그인해주세요.');
+      return;
+    }
+    
     try {
-      // 사용자 ID 확인 (useAuth의 user → Supabase 세션 → localStorage)
-      let uid = user?.id;
-      
-      if (!uid) {
-        const { data: auth } = await supabase.auth.getUser();
-        uid = auth?.user?.id;
-      }
-      
-      if (!uid) {
-        const backendAuthData = localStorage.getItem('auth_backend_user');
-        if (backendAuthData) {
-          try {
-            const backendUser = JSON.parse(backendAuthData);
-            uid = backendUser.id;
-          } catch {
-            // 무시
-          }
-        }
-      }
-      
-      if (!uid) {
-        alert('로그인이 필요합니다. 다시 로그인해주세요.');
-        return;
-      }
       
       // 현재 사용자의 모든 기록을 백엔드 API로 삭제
       // 백엔드에서 userId로 모든 기록을 삭제하는 엔드포인트가 없으므로
@@ -638,6 +446,7 @@ export default function PastConcernsPage() {
     };
   }, [history, uniqueRoles.length]);
   
+  // 로딩 중이거나 로그인되지 않은 사용자는 리다이렉트되므로 여기서는 처리 불필요
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-amber-50 via-orange-50 to-amber-100">
@@ -645,6 +454,11 @@ export default function PastConcernsPage() {
         <LoadingState />
       </div>
     );
+  }
+
+  // 로그인되지 않은 사용자는 이미 리다이렉트되었으므로 여기서는 처리 불필요
+  if (!user?.id) {
+    return null;
   }
   
   return (
@@ -660,7 +474,7 @@ export default function PastConcernsPage() {
           )}
 
           {/* 통계 카드 */}
-          {isLoggedIn && history.length > 0 && (
+          {history.length > 0 && (
             <StatisticsCards
               totalCount={statistics.totalCount}
               uniqueRolesCount={statistics.uniqueRolesCount}
@@ -670,7 +484,7 @@ export default function PastConcernsPage() {
           )}
 
           {/* 액션 바 */}
-          {isLoggedIn && history.length > 0 && (
+          {history.length > 0 && (
             <FilterAndSearchBar
               searchTerm={searchTerm}
               filterRole={filterRole}
@@ -689,18 +503,13 @@ export default function PastConcernsPage() {
               onViewModeChange={setViewMode}
               onClearAll={() => setShowDeleteConfirm('all')}
               onNewFortune={async () => {
-                if (!isLoggedIn) {
-                  showAccessModal('로그인 필요', '로그인 후 이용해 주세요.', '🔑');
-                  return;
-                }
-                
                 if (!user?.id) {
-                  showAccessModal('사용자 정보 오류', '사용자 정보를 확인할 수 없습니다.\n\n다시 로그인해 주세요.', '👤');
+                  showAccessModal('사용자 정보 오류', '');
                   return;
                 }
                 
                 // 접근 권한 체크 (학교 밴 > 일일 사용 제한 순서)
-                const canAccess = await checkAccessPermission(user.id);
+                const canAccess = await checkAccessPermission();
                 
                 if (!canAccess) {
                   return; // 이미 모달이 표시됨
@@ -715,8 +524,7 @@ export default function PastConcernsPage() {
                 // 일반 사용자는 사전 안내 모달 표시
                 showAccessModal(
                   '포춘쿠키 이용 안내',
-                  '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
-                  '🎁',
+                  '', // AccessModal에서 하드코딩된 메시지 사용
                   {
                     text: '확인',
                     onClick: () => {
@@ -739,13 +547,10 @@ export default function PastConcernsPage() {
           )}
         </div>
         
-        {!isLoggedIn ? (
-          /* 로그인 안내 */
-          <LoginPrompt />
-        ) : filteredHistory.length === 0 ? (
+        {filteredHistory.length === 0 ? (
           /* 빈 상태 */
           <EmptyState
-            isLoggedIn={isLoggedIn}
+            isLoggedIn={true}
             hasNoRecords={history.length === 0}
             onNavigateHome={async () => {
               if (!user?.id) {
@@ -753,7 +558,7 @@ export default function PastConcernsPage() {
               }
               
               // 접근 권한 체크 (학교 밴 > 일일 사용 제한 순서)
-              const canAccess = await checkAccessPermission(user.id);
+              const canAccess = await checkAccessPermission();
               
               if (!canAccess) {
                 return; // 이미 모달이 표시됨
@@ -768,8 +573,7 @@ export default function PastConcernsPage() {
               // 일반 사용자는 사전 안내 모달 표시
               showAccessModal(
                 '포춘쿠키 이용 안내',
-                '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
-                '🎁',
+                '', // AccessModal에서 하드코딩된 메시지 사용
                 {
                   text: '확인',
                   onClick: () => {
@@ -850,12 +654,12 @@ export default function PastConcernsPage() {
           onClose={() => setSelectedItem(null)}
           onNewFortune={async () => {
             if (!user?.id) {
-              showAccessModal('사용자 정보 오류', '사용자 정보를 확인할 수 없습니다.\n\n다시 로그인해 주세요.', '👤');
+              showAccessModal('사용자 정보 오류', '');
               return;
             }
             
             // 접근 권한 체크 (학교 밴 > 일일 사용 제한 순서)
-            const canAccess = await checkAccessPermission(user.id);
+            const canAccess = await checkAccessPermission();
             
             if (!canAccess) {
               return; // 이미 모달이 표시됨
@@ -883,8 +687,7 @@ export default function PastConcernsPage() {
             // 일반 사용자는 사전 안내 모달 표시
             showAccessModal(
               '포춘쿠키 이용 안내',
-              '하루에 한 번만 사용 가능합니다.\n\n포춘쿠키를 받으시겠어요? 🍪',
-              '🎁',
+              '', // AccessModal에서 하드코딩된 메시지 사용
               {
                 text: '확인',
                 onClick: () => {
@@ -933,7 +736,6 @@ export default function PastConcernsPage() {
         onClose={closeAccessModal}
         title={accessModal.title}
         message={accessModal.message}
-        icon={accessModal.icon}
         actionButton={accessModal.actionButton}
         cancelButtonText={accessModal.cancelButtonText}
         variant={accessModal.variant}

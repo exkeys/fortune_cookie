@@ -166,7 +166,13 @@ export default function OAuthCallbackPage() {
         sessionStorage.removeItem('oauth_processed');
         window.dispatchEvent(new CustomEvent('oauth-status-change', { detail: { isProcessing: false } }));
         
-        window.location.href = '/';
+        // 신규 가입자인 경우 학교 선택 페이지로 리다이렉트
+        const school = loginResult.school;
+        if (!school || school === 'unknown' || school.trim() === '') {
+          window.location.href = '/school-select';
+        } else {
+          window.location.href = '/';
+        }
 
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류';

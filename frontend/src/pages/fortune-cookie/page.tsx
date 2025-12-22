@@ -1,6 +1,7 @@
 
 import { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import Header from '../../components/feature/Header';
 import CopySuccessModal from '../../components/base/CopySuccessModal';
 import { useApi } from '../../hooks/useApi';
@@ -29,6 +30,7 @@ interface LocationState {
 export default function FortuneCookiePage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user } = useAuth();
   const { isMobile } = useResponsive();
   const { selectedRole, concern, updateId } = (location.state as LocationState & { updateId?: string }) || {};
@@ -149,15 +151,6 @@ export default function FortuneCookiePage() {
                 mobileWebUrl: shareUrl,
                 webUrl: shareUrl,
               },
-              buttons: [
-                {
-                  title: '운세 보러가기',
-                  link: {
-                    mobileWebUrl: shareUrl,
-                    webUrl: shareUrl,
-                  },
-                },
-              ],
             });
           } catch (error) {
             console.error('카카오톡 공유 오류:', error);
@@ -180,15 +173,6 @@ export default function FortuneCookiePage() {
                     mobileWebUrl: shareUrl,
                     webUrl: shareUrl,
                   },
-                  buttons: [
-                    {
-                      title: '운세 보러가기',
-                      link: {
-                        mobileWebUrl: shareUrl,
-                        webUrl: shareUrl,
-                      },
-                    },
-                  ],
                 });
               } else {
                 navigator.clipboard.writeText(`${shareText}\n\n${shareUrl}`);
@@ -267,6 +251,9 @@ export default function FortuneCookiePage() {
         alert(`저장에 실패했습니다: ${result.error}`);
         return; // 저장 실패 시 이동하지 않음
       }
+      
+      // 운세 저장 후 React Query 캐시 무효화 (즉시 반영)
+      queryClient.invalidateQueries({ queryKey: ['concerns'] });
       
       // 운세 저장 후 사용자 정보를 DB에서 다시 불러와서 localStorage 업데이트
       // 저장할 때 사용한 uid를 그대로 사용 (DB에서 직접 가져옴)

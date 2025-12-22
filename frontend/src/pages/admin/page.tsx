@@ -115,6 +115,7 @@ export default function AdminPage() {
         }
         
         if (!userId) {
+          setIsAdmin(false);
           setIsAdminChecked(true);
           return;
         }
@@ -122,6 +123,7 @@ export default function AdminPage() {
         // 백엔드 API를 통해 사용자 정보 조회 (JWT 토큰으로 인증)
         const response = await apiFetch(`/api/access-control/check-access`);
         if (!response.ok) {
+          setIsAdmin(false);
           setIsAdminChecked(true);
           return;
         }
@@ -130,25 +132,27 @@ export default function AdminPage() {
         const userData = result.user;
         
         if (!userData) {
+          setIsAdmin(false);
           setIsAdminChecked(true);
           return;
         }
 
         // 관리자가 아닌 경우
         if (!userData.is_admin) {
-          setIsAdminChecked(true);
           setIsAdmin(false);
+          setIsAdminChecked(true);
           return;
         }
 
         // 관리자인 경우 - React Query가 자동으로 데이터 로드
         setIsAdmin(true);
-    } catch (error) {
-      // 에러 무시
-    } finally {
-      setIsAdminChecked(true);
-    }
-  };
+        setIsAdminChecked(true);
+      } catch (error) {
+        // 에러 발생 시 관리자가 아닌 것으로 처리
+        setIsAdmin(false);
+        setIsAdminChecked(true);
+      }
+    };
 
     checkAdminAndLoadData();
   }, [authLoading, isLoggedIn, user?.id]); // user 전체 대신 user.id만 의존성으로 설정
@@ -312,8 +316,9 @@ export default function AdminPage() {
     );
   }
 
-  // 관리자가 아닌 경우
-  if (!isAdmin || !user || !user.is_admin) {
+  // 로딩이 완전히 끝난 후에만 관리자 체크
+  // isAdminChecked가 true이고, isAdmin이 false인 경우에만 접근 거부 메시지 표시
+  if (isAdminChecked && !isAdmin) {
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col items-center justify-center">
         <div className="text-2xl text-gray-700 dark:text-gray-300 font-semibold">관리자만 접근할 수 있습니다.</div>
@@ -326,16 +331,7 @@ export default function AdminPage() {
       <div className="flex">
         {/* 왼쪽 사이드바 네비게이션 (고정 펼침) */}
         <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 sticky top-0 self-start h-[calc(100vh)] flex flex-col">
-          <div className="px-4 pt-2 pb-5 space-y-2">
-            <button
-              type="button"
-              onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-1 text-xs text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors focus:outline-none"
-              aria-label="뒤로 가기"
-            >
-              <i className="ri-arrow-left-line text-base"></i>
-              <span>뒤로가기</span>
-            </button>
+          <div className="px-4 pt-6 pb-5 space-y-2">
             <button
               type="button"
               onClick={() => navigate('/')}
@@ -345,7 +341,7 @@ export default function AdminPage() {
               <img
                 src={FCLogoImg}
                 alt="Fortune Cookie Admin Logo"
-                className="w-[17rem] h-24 object-contain -mt-2"
+                className="w-[17rem] h-24 object-contain"
               />
             </button>
         </div>
