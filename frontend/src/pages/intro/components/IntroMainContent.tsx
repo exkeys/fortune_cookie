@@ -8,6 +8,7 @@ import AccessModal from '../../../components/feature/AccessModal';
 
 interface IntroMainContentProps {
   isLoggedIn: boolean;
+  isAdmin: boolean | null;
 }
 
 interface ModalState {
@@ -23,7 +24,7 @@ interface ModalState {
   nextAvailableAt?: string | null; // 다음 이용 가능 시간 (ISO string, used_at 기준)
 }
 
-export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) {
+export default function IntroMainContent({ isLoggedIn, isAdmin }: IntroMainContentProps) {
   const navigate = useNavigate();
   const { user, login } = useAuth();
   const [showContent, setShowContent] = useState(false);
@@ -106,7 +107,7 @@ export default function IntroMainContent({ isLoggedIn }: IntroMainContentProps) 
     }
     
     // 관리자는 바로 이동 (일일 제한 없음)
-    if (user.is_admin) {
+    if (isAdmin === true) {
       navigate('/role-select');
       return;
     }

@@ -1,15 +1,16 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Header from '../../components/feature/Header';
 import PageTitle from './components/PageTitle';
 import RoleGrid from './components/RoleGrid';
 import CustomRoleInput from './components/CustomRoleInput';
 import NextButton from './components/NextButton';
+import LoadingSpinner from '../../components/base/LoadingSpinner';
 import { useAuth } from '../../hooks/useAuth';
 import { useResponsive } from '../../hooks/useResponsive';
 import { loadFormData, updateFormData } from '../../utils/formPersistence';
-import { apiFetch } from '../../utils/apiClient';
+import { useCustomRoles, useCreateCustomRole, useUpdateCustomRole, useDeleteCustomRole } from '../../hooks/useCustomRoles';
 
 interface Role {
   id: string;
@@ -39,11 +40,55 @@ export default function RoleSelectPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { isMobile } = useResponsive();
-  const [roles, setRoles] = useState<Role[]>(initialRoles);
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [customRoles, setCustomRoles] = useState<{ [id: string]: string }>({});
   const [isAnimating, setIsAnimating] = useState(false);
   const [customRoleInputId, setCustomRoleInputId] = useState<string | null>(null);
+
+  // userId 가져오기 (localStorage fallback 포함)
+  const userId = useMemo(() => {
+    if (user?.id) return user.id;
+    const backendAuthData = localStorage.getItem('auth_backend_user');
+    if (backendAuthData) {
+      try {
+        const backendUser = JSON.parse(backendAuthData);
+        return backendUser.id;
+      } catch {
+        return undefined;
+      }
+    }
+    return undefined;
+  }, [user?.id]);
+
+  // React Query로 커스텀 역할 목록 가져오기
+  const { data: customRolesData = [], isLoading: isLoadingRoles } = useCustomRoles(userId);
+  const createCustomRoleMutation = useCreateCustomRole();
+  const updateCustomRoleMutation = useUpdateCustomRole();
+  const deleteCustomRoleMutation = useDeleteCustomRole();
+
+  // 커스텀 역할 데이터를 Role 형식으로 변환
+  const customRoleObjs: Role[] = useMemo(() => {
+    return customRolesData.map((row: CustomRoleRow) => ({
+      id: row.id,
+      name: row.role_name || '역할 선택',
+      icon: 'ri-user-line',
+      description: row.role_name?.trim() ? `${row.role_name} 관련 조언` : '역할을 선택해 주세요',
+    }));
+  }, [customRolesData]);
+
+  // 전체 역할 목록 (학생 + 커스텀 역할)
+  const roles: Role[] = useMemo(() => {
+    return [initialRoles[0], ...customRoleObjs];
+  }, [customRoleObjs]);
+
+  // customRoles state 동기화
+  useEffect(() => {
+    const cr: { [id: string]: string } = {};
+    customRolesData.forEach((row: CustomRoleRow) => {
+      cr[row.id] = row.role_name || '';
+    });
+    setCustomRoles(cr);
+  }, [customRolesData]);
 
   // 모바일에서 페이지 진입 시 스크롤을 맨 위로 이동
   useEffect(() => {
@@ -81,101 +126,44 @@ export default function RoleSelectPage() {
     }
   }, [isMobile]);
 
-  // 1. 진입 시 custom_roles 불러오기
+  // 1. 진입 시 저장된 폼 데이터 복원 (로딩 완료 후에만 실행)
   useEffect(() => {
-    // user.id 확인 (localStorage fallback)
-    let userId = user?.id;
+    // 커스텀 역할 데이터 로딩이 완료된 후에만 복원
+    if (isLoadingRoles) return;
     
-    // user.id가 없으면 localStorage에서 확인
-    if (!userId) {
-      const backendAuthData = localStorage.getItem('auth_backend_user');
-      if (backendAuthData) {
-        try {
-          const backendUser = JSON.parse(backendAuthData);
-          userId = backendUser.id;
-        } catch {
-          // 무시
-        }
+    const savedData = loadFormData();
+    const savedRole = savedData?.selectedRole;
+    if (savedRole) {
+      // roles 배열에 해당 역할이 있는지 확인
+      const roleExists = roles.some(r => r.id === savedRole.id);
+      if (roleExists) {
+        setSelectedRole(savedRole.id);
       }
     }
-    
-    if (!userId) return;
-    
-    const initializePage = async () => {
-      try {
-        // 1. 저장된 폼 데이터 복원
-        const savedData = loadFormData();
-        if (savedData?.selectedRole) {
-          setSelectedRole(savedData.selectedRole.id);
-        }
-        if (savedData?.customRole) {
-          setCustomRoles(prev => ({ ...prev, [savedData.customRole!]: savedData.customRole! }));
-        }
-        
-        // 2. 백엔드 API로 custom_roles 불러오기
-        const response = await apiFetch(`/api/custom-roles`);
-        if (response.ok) {
-          const result = await response.json();
-          const data = result.customRoles || [];
-          const customRoleObjs: Role[] = data.map((row: CustomRoleRow) => ({
-            id: row.id,
-            name: row.role_name || '역할 선택',
-            icon: 'ri-user-line',
-            description: row.role_name?.trim() ? `${row.role_name} 관련 조언` : '역할을 선택해 주세요',
-          }));
-          setRoles([initialRoles[0], ...customRoleObjs]);
-          const cr: { [id: string]: string } = {};
-          data.forEach((row: CustomRoleRow) => { cr[row.id] = row.role_name || ''; });
-          setCustomRoles(cr);
-        }
-      } catch (error) {
-        // 에러 무시
-      }
-    };
-
-    initializePage();
-  }, [user?.id]);
+    if (savedData?.customRole) {
+      setCustomRoles(prev => ({ ...prev, [savedData.customRole!]: savedData.customRole! }));
+    }
+  }, [isLoadingRoles, roles]);
 
   // 2. 역할 삭제 (DB 반영)
   const handleRemoveRole = async (roleId: string) => {
     // 학생 역할은 DB에 없음
     if (roleId === 'student') {
-      setRoles((prev) => prev.filter((r) => r.id !== roleId));
       if (selectedRole === roleId) setSelectedRole('');
       if (customRoleInputId === roleId) setCustomRoleInputId(null);
       return;
     }
-    setRoles((prev) => prev.filter((r) => r.id !== roleId));
-    setCustomRoles((prev) => {
-      const copy = { ...prev };
-      delete copy[roleId];
-      return copy;
-    });
+
+    // UI 즉시 업데이트
     if (selectedRole === roleId) setSelectedRole('');
     if (customRoleInputId === roleId) setCustomRoleInputId(null);
-    // 백엔드 API로 삭제 - user.id 확인 (localStorage fallback)
-    let userId = user?.id;
-    if (!userId) {
-      const backendAuthData = localStorage.getItem('auth_backend_user');
-      if (backendAuthData) {
-        try {
-          const backendUser = JSON.parse(backendAuthData);
-          userId = backendUser.id;
-        } catch {
-          // 무시
-        }
-      }
-    }
+
+    // React Query mutation으로 삭제 (Optimistic Update 적용됨)
     if (userId) {
       try {
-        await apiFetch(`/api/custom-roles/${roleId}`, {
-          method: 'DELETE',
-          headers: {
-            'Content-Type': 'application/json'
-          }
-        });
+        await deleteCustomRoleMutation.mutateAsync({ roleId, userId });
       } catch (error) {
-        // 에러 무시
+        // 에러 무시 (이미 Optimistic Update로 UI는 업데이트됨)
       }
     }
   };
@@ -184,51 +172,14 @@ export default function RoleSelectPage() {
   const handleAddRole = async () => {
     if (roles.length >= 8) return;
     
-    // user.id 확인 (localStorage fallback)
-    let userId = user?.id;
-    if (!userId) {
-      const backendAuthData = localStorage.getItem('auth_backend_user');
-      if (backendAuthData) {
-        try {
-          const backendUser = JSON.parse(backendAuthData);
-          userId = backendUser.id;
-        } catch {
-          // 무시
-        }
-      }
-    }
-    
     if (!userId) return;
     
-    // 백엔드 API로 빈 역할 추가
     try {
-      // B 구조: Supabase SDK가 자동으로 토큰 관리하므로 setAccessToken 불필요
-      const response = await apiFetch('/api/custom-roles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          roleName: ''
-        })
-      });
-      
-      if (response.ok) {
-        const result = await response.json();
-        const newId = result.customRole?.id;
-        if (newId) {
-          setRoles((prev) => [
-            ...prev,
-            {
-              id: newId,
-              name: '직접 추가',
-              icon: 'ri-add-line',
-              description: '새로운 역할을 추가하세요',
-            },
-          ]);
-          setSelectedRole(newId);
-          setCustomRoleInputId(newId);
-        }
+      // React Query mutation으로 생성 (Optimistic Update로 즉시 반영됨)
+      const result = await createCustomRoleMutation.mutateAsync(userId);
+      if (result?.customRole?.id) {
+        setSelectedRole(result.customRole.id);
+        setCustomRoleInputId(result.customRole.id);
       }
     } catch (error) {
       // 에러 무시
@@ -292,64 +243,24 @@ export default function RoleSelectPage() {
     setCustomRoles((prev) => ({ ...prev, [customRoleInputId]: value }));
   };
 
-  // 저장하기 버튼 클릭 시 DB update 후 custom_roles 다시 불러오기
+  // 저장하기 버튼 클릭 시 DB update (Optimistic Update 적용됨)
   const handleCustomRoleSave = async () => {
-    if (!customRoleInputId) return;
-    
-    // user.id 확인 (localStorage fallback)
-    let userId = user?.id;
-    if (!userId) {
-      const backendAuthData = localStorage.getItem('auth_backend_user');
-      if (backendAuthData) {
-        try {
-          const backendUser = JSON.parse(backendAuthData);
-          userId = backendUser.id;
-        } catch {
-          // 무시
-        }
-      }
-    }
-    
-    if (!userId) return;
+    if (!customRoleInputId || !userId) return;
     
     const value = customRoles[customRoleInputId];
     if (typeof value !== 'string') return;
     
-    // 백엔드 API로 업데이트
     try {
-      // B 구조: Supabase SDK가 자동으로 토큰 관리하므로 setAccessToken 불필요
-      const response = await apiFetch(`/api/custom-roles/${customRoleInputId}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          roleName: value
-        })
+      // React Query mutation으로 업데이트 (Optimistic Update로 즉시 반영됨)
+      await updateCustomRoleMutation.mutateAsync({
+        roleId: customRoleInputId,
+        roleName: value,
+        userId
       });
-      
-      if (response.ok) {
-        // 저장 후 custom_roles 다시 불러와서 local state 갱신
-        const listResponse = await apiFetch(`/api/custom-roles`);
-        if (listResponse.ok) {
-          const result = await listResponse.json();
-          const data = result.customRoles || [];
-          const customRoleObjs: Role[] = data.map((row: CustomRoleRow) => ({
-            id: row.id,
-            name: row.role_name || '역할 선택',
-            icon: 'ri-user-line',
-            description: row.role_name?.trim() ? `${row.role_name} 관련 조언` : '역할을 선택해 주세요',
-            color: 'from-gray-400 to-gray-600',
-          }));
-          setRoles([initialRoles[0], ...customRoleObjs]);
-          const cr: { [id: string]: string } = {};
-          data.forEach((row: CustomRoleRow) => { cr[row.id] = row.role_name || ''; });
-          setCustomRoles(cr);
-        }
-      }
     } catch (error) {
-      // 에러 무시
+      // 에러 무시 (Optimistic Update로 UI는 이미 업데이트됨)
     }
+    
     // 입력창 닫기
     setCustomRoleInputId(null);
   };
@@ -394,6 +305,11 @@ export default function RoleSelectPage() {
     }
   };
   
+
+  // 로딩 중일 때는 스피너만 표시
+  if (isLoadingRoles) {
+    return <LoadingSpinner message="역할 목록을 불러오는 중..." />;
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-amber-50 to-orange-50">

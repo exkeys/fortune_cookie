@@ -319,7 +319,7 @@ export default function IntroPage() {
       />
       <BackgroundDecorations />
       <FloatingIcons />
-      <IntroMainContent isLoggedIn={isLoggedIn} />
+      <IntroMainContent isLoggedIn={isLoggedIn} isAdmin={isAdmin} />
     </div>
   );
 }
