@@ -9,7 +9,7 @@
 ### 핵심 원칙
 - **Supabase SDK만 사용**: 모든 토큰 관리를 Supabase가 자동으로 처리
 - **JWT 토큰 기반**: Authorization 헤더에 Bearer 토큰 사용
-- **CSRF 토큰 제거**: B 구조에서는 CSRF 토큰이 불필요
+- **CSRF 토큰 제거**: CSRF 토큰이 불필요
 - **자동 토큰 갱신**: Supabase SDK가 자동으로 access token을 갱신
 
 ## 로그인 플로우
@@ -75,7 +75,7 @@
 #### 토큰 관리 (`authSession.ts`)
 - `getAccessToken()`: 현재 세션의 access token 가져오기
 - `ensureAccessToken()`: access token이 없으면 자동 refresh
-- `clearAccessToken()`: 토큰 정리 (B 구조에서는 불필요)
+- `clearAccessToken()`: 토큰 정리 
 
 #### API 호출 (`apiClient.ts`)
 - 모든 API 호출에 `Authorization: Bearer {token}` 헤더 자동 추가

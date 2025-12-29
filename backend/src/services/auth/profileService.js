@@ -8,20 +8,28 @@ export class ProfileService {
     try {
       logger.info('로그아웃 요청', { userId });
       
-      const { error } = await supabase
+      // supabaseAdmin을 사용하여 RLS 정책을 우회하고 업데이트
+      const { data, error } = await supabaseAdmin
         .from('users')
         .update({ last_logout_at: new Date().toISOString() })
-        .eq('id', userId);
+        .eq('id', userId)
+        .select();
       
       if (error) {
-        logger.error('로그아웃 시간 업데이트 실패', error);
+        logger.error('로그아웃 시간 업데이트 실패', { userId, error });
         throw new DatabaseError('로그아웃 처리에 실패했습니다');
       }
       
-      logger.info('로그아웃 성공', { userId });
+      if (!data || data.length === 0) {
+        logger.warn('로그아웃: 사용자를 찾을 수 없음', { userId });
+        // 사용자가 없어도 성공으로 처리 (이미 삭제된 경우 등)
+        return { success: true };
+      }
+      
+      logger.info('로그아웃 성공', { userId, last_logout_at: data[0]?.last_logout_at });
       return { success: true };
     } catch (error) {
-      logger.error('로그아웃 예외', error);
+      logger.error('로그아웃 예외', { userId, error });
       throw error;
     }
   }

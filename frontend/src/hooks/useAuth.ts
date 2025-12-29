@@ -853,6 +853,35 @@ export const useAuth = (): AuthReturn => {
   };
 
   const logout = async () => {
+    // 먼저 사용자 ID와 토큰을 가져옴 (정리하기 전에)
+    let userId: string | null = null;
+    let token: string | null = null;
+    
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (!userError && user) {
+        userId = user.id;
+      }
+      
+      // 토큰을 먼저 가져옴
+      token = await ensureAccessToken();
+    } catch (error) {
+      logger.warn('[useAuth] logout: 사용자 정보 가져오기 실패', error);
+    }
+    
+    // 백엔드에 로그아웃 요청 (토큰이 있을 때만) - 리다이렉트 전에 실행
+    if (userId && token) {
+      try {
+        await apiFetch('/api/auth/logout', {
+          method: 'POST'
+        });
+        logger.log('[useAuth] logout: 백엔드 로그아웃 성공', { userId });
+      } catch (error) {
+        logger.warn('[useAuth] logout: 백엔드 로그아웃 실패', error);
+        // 실패해도 계속 진행
+      }
+    }
+    
     // 즉시 상태 초기화 및 필수 정리 작업
     lastUserIdRef.current = null;
     isInitializedRef.current = false;
@@ -867,29 +896,8 @@ export const useAuth = (): AuthReturn => {
     localStorage.removeItem('user_school');
     localStorage.removeItem('user_created_at');
     
-    // 즉시 intro 페이지로 리다이렉트 (API 호출 대기하지 않음)
-    window.location.href = '/intro';
-    
-    // 백그라운드에서 나머지 정리 작업 수행 (페이지 리다이렉트 이후)
+    // 백그라운드에서 나머지 정리 작업 수행
     try {
-      let userId: string | null = null;
-      
-      const { data: { user }, error: userError } = await supabase.auth.getUser();
-      if (!userError && user) {
-        userId = user.id;
-      }
-      
-      // API 호출은 백그라운드에서 처리 (대기하지 않음)
-      if (userId) {
-        ensureAccessToken().then(token => {
-          if (token) {
-            apiFetch('/api/auth/logout', {
-              method: 'POST'
-            }).catch(() => {});
-          }
-        }).catch(() => {});
-      }
-      
       // 쿠키 정리
       const kakaoCookies = [
         'kauth', 'kakao', 'kakao_account', 'kakao_token',
@@ -920,29 +928,15 @@ export const useAuth = (): AuthReturn => {
         }
       });
       
-      // Supabase 로그아웃은 백그라운드에서 처리
-      supabase.auth.signOut().catch(() => {});
+      // Supabase 로그아웃
+      await supabase.auth.signOut();
     } catch (error) {
-      // 에러 발생해도 무시 (이미 리다이렉트됨)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user?.id) {
-        localStorage.removeItem(`user_profile_cache_${user.id}`);
-      }
-      
-      const supabaseKeys = Object.keys(localStorage).filter(key => 
-        key.includes('supabase') || key.includes('sb-')
-      );
-      supabaseKeys.forEach(key => localStorage.removeItem(key));
-      
-      const allLocalStorageKeys = Object.keys(localStorage);
-      allLocalStorageKeys.forEach(key => {
-        if (key.toLowerCase().includes('kakao') || key.toLowerCase().includes('kauth')) {
-          localStorage.removeItem(key);
-        }
-      });
-      
-      supabase.auth.signOut().catch(() => {});
+      // 에러 발생해도 무시
+      logger.warn('[useAuth] logout: 정리 작업 중 에러', error);
     }
+    
+    // 모든 정리 작업 완료 후 리다이렉트
+    window.location.href = '/';
   };
 
   const deleteAccount = async () => {
